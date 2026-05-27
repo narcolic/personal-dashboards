@@ -1,0 +1,1 @@
+ALTER TABLE public.portfolios DROP COLUMN IF EXISTS currency;
