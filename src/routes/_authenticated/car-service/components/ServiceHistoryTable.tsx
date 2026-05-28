@@ -77,7 +77,7 @@ export function ServiceHistoryTable({ visits = [], isLoading = false }: { visits
                 <tr className="border-t border-border/60 hover:bg-secondary/30 cursor-pointer" onClick={() => toggleExpanded(visit.id)}>
                   <td className="px-3 py-2 text-left">
                     <button type="button" onClick={(event) => { event.stopPropagation(); toggleExpanded(visit.id); }} className="mr-2 text-muted-foreground hover:text-foreground" aria-expanded={expanded} aria-label={expanded ? t("car.collapseDetails") : t("car.expandDetails")}>
-                      {expanded ? "v" : ">"}
+                      {expanded ? "\u25BC" : "\u25B6"}
                     </button>
                     {formatDate(visit.service_date)}
                   </td>

@@ -13,6 +13,26 @@ export type ServiceJobInsert = Database["public"]["Tables"]["service_jobs"]["Ins
 
 export type ServiceVisitWithJobs = ServiceVisit & { jobs: ServiceJob[] };
 
+export type ServiceReminder = Database["public"]["Tables"]["service_reminders"]["Row"];
+export type ServiceReminderInsert = Database["public"]["Tables"]["service_reminders"]["Insert"];
+export type ServiceReminderUpdate = Database["public"]["Tables"]["service_reminders"]["Update"];
+
+export type ManualReminder = Database["public"]["Tables"]["manual_reminders"]["Row"];
+export type ManualReminderInsert = Database["public"]["Tables"]["manual_reminders"]["Insert"];
+export type ManualReminderUpdate = Database["public"]["Tables"]["manual_reminders"]["Update"];
+
+export type ReminderStatus = "OVERDUE" | "DUE SOON" | "OK" | "NO DATA";
+
+export type ServiceReminderStatusInfo = {
+  status: ReminderStatus;
+  lastDoneDate: string | null;
+  lastDoneKm: number | null;
+  kmRemaining: number | null;
+  daysRemaining: number | null;
+};
+
+export type ServiceReminderWithStatus = ServiceReminder & ServiceReminderStatusInfo;
+
 export type ServiceJobInput = {
   jobName: string;
   category: string;

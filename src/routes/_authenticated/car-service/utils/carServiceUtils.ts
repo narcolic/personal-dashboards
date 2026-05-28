@@ -1,4 +1,5 @@
 import type { ServiceVisitWithJobs } from "@/routes/_authenticated/car-service/types";
+import type { ServiceReminder, ServiceReminderStatusInfo } from "@/routes/_authenticated/car-service/types";
 
 export function getTotalLifetimeCost(visits: ServiceVisitWithJobs[]): number {
   return visits.reduce((sum, visit) => sum + Number(visit.total_amount ?? 0), 0);
@@ -120,4 +121,69 @@ export function formatDate(date: string): string {
 
 export function formatKm(km: number): string {
   return `${new Intl.NumberFormat("en-US").format(km)} km`;
+}
+
+export function computeReminderStatus(
+  reminder: ServiceReminder,
+  visits: ServiceVisitWithJobs[],
+  currentOdometerKm: number,
+): ServiceReminderStatusInfo {
+  const match = visits
+    .slice()
+    .sort((a, b) => new Date(b.service_date).getTime() - new Date(a.service_date).getTime())
+    .find((visit) =>
+      visit.jobs.some(
+        (job) =>
+          job.job_name_snapshot.trim().toLowerCase() === reminder.job_name.trim().toLowerCase(),
+      ),
+    );
+
+  if (!match) {
+    return {
+      status: "NO DATA",
+      lastDoneDate: null,
+      lastDoneKm: null,
+      kmRemaining: null,
+      daysRemaining: null,
+    };
+  }
+
+  const today = new Date();
+  const lastDoneDate = new Date(match.service_date);
+  const lastDoneKm = Number(match.odometer_km);
+  const kmSinceLast = currentOdometerKm - lastDoneKm;
+
+  const monthsSinceLast =
+    (today.getFullYear() - lastDoneDate.getFullYear()) * 12 + (today.getMonth() - lastDoneDate.getMonth());
+
+  const kmRemaining =
+    reminder.interval_km == null ? null : Math.max(0, reminder.interval_km - kmSinceLast);
+
+  let daysRemaining: number | null = null;
+  if (reminder.interval_months != null) {
+    const due = new Date(lastDoneDate);
+    due.setMonth(due.getMonth() + reminder.interval_months);
+    daysRemaining = Math.ceil((due.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+  }
+
+  const kmOverdue = reminder.interval_km != null && kmSinceLast >= reminder.interval_km;
+  const monthsOverdue = reminder.interval_months != null && monthsSinceLast >= reminder.interval_months;
+  if (kmOverdue || monthsOverdue) {
+    return { status: "OVERDUE", lastDoneDate: match.service_date, lastDoneKm, kmRemaining, daysRemaining };
+  }
+
+  const dueSoonByKm =
+    reminder.interval_km != null &&
+    reminder.warning_km != null &&
+    kmSinceLast >= reminder.interval_km - reminder.warning_km;
+  const dueSoonByDays =
+    daysRemaining != null && reminder.warning_days != null && daysRemaining <= reminder.warning_days;
+
+  return {
+    status: dueSoonByKm || dueSoonByDays ? "DUE SOON" : "OK",
+    lastDoneDate: match.service_date,
+    lastDoneKm,
+    kmRemaining,
+    daysRemaining,
+  };
 }

@@ -1,25 +1,31 @@
-import { createFileRoute } from "@tanstack/react-router";
+﻿import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
+import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import {
+  createManualReminder,
+  createServiceReminder,
+  deleteManualReminder,
+  deleteServiceReminder,
+  toggleManualReminderDone,
+  updateServiceReminder,
+} from "@/routes/_authenticated/car-service/hooks/useReminderMutations";
+import { useReminders } from "@/routes/_authenticated/car-service/hooks/useReminders";
 import {
   createVehicle,
   deleteVehicle,
   parseVehicleMeta,
   updateVehicle,
 } from "@/routes/_authenticated/car-service/hooks/useVehicleMutations";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
-import type { Vehicle } from "@/routes/_authenticated/car-service/types";
+import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
+import { ReminderStatusBadge } from "@/routes/_authenticated/car-service/components/ReminderStatusBadge";
+import type { ServiceReminderWithStatus, Vehicle } from "@/routes/_authenticated/car-service/types";
 import { useTranslation } from "react-i18next";
 
-export const Route = createFileRoute("/_authenticated/car-service/vehicles")({
-  component: VehiclesScreen,
-});
+export const Route = createFileRoute("/_authenticated/car-service/vehicles")({ component: VehiclesScreen });
 
-type EditorState = {
-  mode: "create" | "edit";
-  vehicleId?: string;
+type VehicleFormState = {
   make: string;
   model: string;
   year: string;
@@ -28,58 +34,47 @@ type EditorState = {
   notes: string;
 };
 
+type IntervalFormState = {
+  job_name: string;
+  interval_km: string;
+  interval_months: string;
+  warning_km: string;
+  warning_days: string;
+  notes: string;
+};
+
+function emptyVehicleForm(): VehicleFormState {
+  return { make: "", model: "", year: "", plate: "", colour: "", notes: "" };
+}
+
 function VehiclesScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { vehicles, isLoading, error, refetch } = useVehicles();
-  const { visits } = useCarServiceData();
-  const [editor, setEditor] = useState<EditorState | null>(null);
+  const { visits } = useCarServiceData("all");
+  const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(null);
+  const [newVehicleForm, setNewVehicleForm] = useState<VehicleFormState | null>(null);
   const [busy, setBusy] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
 
   const visitCounts = useMemo(() => {
     const map = new Map<string, number>();
-    for (const visit of visits) {
-      map.set(visit.vehicle_id, (map.get(visit.vehicle_id) ?? 0) + 1);
-    }
+    for (const visit of visits) map.set(visit.vehicle_id, (map.get(visit.vehicle_id) ?? 0) + 1);
     return map;
   }, [visits]);
 
-  const startCreate = () => {
+  const onAddVehicle = () => {
+    setExpandedVehicleId("new");
+    setNewVehicleForm(emptyVehicleForm());
     setInlineError(null);
-    setEditor({
-      mode: "create",
-      make: "",
-      model: "",
-      year: "",
-      plate: "",
-      colour: "",
-      notes: "",
-    });
   };
 
-  const startEdit = (vehicle: Vehicle) => {
-    const meta = parseVehicleMeta(vehicle.name);
-    setInlineError(null);
-    setEditor({
-      mode: "edit",
-      vehicleId: vehicle.id,
-      make: vehicle.make ?? "",
-      model: vehicle.model ?? "",
-      year: vehicle.year ? String(vehicle.year) : "",
-      plate: vehicle.plate ?? "",
-      colour: meta.colour,
-      notes: meta.notes,
-    });
-  };
-
-  const save = async () => {
-    if (!user?.id || !editor) return;
-
-    const make = editor.make.trim();
-    const model = editor.model.trim();
-    const plate = editor.plate.trim();
-    const year = Number(editor.year);
+  const saveNewVehicle = async () => {
+    if (!user?.id || !newVehicleForm) return;
+    const make = newVehicleForm.make.trim();
+    const model = newVehicleForm.model.trim();
+    const plate = newVehicleForm.plate.trim();
+    const year = Number(newVehicleForm.year);
 
     if (!make || !model || !plate || !Number.isFinite(year)) {
       setInlineError(t("car.vehicleRequired"));
@@ -88,45 +83,13 @@ function VehiclesScreen() {
 
     setBusy(true);
     setInlineError(null);
-
     try {
-      if (editor.mode === "create") {
-        await createVehicle(supabase, user.id, {
-          make,
-          model,
-          year,
-          plate,
-          colour: editor.colour,
-          notes: editor.notes,
-        });
-      } else {
-        await updateVehicle(supabase, editor.vehicleId!, {
-          make,
-          model,
-          year,
-          plate,
-          colour: editor.colour,
-          notes: editor.notes,
-        });
-      }
-
+      await createVehicle(supabase, user.id, { ...newVehicleForm, make, model, plate, year });
       await refetch();
-      setEditor(null);
+      setExpandedVehicleId(null);
+      setNewVehicleForm(null);
     } catch (e) {
       setInlineError(e instanceof Error ? e.message : t("car.failedSaveVehicle"));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const remove = async (vehicleId: string) => {
-    setBusy(true);
-    setInlineError(null);
-    try {
-      await deleteVehicle(supabase, vehicleId);
-      await refetch();
-    } catch (e) {
-      setInlineError(e instanceof Error ? e.message : t("car.failedDeleteVehicle"));
     } finally {
       setBusy(false);
     }
@@ -135,179 +98,373 @@ function VehiclesScreen() {
   return (
     <div className="space-y-4 font-mono">
       <div className="border border-border bg-card px-4 py-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">
-          {t("car.vehiclesTitle")}
-        </div>
+        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">{t("car.vehiclesTitle")}</div>
       </div>
 
       <div className="border border-border bg-card p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            {t("car.registeredVehicles")}
-          </div>
-          <button
-            onClick={startCreate}
-            className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
-          >
-            {t("car.addVehicle")}
-          </button>
+        {error ? <div className="mb-3 text-[11px] text-destructive">{error}</div> : null}
+        {inlineError ? <div className="mb-3 text-[11px] text-destructive">{inlineError}</div> : null}
+
+        <div className="space-y-2">
+          {isLoading ? <div className="text-[11px] text-muted-foreground">{t("common.loading")}</div> : null}
+
+          {vehicles.map((vehicle) => (
+            <VehicleAccordionItem
+              key={vehicle.id}
+              vehicle={vehicle}
+              isExpanded={expandedVehicleId === vehicle.id}
+              visitCount={visitCounts.get(vehicle.id) ?? 0}
+              visits={visits}
+              busy={busy}
+              onExpand={() => setExpandedVehicleId((prev) => (prev === vehicle.id ? null : vehicle.id))}
+              onBusyChange={setBusy}
+              onError={setInlineError}
+              onMutated={refetch}
+            />
+          ))}
+
+          {expandedVehicleId === "new" && newVehicleForm ? (
+            <div className="border border-border p-3">
+              <div className="mb-2 text-[11px] uppercase tracking-[0.2em] text-primary">+ ADD VEHICLE</div>
+              <VehicleDetailsForm state={newVehicleForm} onChange={setNewVehicleForm} />
+              <div className="mt-3 flex gap-3">
+                <button onClick={() => void saveNewVehicle()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
+                <button onClick={() => { setExpandedVehicleId(null); setNewVehicleForm(null); }} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+              </div>
+            </div>
+          ) : null}
+
+          <button onClick={onAddVehicle} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">+ ADD VEHICLE</button>
         </div>
-
-        {error ? <div className="mb-3 text-destructive text-[11px]">{error}</div> : null}
-        {inlineError ? (
-          <div className="mb-3 text-destructive text-[11px]">{inlineError}</div>
-        ) : null}
-
-        <div className="overflow-x-auto border border-border">
-          <table className="w-full text-[11px]">
-            <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              <tr>
-                <th className="px-3 py-2 text-left">{t("car.make")}</th>
-                <th className="px-3 py-2 text-left">{t("car.model")}</th>
-                <th className="px-3 py-2 text-right">{t("car.year")}</th>
-                <th className="px-3 py-2 text-left">{t("car.licensePlate")}</th>
-                <th className="px-3 py-2 text-right">{t("car.visits")}</th>
-                <th className="px-3 py-2 text-right">{t("car.actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {isLoading ? (
-                <tr className="border-t border-border/60">
-                  <td colSpan={6} className="px-3 py-3 text-muted-foreground">
-                    {t("common.loading")}
-                  </td>
-                </tr>
-              ) : vehicles.length === 0 ? (
-                <tr className="border-t border-border/60">
-                  <td
-                    colSpan={6}
-                    className="px-3 py-6 text-center text-muted-foreground uppercase tracking-[0.2em]"
-                  >
-                    {t("car.noVehiclesFound")}
-                  </td>
-                </tr>
-              ) : (
-                vehicles.map((vehicle) => (
-                  <tr key={vehicle.id} className="border-t border-border/60">
-                    <td className="px-3 py-2">{vehicle.make ?? "-"}</td>
-                    <td className="px-3 py-2">{vehicle.model ?? "-"}</td>
-                    <td className="px-3 py-2 text-right">{vehicle.year ?? "-"}</td>
-                    <td className="px-3 py-2">{vehicle.plate ?? "-"}</td>
-                    <td className="px-3 py-2 text-right">{visitCounts.get(vehicle.id) ?? 0}</td>
-                    <td className="px-3 py-2 text-right whitespace-nowrap">
-                      <button
-                        onClick={() => startEdit(vehicle)}
-                        className="mr-3 uppercase text-primary hover:underline"
-                      >
-                        {t("common.edit")}
-                      </button>
-                      <button
-                        onClick={() => void remove(vehicle.id)}
-                        disabled={busy}
-                        className="uppercase text-destructive hover:underline disabled:opacity-50"
-                      >
-                        {t("common.deleteShort")}
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {editor ? (
-          <div className="border border-border bg-card p-4 mt-2">
-            <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {editor.mode === "create" ? t("car.newVehicle") : t("car.editVehicle")}
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <Field
-                label={t("car.make")}
-                value={editor.make}
-                onChange={(value) => setEditor((prev) => (prev ? { ...prev, make: value } : prev))}
-              />
-              <Field
-                label={t("car.model")}
-                value={editor.model}
-                onChange={(value) => setEditor((prev) => (prev ? { ...prev, model: value } : prev))}
-              />
-              <Field
-                label={t("car.year")}
-                type="number"
-                value={editor.year}
-                onChange={(value) => setEditor((prev) => (prev ? { ...prev, year: value } : prev))}
-              />
-              <Field
-                label={t("car.licensePlate")}
-                value={editor.plate}
-                onChange={(value) => setEditor((prev) => (prev ? { ...prev, plate: value } : prev))}
-              />
-              <Field
-                label={t("car.colour")}
-                value={editor.colour}
-                onChange={(value) =>
-                  setEditor((prev) => (prev ? { ...prev, colour: value } : prev))
-                }
-              />
-              <label className="block md:col-span-2">
-                <div className="mb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {t("portfolio.notes")}
-                </div>
-                <textarea
-                  value={editor.notes}
-                  onChange={(e) =>
-                    setEditor((prev) => (prev ? { ...prev, notes: e.target.value } : prev))
-                  }
-                  rows={2}
-                  className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
-                />
-              </label>
-            </div>
-            <div className="mt-3 flex gap-3">
-              <button
-                onClick={() => void save()}
-                disabled={busy}
-                className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground disabled:opacity-60"
-              >
-                {busy ? t("car.savingVehicle") : t("car.saveVehicle")}
-              </button>
-              <button
-                onClick={() => setEditor(null)}
-                className="px-4 py-2 text-[11px] uppercase tracking-[0.2em] border border-border"
-              >
-                {t("common.cancel")}
-              </button>
-            </div>
-          </div>
-        ) : null}
       </div>
     </div>
   );
 }
 
-function Field({
-  label,
-  value,
-  onChange,
-  type = "text",
+function VehicleAccordionItem({
+  vehicle,
+  visits,
+  visitCount,
+  isExpanded,
+  busy,
+  onExpand,
+  onBusyChange,
+  onError,
+  onMutated,
 }: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
+  vehicle: Vehicle;
+  visits: ReturnType<typeof useCarServiceData>["visits"];
+  visitCount: number;
+  isExpanded: boolean;
+  busy: boolean;
+  onExpand: () => void;
+  onBusyChange: (busy: boolean) => void;
+  onError: (value: string | null) => void;
+  onMutated: () => Promise<void>;
 }) {
+  const { t } = useTranslation();
+  const meta = parseVehicleMeta(vehicle.name);
+  const [isEditingDetails, setIsEditingDetails] = useState(false);
+  const [details, setDetails] = useState<VehicleFormState>({
+    make: vehicle.make ?? "",
+    model: vehicle.model ?? "",
+    year: vehicle.year ? String(vehicle.year) : "",
+    plate: vehicle.plate ?? "",
+    colour: meta.colour,
+    notes: meta.notes,
+  });
+  const [intervalForm, setIntervalForm] = useState<IntervalFormState | null>(null);
+  const [editingIntervalId, setEditingIntervalId] = useState<string | null>(null);
+  const [manualForm, setManualForm] = useState<{ title: string; due_date: string; notes: string } | null>(null);
+
+  const { serviceReminders, manualReminders, error, refetch } = useReminders(vehicle.id);
+  const vehicleVisits = useMemo(() => visits.filter((v) => v.vehicle_id === vehicle.id), [visits, vehicle.id]);
+  const jobNames = useMemo(
+    () => Array.from(new Set(vehicleVisits.flatMap((visit) => visit.jobs.map((job) => job.job_name_snapshot.trim()).filter(Boolean)))).sort((a, b) => a.localeCompare(b)),
+    [vehicleVisits],
+  );
+
+  const rowTitle = `${(vehicle.make ?? "-").toUpperCase()} ${(vehicle.model ?? "-").toUpperCase()} · ${vehicle.year ?? "-"} · ${(vehicle.plate ?? "-").toUpperCase()}`;
+
+  const saveDetails = async () => {
+    const make = details.make.trim();
+    const model = details.model.trim();
+    const plate = details.plate.trim();
+    const year = Number(details.year);
+    if (!make || !model || !plate || !Number.isFinite(year)) {
+      onError("MAKE, MODEL, YEAR, AND LICENSE PLATE ARE REQUIRED.");
+      return;
+    }
+
+    onBusyChange(true);
+    onError(null);
+    try {
+      await updateVehicle(supabase, vehicle.id, { ...details, make, model, plate, year });
+      await onMutated();
+      setIsEditingDetails(false);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "FAILED TO SAVE VEHICLE.");
+    } finally {
+      onBusyChange(false);
+    }
+  };
+
+  const removeVehicle = async () => {
+    if (visitCount > 0) {
+      onError(t("car.cannotDeleteLinked", { count: visitCount }));
+      return;
+    }
+    onBusyChange(true);
+    onError(null);
+    try {
+      await deleteVehicle(supabase, vehicle.id);
+      await onMutated();
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "FAILED TO DELETE VEHICLE.");
+    } finally {
+      onBusyChange(false);
+    }
+  };
+
+  const saveInterval = async () => {
+    if (!intervalForm) return;
+    if (!intervalForm.job_name.trim()) return onError(t("car.jobNameRequired"));
+    if (!intervalForm.interval_km && !intervalForm.interval_months) {
+      return onError(t("car.intervalRequired"));
+    }
+
+    const payload = {
+      vehicle_id: vehicle.id,
+      job_name: intervalForm.job_name.trim(),
+      interval_km: intervalForm.interval_km ? Number(intervalForm.interval_km) : null,
+      interval_months: intervalForm.interval_months ? Number(intervalForm.interval_months) : null,
+      warning_km: intervalForm.warning_km ? Number(intervalForm.warning_km) : 500,
+      warning_days: intervalForm.warning_days ? Number(intervalForm.warning_days) : 30,
+      notes: intervalForm.notes.trim() || null,
+      is_active: true,
+    };
+
+    onBusyChange(true);
+    onError(null);
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user?.id) throw new Error("Authentication required.");
+
+      if (editingIntervalId) await updateServiceReminder(supabase, editingIntervalId, payload);
+      else await createServiceReminder(supabase, data.user.id, payload);
+
+      await refetch();
+      setIntervalForm(null);
+      setEditingIntervalId(null);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : t("car.failedSaveReminder"));
+    } finally {
+      onBusyChange(false);
+    }
+  };
+
+  const saveManualReminder = async () => {
+    if (!manualForm?.title.trim()) return onError(t("car.titleRequired"));
+    onBusyChange(true);
+    onError(null);
+    try {
+      const { data } = await supabase.auth.getUser();
+      if (!data.user?.id) throw new Error("Authentication required.");
+      await createManualReminder(supabase, data.user.id, {
+        vehicle_id: vehicle.id,
+        title: manualForm.title.trim(),
+        due_date: manualForm.due_date || null,
+        notes: manualForm.notes.trim() || null,
+      });
+      await refetch();
+      setManualForm(null);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : t("car.failedSaveReminder"));
+    } finally {
+      onBusyChange(false);
+    }
+  };
+
   return (
-    <label className="block">
-      <div className="mb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        {label}
+    <div className="border border-border">
+      <div className="flex cursor-pointer items-center justify-between px-3 py-2" onClick={onExpand}>
+        <button className="mr-2 text-muted-foreground">{isExpanded ? "\u25BC" : "\u25B6"}</button>
+        <div className="flex-1 text-[11px] uppercase tracking-[0.1em]">{rowTitle}</div>
+        <div className="mr-3 text-[11px] text-muted-foreground">{t("car.visitsCount", { count: visitCount })}</div>
+        <div className="flex gap-2 text-[11px]">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              void removeVehicle();
+            }}
+            disabled={busy}
+            className="uppercase text-destructive hover:underline disabled:opacity-50"
+          >
+            [DELETE]
+          </button>
+        </div>
       </div>
-      <input
-        type={type}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
-      />
+
+      {isExpanded ? (
+        <div className="ml-2 border-l-2 border-primary pl-4 pb-3">
+          {error ? <div className="mb-2 text-[11px] text-destructive">{error}</div> : null}
+
+          <SectionHeader title={t("car.details")} />
+          {isEditingDetails ? (
+            <div className="mt-2 border border-border bg-card p-3">
+              <VehicleDetailsForm state={details} onChange={setDetails} />
+              <div className="mt-3 flex gap-3">
+                <button onClick={() => void saveDetails()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
+                <button onClick={() => setIsEditingDetails(false)} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-[11px] text-foreground">
+              <div>{t("car.colour")}: {meta.colour || "-"}</div>
+              <div>{t("portfolio.notes")}: {meta.notes || "-"}</div>
+              <button onClick={() => setIsEditingDetails(true)} className="mt-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[{t("car.editDetails")}]</button>
+            </div>
+          )}
+
+          <SectionHeader title={t("car.serviceIntervals")} />
+          <div className="overflow-x-auto border border-border">
+            <table className="w-full text-[11px]">
+              <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                <tr>
+                  <th className="px-2 py-1 text-left">{t("car.intervalStatus")}</th><th className="px-2 py-1 text-left">{t("car.intervalJob")}</th><th className="px-2 py-1 text-left">{t("car.intervalRule")}</th><th className="px-2 py-1 text-left">{t("car.lastDone")}</th><th className="px-2 py-1 text-left">{t("car.dueAt")}</th><th className="px-2 py-1 text-left">{t("car.remaining")}</th><th className="px-2 py-1 text-right">{t("car.actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {serviceReminders.length === 0 ? (
+                  <tr><td className="px-2 py-2 text-muted-foreground uppercase tracking-[0.2em]" colSpan={7}>{t("car.noIntervalsConfigured")}</td></tr>
+                ) : serviceReminders.map((reminder) => (
+                  <ServiceIntervalRow key={reminder.id} reminder={reminder} onEdit={() => {
+                    setEditingIntervalId(reminder.id);
+                    setIntervalForm({
+                      job_name: reminder.job_name,
+                      interval_km: reminder.interval_km ? String(reminder.interval_km) : "",
+                      interval_months: reminder.interval_months ? String(reminder.interval_months) : "",
+                      warning_km: reminder.warning_km ? String(reminder.warning_km) : "500",
+                      warning_days: reminder.warning_days ? String(reminder.warning_days) : "30",
+                      notes: reminder.notes ?? "",
+                    });
+                  }} onDelete={async () => { await deleteServiceReminder(supabase, reminder.id); await refetch(); }} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {intervalForm ? (
+            <div className="mt-2 border border-border bg-card p-3">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Job name
+                  <select
+                    value={intervalForm.job_name}
+                    onChange={(e) =>
+                      setIntervalForm((prev) => (prev ? { ...prev, job_name: e.target.value } : prev))
+                    }
+                    className="mt-1 w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+                  >
+                    <option value="">Select job</option>
+                    {jobNames.map((name) => (
+                      <option key={name} value={name}>
+                        {name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <SmallField label="Interval KM" value={intervalForm.interval_km} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, interval_km: value } : prev))} />
+                <SmallField label="Interval Months" value={intervalForm.interval_months} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, interval_months: value } : prev))} />
+                <SmallField label="Warning KM" value={intervalForm.warning_km} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, warning_km: value } : prev))} />
+                <SmallField label="Warning Days" value={intervalForm.warning_days} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, warning_days: value } : prev))} />
+                <label className="md:col-span-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Notes
+                  <input value={intervalForm.notes} onChange={(e) => setIntervalForm((prev) => (prev ? { ...prev, notes: e.target.value } : prev))} className="mt-1 w-full border border-border bg-input px-2 py-1" />
+                </label>
+              </div>
+              <div className="mt-3 flex gap-3">
+                <button onClick={() => void saveInterval()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
+                <button onClick={() => { setIntervalForm(null); setEditingIntervalId(null); }} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setIntervalForm({ job_name: "", interval_km: "", interval_months: "", warning_km: "500", warning_days: "30", notes: "" })} className="mt-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[{t("car.addInterval")}]</button>
+          )}
+
+          <SectionHeader title={t("car.manualReminders")} />
+          <div className="space-y-1 text-[11px]">
+            {manualReminders.length === 0 ? <div className="uppercase tracking-[0.2em] text-muted-foreground">{t("car.noReminders")}</div> : manualReminders.map((reminder) => {
+              const isPastDue = !reminder.is_done && !!reminder.due_date && new Date(reminder.due_date) < new Date();
+              return (
+                <div key={reminder.id} className={`flex items-center justify-between border-b border-border pb-1 ${reminder.is_done ? "line-through opacity-50" : ""}`}>
+                  <button onClick={() => void toggleManualReminderDone(supabase, reminder.id, !reminder.is_done).then(refetch)}>[{reminder.is_done ? "✓" : " "}]</button>
+                  <span className={`flex-1 px-2 ${isPastDue ? "text-destructive" : ""}`}>{reminder.title} {reminder.due_date ? `· ${reminder.due_date}` : ""} {reminder.notes ? "· ?" : ""}</span>
+                  <button onClick={() => void deleteManualReminder(supabase, reminder.id).then(refetch)} className="text-destructive">[×]</button>
+                </div>
+              );
+            })}
+          </div>
+          {manualForm ? (
+            <div className="mt-2 border border-border bg-card p-3">
+              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+                <SmallField label="Title" value={manualForm.title} onChange={(value) => setManualForm((prev) => (prev ? { ...prev, title: value } : prev))} />
+                <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Due Date
+                  <input type="date" value={manualForm.due_date} onChange={(e) => setManualForm((prev) => (prev ? { ...prev, due_date: e.target.value } : prev))} className="mt-1 w-full border border-border bg-input px-2 py-1" />
+                </label>
+                <SmallField label="Notes" value={manualForm.notes} onChange={(value) => setManualForm((prev) => (prev ? { ...prev, notes: value } : prev))} />
+              </div>
+              <div className="mt-3 flex gap-3">
+                <button onClick={() => void saveManualReminder()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
+                <button onClick={() => setManualForm(null)} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+              </div>
+            </div>
+          ) : (
+            <button onClick={() => setManualForm({ title: "", due_date: "", notes: "" })} className="mt-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[{t("car.addReminder")}]</button>
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function ServiceIntervalRow({ reminder, onEdit, onDelete }: { reminder: ServiceReminderWithStatus; onEdit: () => void; onDelete: () => Promise<void> }) {
+  return (
+    <tr className="border-t border-border/60">
+      <td className="px-2 py-1"><ReminderStatusBadge status={reminder.status} /></td>
+      <td className="px-2 py-1">{reminder.job_name}</td>
+      <td className="px-2 py-1">{reminder.interval_km ? `${reminder.interval_km}km` : "-"} {reminder.interval_months ? `/${reminder.interval_months}mo` : ""}</td>
+      <td className="px-2 py-1">{reminder.lastDoneDate ?? "--"} {reminder.lastDoneKm != null ? `· ${reminder.lastDoneKm}km` : ""}</td>
+      <td className="px-2 py-1">{reminder.interval_km ? `${reminder.interval_km}km` : "--"} {reminder.interval_months ? `/${reminder.interval_months}mo` : ""}</td>
+      <td className="px-2 py-1">{reminder.kmRemaining != null ? `${reminder.kmRemaining}km` : "--"} {reminder.daysRemaining != null ? `· ${reminder.daysRemaining}d` : ""}</td>
+      <td className="px-2 py-1 text-right"><button onClick={onEdit} className="mr-2 text-primary">[EDIT]</button><button onClick={() => void onDelete()} className="text-destructive">[×]</button></td>
+    </tr>
+  );
+}
+
+function SectionHeader({ title }: { title: string }) {
+  return <div className="mt-4 mb-3 border-b border-border pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{title}</div>;
+}
+
+function SmallField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
+  return (
+    <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+      {label}
+      <input value={value} onChange={(e) => onChange(e.target.value)} className="mt-1 w-full border border-border bg-input px-2 py-1" />
     </label>
   );
 }
+
+function VehicleDetailsForm({ state, onChange }: { state: VehicleFormState; onChange: (next: VehicleFormState) => void }) {
+  return (
+    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <SmallField label="Make" value={state.make} onChange={(value) => onChange({ ...state, make: value })} />
+      <SmallField label="Model" value={state.model} onChange={(value) => onChange({ ...state, model: value })} />
+      <SmallField label="Year" value={state.year} onChange={(value) => onChange({ ...state, year: value })} />
+      <SmallField label="License Plate" value={state.plate} onChange={(value) => onChange({ ...state, plate: value })} />
+      <SmallField label="Colour" value={state.colour} onChange={(value) => onChange({ ...state, colour: value })} />
+      <SmallField label="Notes" value={state.notes} onChange={(value) => onChange({ ...state, notes: value })} />
+    </div>
+  );
+}
+
+
+
+

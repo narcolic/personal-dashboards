@@ -44,14 +44,16 @@ function mergeRowsForAllPortfolios(rows: RowWithNative[]) {
       unrealized,
       unrealizedPct: costBasis ? (unrealized / costBasis) * 100 : 0,
       tx_count: txCount,
-      first_date: items.reduce(
-        (min, item) => (item.first_date < min ? item.first_date : min),
-        first.first_date,
-      ),
-      last_date: items.reduce(
-        (max, item) => (item.last_date > max ? item.last_date : max),
-        first.last_date,
-      ),
+      first_date: items.reduce((min, item) => {
+        if (!item.first_date) return min;
+        if (!min) return item.first_date;
+        return item.first_date < min ? item.first_date : min;
+      }, first.first_date),
+      last_date: items.reduce((max, item) => {
+        if (!item.last_date) return max;
+        if (!max) return item.last_date;
+        return item.last_date > max ? item.last_date : max;
+      }, first.last_date),
     };
   });
 }
