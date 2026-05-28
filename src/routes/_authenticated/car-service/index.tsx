@@ -127,8 +127,9 @@ function CarServiceOverview() {
               </div>
             ) : (
               recentVisits.map((visit) => (
-                <div
+                <Link
                   key={visit.id}
+                  to={`/car-service/history?visitId=${visit.id}`}
                   className="flex items-center justify-between border-b border-border pb-2 last:border-b-0 last:pb-0"
                 >
                   <span>
@@ -137,7 +138,7 @@ function CarServiceOverview() {
                   <span className="text-right">
                     {formatCurrency(Number(visit.total_amount))} | {visit.jobs.length} {t("car.jobs")}
                   </span>
-                </div>
+                </Link>
               ))
             )}
           </div>
@@ -155,9 +156,10 @@ function CarServiceOverview() {
                 const vehicle = vehicleById.get(item.vehicleId);
                 const vehicleName = `${vehicle?.make ?? "-"} ${vehicle?.model ?? "-"}`.trim().toUpperCase();
                 return (
-                  <div
+                  <Link
                     key={`${item.type}-${idx}-${item.title}`}
-                    className="flex items-center justify-between border-b border-border pb-2 last:border-b-0 last:pb-0"
+                    to={`/car-service/vehicles?vehicleId=${item.vehicleId}`}
+                    className="flex items-center justify-between border-b border-border pb-2 last:border-b-0 last:pb-0 hover:text-foreground"
                   >
                     <div className="flex items-center gap-2">
                       <ReminderStatusBadge status={item.status} />
@@ -165,7 +167,7 @@ function CarServiceOverview() {
                       <span>{item.title}</span>
                     </div>
                     <span>{item.dueInfo}</span>
-                  </div>
+                  </Link>
                 );
               })
             )}

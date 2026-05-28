@@ -227,6 +227,8 @@
     "noServiceRecordsFound": "NO SERVICE RECORDS FOUND",
     "collapseDetails": "Collapse service details",
     "expandDetails": "Expand service details",
+    "visitHasNote": "Visit has note",
+    "noteLabel": "NOTE",
     "noJobDetails": "no job details",
     "job": "Job",
     "category": "Category",

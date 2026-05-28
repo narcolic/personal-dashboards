@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import type { ServiceVisitWithJobs } from "@/routes/_authenticated/car-service/types";
 import { formatCurrency, formatDate, formatKm } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
@@ -8,10 +8,40 @@ import { useTranslation } from "react-i18next";
 type JobsSortKey = "job" | "category" | "qty" | "unit" | "subtotal" | "total";
 type JobsSortDirection = "asc" | "desc";
 
-export function ServiceHistoryTable({ visits = [], isLoading = false }: { visits?: ServiceVisitWithJobs[]; isLoading?: boolean }) {
+function NoteIcon() {
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
+      <path
+        d="M2 1h8v10H2V1zm1 1v8h6V2H3zm1 2h4v1H4V4zm0 2h4v1H4V6z"
+        className="fill-current"
+      />
+    </svg>
+  );
+}
+
+export function ServiceHistoryTable({
+  visits = [],
+  isLoading = false,
+  initialExpandedVisitId,
+}: {
+  visits?: ServiceVisitWithJobs[];
+  isLoading?: boolean;
+  initialExpandedVisitId?: string | null;
+}) {
   const { t } = useTranslation();
   const [expandedVisitIds, setExpandedVisitIds] = useState<Set<string>>(new Set());
   const [jobsSortByVisit, setJobsSortByVisit] = useState<Record<string, { key: JobsSortKey; dir: JobsSortDirection }>>({});
+
+  useEffect(() => {
+    if (!initialExpandedVisitId) return;
+    if (!visits.some((visit) => visit.id === initialExpandedVisitId)) return;
+    setExpandedVisitIds((prev) => {
+      if (prev.has(initialExpandedVisitId)) return prev;
+      const next = new Set(prev);
+      next.add(initialExpandedVisitId);
+      return next;
+    });
+  }, [initialExpandedVisitId, visits]);
 
   const toggleExpanded = (visitId: string) => {
     setExpandedVisitIds((prev) => {
@@ -79,6 +109,15 @@ export function ServiceHistoryTable({ visits = [], isLoading = false }: { visits
                     <button type="button" onClick={(event) => { event.stopPropagation(); toggleExpanded(visit.id); }} className="mr-2 text-muted-foreground hover:text-foreground" aria-expanded={expanded} aria-label={expanded ? t("car.collapseDetails") : t("car.expandDetails")}>
                       {expanded ? "\u25BC" : "\u25B6"}
                     </button>
+                    {visit.notes?.trim() ? (
+                      <span
+                        className="mr-2 inline-flex align-middle text-muted-foreground hover:text-foreground"
+                        aria-label={t("car.visitHasNote")}
+                        title={t("car.visitHasNote")}
+                      >
+                        <NoteIcon />
+                      </span>
+                    ) : null}
                     {formatDate(visit.service_date)}
                   </td>
                   <td className="px-3 py-2 text-right">{formatKm(visit.odometer_km)}</td>
@@ -95,6 +134,12 @@ export function ServiceHistoryTable({ visits = [], isLoading = false }: { visits
                 {expanded ? (
                   <tr className="border-t border-border/40 bg-secondary/20">
                     <td colSpan={7} className="px-3 py-3">
+                      {visit.notes?.trim() ? (
+                        <div className="mb-3 border-b border-border/40 pb-2 text-[10px] uppercase tracking-[0.16em]">
+                          <span className="text-muted-foreground">{t("car.noteLabel")}:</span>{" "}
+                          <span className="text-foreground normal-case tracking-normal">{visit.notes.trim()}</span>
+                        </div>
+                      ) : null}
                       {visit.jobs.length === 0 ? (
                         <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t("car.noJobDetails")}</div>
                       ) : (

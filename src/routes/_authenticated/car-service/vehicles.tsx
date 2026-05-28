@@ -1,5 +1,5 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
@@ -56,6 +56,16 @@ function VehiclesScreen() {
   const [newVehicleForm, setNewVehicleForm] = useState<VehicleFormState | null>(null);
   const [busy, setBusy] = useState(false);
   const [inlineError, setInlineError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const vehicleId = params.get("vehicleId");
+    if (!vehicleId) return;
+    if (vehicles.some((vehicle) => vehicle.id === vehicleId)) {
+      setExpandedVehicleId(vehicleId);
+      setNewVehicleForm(null);
+    }
+  }, [vehicles]);
 
   const visitCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -464,6 +474,8 @@ function VehicleDetailsForm({ state, onChange }: { state: VehicleFormState; onCh
     </div>
   );
 }
+
+
 
 
 
