@@ -42,14 +42,17 @@ function CarServiceOverview() {
       vehicleId: item.vehicle_id,
       title: item.job_name,
       dueInfo:
-        item.kmRemaining != null
-          ? t("car.kmRemaining", { count: item.kmRemaining })
-          : item.daysRemaining != null
-            ? t("car.daysRemaining", { count: item.daysRemaining })
+        item.daysRemaining != null
+          ? t("car.daysRemaining", { count: item.daysRemaining })
+          : item.kmRemaining != null
+            ? t("car.kmRemaining", { count: item.kmRemaining })
             : "--",
       urgency:
         item.status === "OVERDUE" ? 0 : item.status === "DUE SOON" ? 1 : item.status === "OK" ? 3 : 4,
-      dateSort: Number.MAX_SAFE_INTEGER,
+      dateSort:
+        item.daysRemaining != null
+          ? Date.now() + item.daysRemaining * 24 * 60 * 60 * 1000
+          : Number.MAX_SAFE_INTEGER,
     })),
     ...manualReminders.map((item) => ({
       type: "manual" as const,
@@ -61,7 +64,7 @@ function CarServiceOverview() {
       dateSort: item.due_date ? new Date(item.due_date).getTime() : Number.MAX_SAFE_INTEGER,
     })),
   ]
-    .sort((a, b) => a.urgency - b.urgency || a.dateSort - b.dateSort)
+    .sort((a, b) => a.dateSort - b.dateSort || a.urgency - b.urgency)
     .slice(0, 5);
 
   return (
