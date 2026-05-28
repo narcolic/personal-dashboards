@@ -12,6 +12,7 @@ export function useCarServiceData(vehicleId: string = "all") {
   const userId = user?.id ?? null;
   const [visits, setVisits] = useState<ServiceVisitWithJobs[]>([]);
   const [jobSuggestions, setJobSuggestions] = useState<string[]>([]);
+  const [categorySuggestions, setCategorySuggestions] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -19,6 +20,7 @@ export function useCarServiceData(vehicleId: string = "all") {
     if (!userId) {
       setVisits([]);
       setJobSuggestions([]);
+      setCategorySuggestions([]);
       setError(null);
       setIsLoading(false);
       return;
@@ -42,6 +44,7 @@ export function useCarServiceData(vehicleId: string = "all") {
     if (visitsError) {
       setVisits([]);
       setJobSuggestions([]);
+      setCategorySuggestions([]);
       setError(visitsError.message);
       setIsLoading(false);
       return;
@@ -52,6 +55,7 @@ export function useCarServiceData(vehicleId: string = "all") {
     if (baseVisits.length === 0) {
       setVisits([]);
       setJobSuggestions([]);
+      setCategorySuggestions([]);
       setIsLoading(false);
       return;
     }
@@ -67,6 +71,7 @@ export function useCarServiceData(vehicleId: string = "all") {
     if (jobsError) {
       setVisits([]);
       setJobSuggestions([]);
+      setCategorySuggestions([]);
       setError(jobsError.message);
       setIsLoading(false);
       return;
@@ -84,9 +89,13 @@ export function useCarServiceData(vehicleId: string = "all") {
     const names = Array.from(
       new Set(jobs.map((job) => job.job_name_snapshot.trim()).filter(Boolean)),
     ).sort((a, b) => a.localeCompare(b));
+    const categories = Array.from(
+      new Set(jobs.map((job) => (job.category_snapshot ?? "").trim().toUpperCase()).filter(Boolean)),
+    ).sort((a, b) => a.localeCompare(b));
 
     setVisits(baseVisits.map((visit) => ({ ...visit, jobs: jobsByVisit.get(visit.id) ?? [] })));
     setJobSuggestions(names);
+    setCategorySuggestions(categories);
     setIsLoading(false);
   }, [userId, vehicleId]);
 
@@ -98,5 +107,5 @@ export function useCarServiceData(vehicleId: string = "all") {
     return () => clearTimeout(id);
   }, [refetch]);
 
-  return { visits, jobSuggestions, isLoading, error, refetch };
+  return { visits, jobSuggestions, categorySuggestions, isLoading, error, refetch };
 }

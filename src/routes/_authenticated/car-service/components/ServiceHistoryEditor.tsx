@@ -8,7 +8,7 @@ import type {
 import { formatCurrency } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 
-const CATEGORY_SUGGESTIONS = [
+const BASE_CATEGORY_SUGGESTIONS = [
   "AC",
   "ΕΛΑΣΤΙΚΑ",
   "ΕΛΕΓΧΟΣ",
@@ -60,6 +60,7 @@ export function ServiceHistoryEditor({
   vehicles,
   defaultVehicleId,
   jobSuggestions,
+  categorySuggestions = [],
   submitLabel,
   saveError,
   isSaving,
@@ -71,6 +72,7 @@ export function ServiceHistoryEditor({
   vehicles: Vehicle[];
   defaultVehicleId?: string;
   jobSuggestions: string[];
+  categorySuggestions?: string[];
   submitLabel: string;
   saveError: string | null;
   isSaving: boolean;
@@ -109,6 +111,17 @@ export function ServiceHistoryEditor({
   const [jobMenuOpenIndex, setJobMenuOpenIndex] = useState<number | null>(null);
   const [categoryMenuOpenIndex, setCategoryMenuOpenIndex] = useState<number | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const mergedCategorySuggestions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [...BASE_CATEGORY_SUGGESTIONS, ...categorySuggestions]
+            .map((item) => item.trim().toUpperCase())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b)),
+    [categorySuggestions],
+  );
 
   useEffect(() => {
     if (initialVisit) return;
@@ -310,7 +323,7 @@ export function ServiceHistoryEditor({
           const exactMatch = options.some((option) => option.toLowerCase() === query);
 
           const categoryQuery = line.category.trim().toUpperCase();
-          const categoryOptions = CATEGORY_SUGGESTIONS.filter((item) =>
+          const categoryOptions = mergedCategorySuggestions.filter((item) =>
             item.includes(categoryQuery),
           );
           const categoryExactMatch = categoryOptions.some((option) => option === categoryQuery);

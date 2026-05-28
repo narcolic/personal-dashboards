@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/car-service/$visitId")({
 function CarServiceEditVisit() {
   const { visitId } = Route.useParams();
   const navigate = useNavigate();
-  const { jobSuggestions } = useCarServiceData();
+  const { jobSuggestions, categorySuggestions } = useCarServiceData();
   const { vehicles } = useVehicles();
 
   const [visit, setVisit] = useState<ServiceVisitWithJobs | null>(null);
@@ -144,6 +144,7 @@ function CarServiceEditVisit() {
           initialVisit={visit}
           vehicles={vehicles}
           jobSuggestions={jobSuggestions}
+          categorySuggestions={categorySuggestions}
           submitLabel="UPDATE VISIT"
           saveError={error}
           isSaving={isSaving}

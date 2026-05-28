@@ -17,7 +17,7 @@ function CarServiceAddVisit() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { jobSuggestions } = useCarServiceData();
+  const { jobSuggestions, categorySuggestions } = useCarServiceData();
   const { vehicles } = useVehicles();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,6 +73,7 @@ function CarServiceAddVisit() {
         vehicles={vehicles}
         defaultVehicleId={vehicles.length === 1 ? vehicles[0].id : undefined}
         jobSuggestions={jobSuggestions}
+        categorySuggestions={categorySuggestions}
         submitLabel={t("car.saveVisit")}
         saveError={error}
         isSaving={isSaving}
