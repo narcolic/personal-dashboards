@@ -7,25 +7,37 @@ import { useTranslation } from "react-i18next";
 export function PnLBucket({
   title,
   tone,
-  total,
+  totalsByCurrency,
+  headerLineCount,
   rows,
 }: {
   title: string;
   tone: "bull" | "bear";
-  total: number;
+  totalsByCurrency: Record<string, number>;
+  headerLineCount?: number;
   rows: ReturnType<typeof enrich>;
 }) {
   const { t } = useTranslation();
+  const totalEntries = Object.entries(totalsByCurrency).sort((a, b) => a[0].localeCompare(b[0]));
+  const targetLines = Math.max(headerLineCount ?? totalEntries.length, totalEntries.length, 1);
+  const fillerCount = Math.max(0, targetLines - totalEntries.length);
   return (
     <TerminalCard
       title={`${title} (${rows.length})`}
       bodyClassName="p-0"
       actions={
-        <span
-          className={`text-sm font-bold tabular-nums ${tone === "bull" ? "text-bull" : "text-bear"}`}
-        >
-          {fmtCurrency(total)}
-        </span>
+        <div className={`text-right tabular-nums ${tone === "bull" ? "text-bull" : "text-bear"}`}>
+          {totalEntries.map(([currency, value]) => (
+            <div key={currency} className="text-[11px] font-bold">
+              {fmtCurrency(value, currency)}
+            </div>
+          ))}
+          {Array.from({ length: fillerCount }).map((_, index) => (
+            <div key={`filler-${index}`} className="text-[11px] font-bold invisible">
+              0
+            </div>
+          ))}
+        </div>
       }
     >
       <div className={`h-1 ${tone === "bull" ? "bg-bull/40" : "bg-bear/40"}`} />

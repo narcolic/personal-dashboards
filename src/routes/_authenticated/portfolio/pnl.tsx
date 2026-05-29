@@ -12,7 +12,7 @@ export const Route = createFileRoute("/_authenticated/portfolio/pnl")({
 function PnL() {
   const { t } = useTranslation();
   const { transactions } = usePortfolioData({ includePortfolios: false });
-  const { tickers, quotesQ, enrichedRows } = useQuotes(transactions);
+  const { enrichedRows } = useQuotes(transactions);
 
   const rows = useMemo(
     () => enrichedRows.slice().sort((a, b) => b.unrealized - a.unrealized),
@@ -21,25 +21,42 @@ function PnL() {
 
   const gainers = rows.filter((r) => r.unrealized >= 0);
   const losers = rows.filter((r) => r.unrealized < 0).reverse();
-  const totalGain = gainers.reduce((s, r) => s + r.unrealized, 0);
-  const totalLoss = losers.reduce((s, r) => s + r.unrealized, 0);
+
+  const totalsByCurrency = (bucketRows: typeof rows) =>
+    bucketRows.reduce<Record<string, number>>((acc, row) => {
+      const ccy = (row.currency || row.quote?.currency || "USD").toUpperCase();
+      acc[ccy] = (acc[ccy] ?? 0) + row.unrealized;
+      return acc;
+    }, {});
+
+  const gainTotals = totalsByCurrency(gainers);
+  const lossTotals = totalsByCurrency(losers);
+  const maxHeaderLines = Math.max(
+    Object.keys(gainTotals).length || 1,
+    Object.keys(lossTotals).length || 1,
+  );
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="text-xl uppercase tracking-[0.2em]">{t("portfolio.gainLoss")}</h1>
-        <button
-          className="border border-border bg-card px-4 text-[11px] uppercase tracking-[0.2em] hover:text-primary disabled:opacity-50"
-          disabled={tickers.length === 0}
-          onClick={() => quotesQ.refetch()}
-        >
-          {t("portfolio.sync")}
-        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <PnLBucket title={t("portfolio.gainers")} tone="bull" total={totalGain} rows={gainers} />
-        <PnLBucket title={t("portfolio.losers")} tone="bear" total={totalLoss} rows={losers} />
+        <PnLBucket
+          title={t("portfolio.gainers")}
+          tone="bull"
+          totalsByCurrency={gainTotals}
+          headerLineCount={maxHeaderLines}
+          rows={gainers}
+        />
+        <PnLBucket
+          title={t("portfolio.losers")}
+          tone="bear"
+          totalsByCurrency={lossTotals}
+          headerLineCount={maxHeaderLines}
+          rows={losers}
+        />
       </div>
     </div>
   );
