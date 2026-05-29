@@ -4,12 +4,15 @@ import { RouterProvider } from "@tanstack/react-router";
 import { getRouter } from "./router";
 import "./styles.css";
 import "./i18n";
+import { ThemeProvider } from "@/theme/theme-provider";
 
 const root = createRoot(document.getElementById("root")!);
 const router = getRouter();
 
 root.render(
   <React.StrictMode>
-    <RouterProvider router={router} />
+    <ThemeProvider>
+      <RouterProvider router={router} />
+    </ThemeProvider>
   </React.StrictMode>,
 );

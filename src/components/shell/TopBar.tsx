@@ -1,7 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { dashboards } from "@/components/shell/dashboards";
 import { useTranslation } from "react-i18next";
-import i18n from "@/i18n";
 
 function GridIcon() {
   return (
@@ -17,7 +16,6 @@ function GridIcon() {
 export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
   const { t } = useTranslation();
   const navItems = dashboards.filter((item) => item.path);
-  const currentLanguage = i18n.resolvedLanguage === "el" || i18n.language === "el" ? "el" : "en";
 
   return (
     <div className="sticky top-0 z-10 h-10 w-full border-b border-border bg-card/50 backdrop-blur">
@@ -52,19 +50,6 @@ export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: 
         </div>
 
         <div className="flex h-full items-center gap-3 text-muted-foreground">
-          <select
-            value={currentLanguage}
-            onChange={(e) => {
-              void i18n.changeLanguage(e.target.value).catch((error: unknown) => {
-                console.error("[i18n] changeLanguage failed", error);
-              });
-            }}
-            className="border border-border bg-card px-1 py-0.5 text-[10px] text-foreground uppercase"
-            aria-label={t("common.language")}
-          >
-            <option value="en">EN</option>
-            <option value="el">GR</option>
-          </select>
           <span className="hidden md:inline truncate max-w-[180px]">{userEmail}</span>
           <button onClick={onLogout} className="text-primary hover:underline">
             {t("common.logout")}

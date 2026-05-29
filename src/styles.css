@@ -42,55 +42,105 @@
   --color-bear: var(--bear);
   --color-amber: var(--amber);
   --color-data: var(--data);
+  --color-panel: var(--background-secondary);
+  --color-surface: var(--surface);
+  --color-text-primary: var(--foreground);
+  --color-text-secondary: var(--muted-foreground);
 }
 
 :root {
   --radius: 3px;
 
-  /* Bloomberg-inspired dark terminal */
+  /* Bloomberg-inspired light terminal */
+  --background: oklch(0.96 0.004 80);
+  --foreground: oklch(0.2 0.008 80);
+
+  --background-secondary: oklch(0.93 0.004 80);
+  --surface: oklch(0.98 0.002 80);
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+
+  --popover: oklch(0.985 0.002 80);
+  --popover-foreground: var(--foreground);
+
+  --primary: oklch(0.62 0.17 55); /* signature orange */
+  --primary-foreground: oklch(0.98 0.002 80);
+
+  --secondary: var(--background-secondary);
+  --secondary-foreground: var(--foreground);
+
+  --muted: oklch(0.9 0.004 80);
+  --muted-foreground: oklch(0.45 0.01 80);
+
+  --accent: oklch(0.88 0.006 80);
+  --accent-foreground: var(--foreground);
+
+  --destructive: oklch(0.56 0.21 25);
+  --destructive-foreground: oklch(0.98 0.002 80);
+
+  --border: oklch(0.82 0.004 80);
+  --input: oklch(0.95 0.003 80);
+  --ring: var(--primary);
+
+  --bull: oklch(0.58 0.16 150); /* terminal green */
+  --bear: oklch(0.56 0.21 25); /* loss red */
+  --amber: oklch(0.74 0.14 85); /* highlight amber */
+  --data: oklch(0.2 0.008 80);
+
+  --chart-1: var(--primary);
+  --chart-2: var(--bull);
+  --chart-3: var(--amber);
+  --chart-4: var(--bear);
+  --chart-5: oklch(0.55 0.13 235);
+  --chart-6: oklch(0.5 0.12 290);
+  --chart-7: oklch(0.64 0.13 70);
+}
+
+.dark {
   --background: oklch(0.13 0.005 60);
   --foreground: oklch(0.92 0.02 80);
 
-  --card: oklch(0.16 0.005 60);
-  --card-foreground: oklch(0.92 0.02 80);
+  --background-secondary: oklch(0.18 0.005 60);
+  --surface: oklch(0.16 0.005 60);
+
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
 
   --popover: oklch(0.17 0.006 60);
-  --popover-foreground: oklch(0.92 0.02 80);
+  --popover-foreground: var(--foreground);
 
-  --primary: oklch(0.74 0.19 55); /* signature orange */
+  --primary: oklch(0.74 0.19 55);
   --primary-foreground: oklch(0.12 0.01 60);
 
   --secondary: oklch(0.22 0.006 60);
-  --secondary-foreground: oklch(0.92 0.02 80);
+  --secondary-foreground: var(--foreground);
 
   --muted: oklch(0.2 0.005 60);
   --muted-foreground: oklch(0.62 0.02 80);
 
   --accent: oklch(0.24 0.008 60);
-  --accent-foreground: oklch(0.92 0.02 80);
+  --accent-foreground: var(--foreground);
 
   --destructive: oklch(0.62 0.22 25);
   --destructive-foreground: oklch(0.98 0.005 80);
 
   --border: oklch(0.26 0.006 60);
   --input: oklch(0.2 0.006 60);
-  --ring: oklch(0.74 0.19 55);
+  --ring: var(--primary);
 
-  --bull: oklch(0.76 0.18 150); /* terminal green */
-  --bear: oklch(0.66 0.22 25); /* loss red */
-  --amber: oklch(0.85 0.16 85); /* highlight amber */
+  --bull: oklch(0.76 0.18 150);
+  --bear: oklch(0.66 0.22 25);
+  --amber: oklch(0.85 0.16 85);
   --data: oklch(0.92 0.02 80);
 
-  --chart-1: oklch(0.74 0.19 55);
-  --chart-2: oklch(0.76 0.18 150);
-  --chart-3: oklch(0.85 0.16 85);
-  --chart-4: oklch(0.66 0.22 25);
+  --chart-1: var(--primary);
+  --chart-2: var(--bull);
+  --chart-3: var(--amber);
+  --chart-4: var(--bear);
   --chart-5: oklch(0.7 0.15 220);
-}
-
-.dark {
-  --background: oklch(0.13 0.005 60);
-  --foreground: oklch(0.92 0.02 80);
+  --chart-6: oklch(0.74 0.16 285);
+  --chart-7: oklch(0.8 0.15 80);
 }
 
 @layer base {
@@ -114,8 +164,8 @@
 @layer utilities {
   .grid-bg {
     background-image:
-      linear-gradient(to right, oklch(0.2 0.005 60 / 0.5) 1px, transparent 1px),
-      linear-gradient(to bottom, oklch(0.2 0.005 60 / 0.5) 1px, transparent 1px);
+      linear-gradient(to right, color-mix(in oklch, var(--color-border) 55%, transparent) 1px, transparent 1px),
+      linear-gradient(to bottom, color-mix(in oklch, var(--color-border) 55%, transparent) 1px, transparent 1px);
     background-size: 32px 32px;
   }
   .scanline::before {
@@ -126,8 +176,8 @@
       to bottom,
       transparent 0,
       transparent 2px,
-      oklch(1 0 0 / 0.012) 2px,
-      oklch(1 0 0 / 0.012) 3px
+      color-mix(in oklch, var(--color-foreground) 6%, transparent) 2px,
+      color-mix(in oklch, var(--color-foreground) 6%, transparent) 3px
     );
     pointer-events: none;
   }

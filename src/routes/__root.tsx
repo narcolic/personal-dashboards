@@ -5,6 +5,7 @@ import { useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
+import { useTheme } from "@/theme/theme-provider";
 
 function NotFoundComponent() {
   const { t } = useTranslation();
@@ -101,12 +102,13 @@ function AuthBridge() {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const { resolvedTheme } = useTheme();
   return (
     <QueryClientProvider client={queryClient}>
       <AuthBridge />
       <Outlet />
       <Toaster
-        theme="dark"
+        theme={resolvedTheme}
         position="top-right"
         toastOptions={{
           style: {

@@ -2,6 +2,8 @@ import { ResponsiveContainer, CartesianGrid, Tooltip, XAxis, YAxis, BarChart, Ba
 import { formatCurrency } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 
 export function CategorySpendChart({ data }: { data: { category: string; total: number }[] }) {
+  const topCategories = [...data].sort((a, b) => b.total - a.total).slice(0, 8);
+
   return (
     <section className="border border-border bg-card p-4">
       <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
@@ -9,7 +11,7 @@ export function CategorySpendChart({ data }: { data: { category: string; total: 
       </div>
       <div className="h-56">
         <ResponsiveContainer>
-          <BarChart data={data} layout="vertical" margin={{ left: 20 }}>
+          <BarChart data={topCategories} layout="vertical" margin={{ left: 20 }}>
             <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />
             <XAxis type="number" tick={{ fontSize: 10, fill: "var(--color-muted-foreground)" }} />
             <YAxis

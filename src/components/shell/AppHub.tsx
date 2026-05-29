@@ -12,12 +12,13 @@ import {
   getLastVisit,
 } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
+import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
 
 export function AppHub() {
   const { t } = useTranslation();
 
   return (
-    <div className="min-h-screen bg-background text-foreground grid-bg px-4 py-8">
+    <div className="min-h-screen bg-background text-foreground grid-bg px-4 py-8 pb-14">
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
@@ -79,6 +80,7 @@ export function AppHub() {
           )}
         </div>
       </div>
+      <BottomStatusBar />
     </div>
   );
 }

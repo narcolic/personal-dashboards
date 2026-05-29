@@ -19,8 +19,8 @@ const COLORS = [
   "var(--color-amber)",
   "var(--color-chart-5)",
   "var(--color-bear)",
-  "#a78bfa",
-  "#f59e0b",
+  "var(--color-chart-6)",
+  "var(--color-chart-7)",
 ];
 
 export function PortfolioChart({

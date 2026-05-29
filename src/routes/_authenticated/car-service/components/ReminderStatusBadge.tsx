@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 const statusClassMap: Record<ReminderStatus, string> = {
   OVERDUE: "text-destructive border-destructive",
   "DUE SOON": "text-primary border-primary",
-  OK: "text-green-600 border-green-600",
+  OK: "text-bull border-bull",
   "NO DATA": "text-muted-foreground border-border",
 };
 

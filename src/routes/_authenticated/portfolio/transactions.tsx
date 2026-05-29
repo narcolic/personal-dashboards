@@ -325,7 +325,7 @@ function TransactionsPage() {
               }
             }}
             disabled={bulkDeleteM.isPending}
-            className="border border-bear px-3 py-1 text-[10px] uppercase tracking-widest text-bear hover:bg-bear hover:text-white disabled:opacity-50"
+            className="border border-bear px-3 py-1 text-[10px] uppercase tracking-widest text-bear hover:bg-bear hover:text-primary-foreground disabled:opacity-50"
           >
             {bulkDeleteM.isPending ? t("portfolio.deleting") : t("portfolio.deleteSelected")}
           </button>

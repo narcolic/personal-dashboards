@@ -11,6 +11,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { useEffect, useState } from "react";
 import { MarketStatusIndicator } from "@/routes/_authenticated/portfolio/components/MarketStatusIndicator";
 import { TopBar } from "@/components/shell/TopBar";
+import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
 import { useTranslation } from "react-i18next";
 
 export const Route = createFileRoute("/_authenticated")({
@@ -108,9 +109,10 @@ function AuthLayout() {
           </nav>
         ) : null}
       </header>
-      <main className="p-4 md:p-6 max-w-[1400px] mx-auto">
+      <main className="mx-auto max-w-[1400px] p-4 pb-12 md:p-6 md:pb-14">
         <Outlet />
       </main>
+      <BottomStatusBar />
     </div>
   );
 }
