@@ -194,13 +194,13 @@ export function TransactionsTable({
                 }
                 className="mr-3 text-[11px] uppercase text-primary hover:underline"
               >
-                {t("common.edit")}
+                [{t("common.edit").toUpperCase()}]
               </button>
               <button
                 onClick={() => onDelete(position.id, position.ticker, position.transaction_date)}
-                className="text-[11px] uppercase text-bear hover:underline"
+                className="text-[11px] text-destructive hover:underline"
               >
-                {t("common.deleteShort")}
+                [x]
               </button>
             </td>
           </tr>

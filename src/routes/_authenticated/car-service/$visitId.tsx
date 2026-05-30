@@ -4,21 +4,30 @@ import { supabase } from "@/integrations/supabase/client";
 import { ServiceHistoryEditor } from "@/routes/_authenticated/car-service/components/ServiceHistoryEditor";
 import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
+import { useTranslation } from "react-i18next";
 import {
   deleteServiceVisit,
   updateServiceVisit,
 } from "@/routes/_authenticated/car-service/hooks/useCarServiceMutations";
-import type { ServiceJob, ServiceJobInput, ServiceVisitWithJobs } from "@/routes/_authenticated/car-service/types";
+import type {
+  ServiceJob,
+  ServiceJobInput,
+  ServiceVisitWithJobs,
+} from "@/routes/_authenticated/car-service/types";
 
 export const Route = createFileRoute("/_authenticated/car-service/$visitId")({
   component: CarServiceEditVisit,
 });
 
 function CarServiceEditVisit() {
+  const { t } = useTranslation();
   const { visitId } = Route.useParams();
   const navigate = useNavigate();
   const { jobSuggestions, categorySuggestions } = useCarServiceData();
   const { vehicles } = useVehicles();
+  const searchParams = new URLSearchParams(window.location.search);
+  const returnVehicleId = searchParams.get("vehicleId")?.trim() ?? "";
+  const returnVisitId = searchParams.get("visitId")?.trim() ?? "";
 
   const [visit, setVisit] = useState<ServiceVisitWithJobs | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,7 +57,7 @@ function CarServiceEditVisit() {
       }
 
       if (!visitData) {
-        setError("Visit not found.");
+        setError(t("car.editVisit.notFound"));
         setIsLoading(false);
         return;
       }
@@ -76,7 +85,7 @@ function CarServiceEditVisit() {
     return () => {
       mounted = false;
     };
-  }, [visitId]);
+  }, [visitId, t]);
 
   const handleSave = async (payload: {
     visit: {
@@ -107,7 +116,13 @@ function CarServiceEditVisit() {
         payload.jobs,
       );
 
-      await navigate({ to: "/car-service/history" });
+      await navigate({
+        to: "/car-service/history",
+        search: {
+          vehicleId: returnVehicleId || undefined,
+          visitId: returnVisitId || visitId,
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to update visit.");
     } finally {
@@ -121,7 +136,12 @@ function CarServiceEditVisit() {
 
     try {
       await deleteServiceVisit(supabase, visitId);
-      await navigate({ to: "/car-service/history" });
+      await navigate({
+        to: "/car-service/history",
+        search: {
+          vehicleId: returnVehicleId || undefined,
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : "Failed to delete visit.");
     } finally {
@@ -129,15 +149,27 @@ function CarServiceEditVisit() {
     }
   };
 
+  const handleCancel = () => {
+    void navigate({
+      to: "/car-service/history",
+      search: {
+        vehicleId: returnVehicleId || undefined,
+        visitId: returnVisitId || visitId,
+      },
+    });
+  };
+
   return (
     <div className="space-y-4 font-mono">
       <div className="border border-border bg-card px-4 py-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">&gt; CAR-SERVICE // EDIT VISIT</div>
+        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">
+          {t("car.editVisit.title")}
+        </div>
       </div>
 
       {isLoading ? (
         <div className="border border-border bg-card px-4 py-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
-          LOADING...
+          {t("common.loading")}
         </div>
       ) : visit ? (
         <ServiceHistoryEditor
@@ -145,16 +177,17 @@ function CarServiceEditVisit() {
           vehicles={vehicles}
           jobSuggestions={jobSuggestions}
           categorySuggestions={categorySuggestions}
-          submitLabel="UPDATE VISIT"
+          submitLabel={t("common.save")}
           saveError={error}
           isSaving={isSaving}
           isDeleting={isDeleting}
           onSave={handleSave}
           onDelete={handleDelete}
+          onCancel={handleCancel}
         />
       ) : (
         <div className="border border-border bg-card px-4 py-3 text-[11px] uppercase tracking-[0.2em] text-destructive">
-          {error ?? "VISIT NOT FOUND."}
+          {error ?? t("car.editVisit.notFound")}
         </div>
       )}
     </div>

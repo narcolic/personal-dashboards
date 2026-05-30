@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import type {
   ServiceJob,
   ServiceJobInput,
@@ -67,6 +67,7 @@ export function ServiceHistoryEditor({
   isDeleting,
   onSave,
   onDelete,
+  onCancel,
 }: {
   initialVisit?: ServiceVisitWithJobs;
   vehicles: Vehicle[];
@@ -89,6 +90,7 @@ export function ServiceHistoryEditor({
     jobs: ServiceJobInput[];
   }) => Promise<void>;
   onDelete?: () => Promise<void>;
+  onCancel?: () => void;
 }) {
   const { t } = useTranslation();
   const initialVehicleId =
@@ -122,14 +124,9 @@ export function ServiceHistoryEditor({
       ).sort((a, b) => a.localeCompare(b)),
     [categorySuggestions],
   );
-
-  useEffect(() => {
-    if (initialVisit) return;
-    if (form.vehicleId) return;
-    if (vehicles.length === 1 && vehicles[0]?.id) {
-      setForm((prev) => ({ ...prev, vehicleId: vehicles[0].id }));
-    }
-  }, [initialVisit, form.vehicleId, vehicles]);
+  const resolvedVehicleId =
+    form.vehicleId ||
+    (!initialVisit && vehicles.length === 1 && vehicles[0]?.id ? vehicles[0].id : "");
 
   const computedLines = useMemo(
     () =>
@@ -170,7 +167,7 @@ export function ServiceHistoryEditor({
     const nextErrors: FieldErrors = {};
     const rowErrors: Record<number, string> = {};
 
-    if (!form.vehicleId) nextErrors.vehicleId = t("car.editor.vehicleRequired");
+    if (!resolvedVehicleId) nextErrors.vehicleId = t("car.editor.vehicleRequired");
     if (!form.serviceDate) nextErrors.serviceDate = t("car.editor.serviceDateRequired");
 
     const km = Number(form.odometerKm);
@@ -222,7 +219,7 @@ export function ServiceHistoryEditor({
 
     await onSave({
       visit: {
-        vehicle_id: form.vehicleId,
+        vehicle_id: resolvedVehicleId,
         service_date: form.serviceDate,
         odometer_km: Number(form.odometerKm),
         workshop: form.workshop.trim() || null,
@@ -239,7 +236,7 @@ export function ServiceHistoryEditor({
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label={t("car.editor.vehicle")} error={errors.vehicleId}>
             <select
-              value={form.vehicleId}
+              value={resolvedVehicleId}
               onChange={(e) => setFormField("vehicleId", e.target.value)}
               className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
             >
@@ -410,7 +407,9 @@ export function ServiceHistoryEditor({
                           }}
                           className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
                         >
-                          {t("car.editor.createValue", { value: line.category.trim().toUpperCase() })}
+                          {t("car.editor.createValue", {
+                            value: line.category.trim().toUpperCase(),
+                          })}
                         </button>
                       ) : null}
                     </div>
@@ -452,6 +451,7 @@ export function ServiceHistoryEditor({
                     type="button"
                     onClick={() => removeLine(index)}
                     className="px-2 py-1.5 text-destructive hover:underline"
+                    aria-label={t("car.editor.removeJobAria", { index: index + 1 })}
                   >
                     x
                   </button>
@@ -475,61 +475,88 @@ export function ServiceHistoryEditor({
       </section>
 
       <div className="border-t border-border p-4 md:p-6">
-        <div className="ml-auto w-full max-w-xs space-y-2 text-[11px] uppercase tracking-[0.2em]">
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">{t("car.editor.subtotalExVat")}</span>
-            <span>{formatCurrency(subtotal)}</span>
+        <div className="space-y-4">
+          <div className="w-full max-w-xs space-y-2 text-[11px] uppercase tracking-[0.2em] md:ml-auto">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t("car.editor.subtotalExVat")}</span>
+              <span>{formatCurrency(subtotal)}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">{t("car.editor.vatAmount")}</span>
+              <span>{formatCurrency(vatAmount)}</span>
+            </div>
+            <div className="flex items-center justify-between border-t border-border pt-2">
+              <span className="text-muted-foreground">{t("car.editor.totalInclVat")}</span>
+              <span className="text-primary">{formatCurrency(totalAmount)}</span>
+            </div>
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground">{t("car.editor.vatAmount")}</span>
-            <span>{formatCurrency(vatAmount)}</span>
-          </div>
-          <div className="flex items-center justify-between border-t border-border pt-2">
-            <span className="text-muted-foreground">{t("car.editor.totalInclVat")}</span>
-            <span className="text-primary">{formatCurrency(totalAmount)}</span>
-          </div>
-        </div>
 
-        {saveError ? <div className="mt-3 text-[11px] text-destructive">{saveError}</div> : null}
+          <div className="space-y-3">
+            {saveError ? <div className="text-[11px] text-destructive">{saveError}</div> : null}
 
-        <div className="mt-4 flex items-center gap-3">
-          <button
-            type="submit"
-            disabled={isSaving}
-            className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
-          >
-            {isSaving ? t("car.editor.saving") : submitLabel}
-          </button>
-
-          {onDelete ? (
-            confirmDelete ? (
-              <>
-                <button
-                  type="button"
-                  disabled={Boolean(isDeleting)}
-                  onClick={() => void onDelete()}
-                  className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:underline disabled:opacity-60"
-                >
-                  {isDeleting ? t("car.editor.deleting") : t("car.editor.confirmDelete")}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setConfirmDelete(false)}
-                  className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-                >
-                  {t("common.cancel")}
-                </button>
-              </>
-            ) : (
-              <button
-                type="button"
-                onClick={() => setConfirmDelete(true)}
-                className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:underline"
+            <div className="border-t border-border/40 pt-2">
+              <div
+                role="group"
+                aria-label={t("car.editor.actionsGroupAria")}
+                className="inline-flex flex-wrap items-center gap-2"
               >
-                {t("car.editor.deleteVisit")}
-              </button>
-            )
-          ) : null}
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                >
+                  {isSaving ? t("car.editor.saving") : submitLabel}
+                </button>
+
+                {onCancel ? (
+                  <button
+                    type="button"
+                    onClick={onCancel}
+                    className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                  >
+                    {t("common.cancel")}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {onDelete ? (
+              <div className="border-t border-destructive/40 pt-2">
+                {confirmDelete ? (
+                  <div className="space-y-2" aria-live="polite">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-destructive">
+                      {t("car.editor.deleteVisitWarning")}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        disabled={Boolean(isDeleting)}
+                        onClick={() => void onDelete()}
+                        className="border border-destructive/60 px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:bg-destructive/10 disabled:opacity-60"
+                      >
+                        {isDeleting ? t("car.editor.deleting") : t("car.editor.confirmDelete")}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmDelete(false)}
+                        className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                      >
+                        {t("common.cancel")}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmDelete(true)}
+                    className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:underline"
+                  >
+                    {t("common.delete")}
+                  </button>
+                )}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
     </form>

@@ -5,6 +5,7 @@
     "logout": "[logout]",
     "cancel": "Cancel",
     "save": "Save",
+    "delete": "Delete",
     "noData": "No data",
     "edit": "edit",
     "deleteShort": "del"
@@ -234,6 +235,33 @@
     "category": "Category",
     "qty": "Qty",
     "unit": "Unit",
+    "analyticsLabels": {
+      "annualSpend": "ANNUAL SPEND",
+      "spendByCategory": "SPEND BY CATEGORY",
+      "topJobsByFrequency": "TOP JOBS BY FREQUENCY",
+      "rank": "RANK",
+      "jobTask": "JOB / TASK",
+      "timesPerformed": "TIMES PERFORMED",
+      "totalSpentOnJob": "TOTAL SPENT ON THIS JOB",
+      "noJobsData": "NO JOB FREQUENCY DATA"
+    },
+    "vehiclesLabels": {
+      "delete": "DELETE",
+      "edit": "EDIT",
+      "jobName": "Job name",
+      "selectJob": "Select job",
+      "intervalKm": "Interval KM",
+      "intervalMonths": "Interval Months",
+      "warningKm": "Warning KM",
+      "warningDays": "Warning Days",
+      "title": "Title",
+      "dueDate": "Due Date"
+    },
+    "editVisit": {
+      "title": "> CAR-SERVICE // EDIT VISIT",
+      "updateVisit": "UPDATE VISIT",
+      "notFound": "Visit not found."
+    },
     "editor": {
       "vehicleRequired": "Vehicle is required.",
       "serviceDateRequired": "Service date is required.",
@@ -263,7 +291,10 @@
       "saving": "SAVING...",
       "deleting": "DELETING...",
       "confirmDelete": "CONFIRM DELETE",
-      "deleteVisit": "DELETE VISIT"
+      "deleteVisit": "DELETE VISIT",
+      "deleteVisitWarning": "Delete this visit permanently? This cannot be undone.",
+      "actionsGroupAria": "Visit actions",
+      "removeJobAria": "Remove job row {{index}}"
     }
   }
 }

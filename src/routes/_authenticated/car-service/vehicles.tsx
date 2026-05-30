@@ -135,11 +135,11 @@ function VehiclesScreen() {
 
           {expandedVehicleId === "new" && newVehicleForm ? (
             <div className="border border-border p-3">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.2em] text-primary">+ ADD VEHICLE</div>
+              <div className="mb-2 text-[11px] uppercase tracking-[0.2em] text-primary">{t("car.addVehicle")}</div>
               <VehicleDetailsForm state={newVehicleForm} onChange={setNewVehicleForm} />
               <div className="mt-3 flex gap-3">
-                <button onClick={() => void saveNewVehicle()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
-                <button onClick={() => { setExpandedVehicleId(null); setNewVehicleForm(null); }} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+                <button onClick={() => void saveNewVehicle()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[{t("common.save").toUpperCase()}]</button>
+                <button onClick={() => { setExpandedVehicleId(null); setNewVehicleForm(null); }} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[{t("common.cancel").toUpperCase()}]</button>
               </div>
             </div>
           ) : null}
@@ -202,7 +202,7 @@ function VehicleAccordionItem({
     const plate = details.plate.trim();
     const year = Number(details.year);
     if (!make || !model || !plate || !Number.isFinite(year)) {
-      onError("MAKE, MODEL, YEAR, AND LICENSE PLATE ARE REQUIRED.");
+      onError(t("car.vehicleRequired"));
       return;
     }
 
@@ -213,7 +213,7 @@ function VehicleAccordionItem({
       await onMutated();
       setIsEditingDetails(false);
     } catch (e) {
-      onError(e instanceof Error ? e.message : "FAILED TO SAVE VEHICLE.");
+      onError(e instanceof Error ? e.message : t("car.failedSaveVehicle"));
     } finally {
       onBusyChange(false);
     }
@@ -230,7 +230,7 @@ function VehicleAccordionItem({
       await deleteVehicle(supabase, vehicle.id);
       await onMutated();
     } catch (e) {
-      onError(e instanceof Error ? e.message : "FAILED TO DELETE VEHICLE.");
+      onError(e instanceof Error ? e.message : t("car.failedDeleteVehicle"));
     } finally {
       onBusyChange(false);
     }
@@ -258,7 +258,7 @@ function VehicleAccordionItem({
     onError(null);
     try {
       const { data } = await supabase.auth.getUser();
-      if (!data.user?.id) throw new Error("Authentication required.");
+      if (!data.user?.id) throw new Error(t("car.authRequired"));
 
       if (editingIntervalId) await updateServiceReminder(supabase, editingIntervalId, payload);
       else await createServiceReminder(supabase, data.user.id, payload);
@@ -279,7 +279,7 @@ function VehicleAccordionItem({
     onError(null);
     try {
       const { data } = await supabase.auth.getUser();
-      if (!data.user?.id) throw new Error("Authentication required.");
+      if (!data.user?.id) throw new Error(t("car.authRequired"));
       await createManualReminder(supabase, data.user.id, {
         vehicle_id: vehicle.id,
         title: manualForm.title.trim(),
@@ -310,7 +310,7 @@ function VehicleAccordionItem({
             disabled={busy}
             className="uppercase text-destructive hover:underline disabled:opacity-50"
           >
-            [DELETE]
+            [{t("car.vehiclesLabels.delete")}]
           </button>
         </div>
       </div>
@@ -324,8 +324,8 @@ function VehicleAccordionItem({
             <div className="mt-2 border border-border bg-card p-3">
               <VehicleDetailsForm state={details} onChange={setDetails} />
               <div className="mt-3 flex gap-3">
-                <button onClick={() => void saveDetails()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
-                <button onClick={() => setIsEditingDetails(false)} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+                <button onClick={() => void saveDetails()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[{t("common.save").toUpperCase()}]</button>
+                <button onClick={() => setIsEditingDetails(false)} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[{t("common.cancel").toUpperCase()}]</button>
               </div>
             </div>
           ) : (
@@ -341,12 +341,12 @@ function VehicleAccordionItem({
             <table className="w-full text-[11px]">
               <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 <tr>
-                  <th className="px-2 py-1 text-left">{t("car.intervalStatus")}</th><th className="px-2 py-1 text-left">{t("car.intervalJob")}</th><th className="px-2 py-1 text-left">{t("car.intervalRule")}</th><th className="px-2 py-1 text-left">{t("car.lastDone")}</th><th className="px-2 py-1 text-left">{t("car.dueAt")}</th><th className="px-2 py-1 text-left">{t("car.remaining")}</th><th className="px-2 py-1 text-right">{t("car.actions")}</th>
+                  <th className="px-2 py-1 text-left">{t("car.intervalStatus")}</th><th className="px-2 py-1 text-left">{t("car.intervalJob")}</th><th className="px-2 py-1 text-left">{t("car.intervalRule")}</th><th className="px-2 py-1 text-left">{t("car.lastDone")}</th><th className="px-2 py-1 text-left">{t("car.remaining")}</th><th className="px-2 py-1 text-right">{t("car.actions")}</th>
                 </tr>
               </thead>
               <tbody>
                 {serviceReminders.length === 0 ? (
-                  <tr><td className="px-2 py-2 text-muted-foreground uppercase tracking-[0.2em]" colSpan={7}>{t("car.noIntervalsConfigured")}</td></tr>
+                  <tr><td className="px-2 py-2 text-muted-foreground uppercase tracking-[0.2em]" colSpan={6}>{t("car.noIntervalsConfigured")}</td></tr>
                 ) : serviceReminders.map((reminder) => (
                   <ServiceIntervalRow key={reminder.id} reminder={reminder} onEdit={() => {
                     setEditingIntervalId(reminder.id);
@@ -366,7 +366,7 @@ function VehicleAccordionItem({
           {intervalForm ? (
             <div className="mt-2 border border-border bg-card p-3">
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Job name
+                <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t("car.vehiclesLabels.jobName")}
                   <select
                     value={intervalForm.job_name}
                     onChange={(e) =>
@@ -374,7 +374,7 @@ function VehicleAccordionItem({
                     }
                     className="mt-1 w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
                   >
-                    <option value="">Select job</option>
+                    <option value="">{t("car.vehiclesLabels.selectJob")}</option>
                     {jobNames.map((name) => (
                       <option key={name} value={name}>
                         {name}
@@ -382,17 +382,17 @@ function VehicleAccordionItem({
                     ))}
                   </select>
                 </label>
-                <SmallField label="Interval KM" value={intervalForm.interval_km} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, interval_km: value } : prev))} />
-                <SmallField label="Interval Months" value={intervalForm.interval_months} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, interval_months: value } : prev))} />
-                <SmallField label="Warning KM" value={intervalForm.warning_km} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, warning_km: value } : prev))} />
-                <SmallField label="Warning Days" value={intervalForm.warning_days} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, warning_days: value } : prev))} />
-                <label className="md:col-span-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Notes
+                <SmallField label={t("car.vehiclesLabels.intervalKm")} value={intervalForm.interval_km} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, interval_km: value } : prev))} />
+                <SmallField label={t("car.vehiclesLabels.intervalMonths")} value={intervalForm.interval_months} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, interval_months: value } : prev))} />
+                <SmallField label={t("car.vehiclesLabels.warningKm")} value={intervalForm.warning_km} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, warning_km: value } : prev))} />
+                <SmallField label={t("car.vehiclesLabels.warningDays")} value={intervalForm.warning_days} onChange={(value) => setIntervalForm((prev) => (prev ? { ...prev, warning_days: value } : prev))} />
+                <label className="md:col-span-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t("car.editor.notes")}
                   <input value={intervalForm.notes} onChange={(e) => setIntervalForm((prev) => (prev ? { ...prev, notes: e.target.value } : prev))} className="mt-1 w-full border border-border bg-input px-2 py-1" />
                 </label>
               </div>
               <div className="mt-3 flex gap-3">
-                <button onClick={() => void saveInterval()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
-                <button onClick={() => { setIntervalForm(null); setEditingIntervalId(null); }} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+                <button onClick={() => void saveInterval()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[{t("common.save").toUpperCase()}]</button>
+                <button onClick={() => { setIntervalForm(null); setEditingIntervalId(null); }} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[{t("common.cancel").toUpperCase()}]</button>
               </div>
             </div>
           ) : (
@@ -415,15 +415,15 @@ function VehicleAccordionItem({
           {manualForm ? (
             <div className="mt-2 border border-border bg-card p-3">
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <SmallField label="Title" value={manualForm.title} onChange={(value) => setManualForm((prev) => (prev ? { ...prev, title: value } : prev))} />
-                <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Due Date
+                <SmallField label={t("car.vehiclesLabels.title")} value={manualForm.title} onChange={(value) => setManualForm((prev) => (prev ? { ...prev, title: value } : prev))} />
+                <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">{t("car.vehiclesLabels.dueDate")}
                   <input type="date" value={manualForm.due_date} onChange={(e) => setManualForm((prev) => (prev ? { ...prev, due_date: e.target.value } : prev))} className="mt-1 w-full border border-border bg-input px-2 py-1" />
                 </label>
-                <SmallField label="Notes" value={manualForm.notes} onChange={(value) => setManualForm((prev) => (prev ? { ...prev, notes: value } : prev))} />
+                <SmallField label={t("car.editor.notes")} value={manualForm.notes} onChange={(value) => setManualForm((prev) => (prev ? { ...prev, notes: value } : prev))} />
               </div>
               <div className="mt-3 flex gap-3">
-                <button onClick={() => void saveManualReminder()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[SAVE]</button>
-                <button onClick={() => setManualForm(null)} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[CANCEL]</button>
+                <button onClick={() => void saveManualReminder()} className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">[{t("common.save").toUpperCase()}]</button>
+                <button onClick={() => setManualForm(null)} className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline">[{t("common.cancel").toUpperCase()}]</button>
               </div>
             </div>
           ) : (
@@ -436,15 +436,15 @@ function VehicleAccordionItem({
 }
 
 function ServiceIntervalRow({ reminder, onEdit, onDelete }: { reminder: ServiceReminderWithStatus; onEdit: () => void; onDelete: () => Promise<void> }) {
+  const { t } = useTranslation();
   return (
     <tr className="border-t border-border/60">
       <td className="px-2 py-1"><ReminderStatusBadge status={reminder.status} /></td>
       <td className="px-2 py-1">{reminder.job_name}</td>
       <td className="px-2 py-1">{reminder.interval_km ? `${reminder.interval_km}km` : "-"} {reminder.interval_months ? `/${reminder.interval_months}mo` : ""}</td>
       <td className="px-2 py-1">{reminder.lastDoneDate ?? "--"} {reminder.lastDoneKm != null ? `· ${reminder.lastDoneKm}km` : ""}</td>
-      <td className="px-2 py-1">{reminder.interval_km ? `${reminder.interval_km}km` : "--"} {reminder.interval_months ? `/${reminder.interval_months}mo` : ""}</td>
       <td className="px-2 py-1">{reminder.kmRemaining != null ? `${reminder.kmRemaining}km` : "--"} {reminder.daysRemaining != null ? `· ${reminder.daysRemaining}d` : ""}</td>
-      <td className="px-2 py-1 text-right"><button onClick={onEdit} className="mr-2 text-primary">[EDIT]</button><button onClick={() => void onDelete()} className="text-destructive">[×]</button></td>
+      <td className="px-2 py-1 text-right"><button onClick={onEdit} className="mr-2 text-primary">[{t("car.vehiclesLabels.edit")}]</button><button onClick={() => void onDelete()} className="text-destructive">[×]</button></td>
     </tr>
   );
 }
@@ -463,14 +463,15 @@ function SmallField({ label, value, onChange }: { label: string; value: string; 
 }
 
 function VehicleDetailsForm({ state, onChange }: { state: VehicleFormState; onChange: (next: VehicleFormState) => void }) {
+  const { t } = useTranslation();
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-      <SmallField label="Make" value={state.make} onChange={(value) => onChange({ ...state, make: value })} />
-      <SmallField label="Model" value={state.model} onChange={(value) => onChange({ ...state, model: value })} />
-      <SmallField label="Year" value={state.year} onChange={(value) => onChange({ ...state, year: value })} />
-      <SmallField label="License Plate" value={state.plate} onChange={(value) => onChange({ ...state, plate: value })} />
-      <SmallField label="Colour" value={state.colour} onChange={(value) => onChange({ ...state, colour: value })} />
-      <SmallField label="Notes" value={state.notes} onChange={(value) => onChange({ ...state, notes: value })} />
+      <SmallField label={t("car.make")} value={state.make} onChange={(value) => onChange({ ...state, make: value })} />
+      <SmallField label={t("car.model")} value={state.model} onChange={(value) => onChange({ ...state, model: value })} />
+      <SmallField label={t("car.year")} value={state.year} onChange={(value) => onChange({ ...state, year: value })} />
+      <SmallField label={t("car.licensePlate")} value={state.plate} onChange={(value) => onChange({ ...state, plate: value })} />
+      <SmallField label={t("car.colour")} value={state.colour} onChange={(value) => onChange({ ...state, colour: value })} />
+      <SmallField label={t("car.editor.notes")} value={state.notes} onChange={(value) => onChange({ ...state, notes: value })} />
     </div>
   );
 }

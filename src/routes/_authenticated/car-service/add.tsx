@@ -74,7 +74,7 @@ function CarServiceAddVisit() {
         defaultVehicleId={vehicles.length === 1 ? vehicles[0].id : undefined}
         jobSuggestions={jobSuggestions}
         categorySuggestions={categorySuggestions}
-        submitLabel={t("car.saveVisit")}
+        submitLabel={t("common.save")}
         saveError={error}
         isSaving={isSaving}
         onSave={handleSave}

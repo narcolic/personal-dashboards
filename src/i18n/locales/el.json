@@ -5,6 +5,7 @@
     "logout": "[αποσύνδεση]",
     "cancel": "Ακύρωση",
     "save": "Αποθήκευση",
+    "delete": "Διαγραφή",
     "noData": "Δεν υπάρχουν δεδομένα",
     "edit": "επεξ.",
     "deleteShort": "διαγρ."
@@ -234,6 +235,33 @@
     "category": "Κατηγορία",
     "qty": "Ποσ.",
     "unit": "Μονάδα",
+    "analyticsLabels": {
+      "annualSpend": "ΕΤΗΣΙΑ ΔΑΠΑΝΗ",
+      "spendByCategory": "ΔΑΠΑΝΗ ΑΝΑ ΚΑΤΗΓΟΡΙΑ",
+      "topJobsByFrequency": "ΣΥΧΝΟΤΕΡΕΣ ΕΡΓΑΣΙΕΣ",
+      "rank": "ΘΕΣΗ",
+      "jobTask": "ΕΡΓΑΣΙΑ",
+      "timesPerformed": "ΦΟΡΕΣ ΕΚΤΕΛΕΣΗΣ",
+      "totalSpentOnJob": "ΣΥΝΟΛΙΚΗ ΔΑΠΑΝΗ ΣΤΗΝ ΕΡΓΑΣΙΑ",
+      "noJobsData": "ΔΕΝ ΥΠΑΡΧΟΥΝ ΔΕΔΟΜΕΝΑ ΣΥΧΝΟΤΗΤΑΣ ΕΡΓΑΣΙΩΝ"
+    },
+    "vehiclesLabels": {
+      "delete": "ΔΙΑΓΡΑΦΗ",
+      "edit": "ΕΠΕΞ.",
+      "jobName": "Όνομα εργασίας",
+      "selectJob": "Επιλέξτε εργασία",
+      "intervalKm": "Διάστημα χλμ",
+      "intervalMonths": "Διάστημα μηνών",
+      "warningKm": "Προειδοποίηση χλμ",
+      "warningDays": "Προειδοποίηση ημερών",
+      "title": "Τίτλος",
+      "dueDate": "Ημερομηνία"
+    },
+    "editVisit": {
+      "title": "> Σέρβις // ΕΠΕΞΕΡΓΑΣΙΑ ΕΠΙΣΚΕΨΗΣ",
+      "updateVisit": "ΕΝΗΜΕΡΩΣΗ ΕΠΙΣΚΕΨΗΣ",
+      "notFound": "Δεν βρέθηκε η επίσκεψη."
+    },
     "editor": {
       "vehicleRequired": "Το όχημα είναι υποχρεωτικό.",
       "serviceDateRequired": "Η ημερομηνία σέρβις είναι υποχρεωτική.",
@@ -263,7 +291,10 @@
       "saving": "ΑΠΟΘΗΚΕΥΣΗ...",
       "deleting": "ΔΙΑΓΡΑΦΗ...",
       "confirmDelete": "ΕΠΙΒΕΒΑΙΩΣΗ ΔΙΑΓΡΑΦΗΣ",
-      "deleteVisit": "ΔΙΑΓΡΑΦΗ ΕΠΙΣΚΕΨΗΣ"
+      "deleteVisit": "ΔΙΑΓΡΑΦΗ ΕΠΙΣΚΕΨΗΣ",
+      "deleteVisitWarning": "Να διαγραφεί μόνιμα η επίσκεψη; Η ενέργεια δεν αναιρείται.",
+      "actionsGroupAria": "Ενέργειες επίσκεψης",
+      "removeJobAria": "Αφαίρεση γραμμής εργασίας {{index}}"
     }
   }
 }

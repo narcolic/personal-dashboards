@@ -1,11 +1,14 @@
 import { ResponsiveContainer, CartesianGrid, Tooltip, XAxis, YAxis, BarChart, Bar } from "recharts";
 import { formatCurrency } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
+import { useTranslation } from "react-i18next";
 
 export function AnnualSpendChart({ data }: { data: { year: string; total: number }[] }) {
+  const { t } = useTranslation();
+
   return (
     <section className="border border-border bg-card p-4">
       <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        ANNUAL SPEND
+        {t("car.analyticsLabels.annualSpend")}
       </div>
       <div className="h-56">
         <ResponsiveContainer>

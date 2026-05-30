@@ -1,4 +1,5 @@
 import { formatCurrency } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
+import { useTranslation } from "react-i18next";
 
 type Row = {
   jobName: string;
@@ -7,22 +8,31 @@ type Row = {
 };
 
 export function JobFrequencyTable({ rows }: { rows: Row[] }) {
+  const { t } = useTranslation();
+
   return (
     <section className="border border-border bg-card">
       <div className="border-b border-border px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-        TOP JOBS BY FREQUENCY
+        {t("car.analyticsLabels.topJobsByFrequency")}
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-[11px] font-mono">
           <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
             <tr>
-              <th className="px-3 py-2 text-left">RANK</th>
-              <th className="px-3 py-2 text-left">JOB / TASK</th>
-              <th className="px-3 py-2 text-right">TIMES PERFORMED</th>
-              <th className="px-3 py-2 text-right">TOTAL SPENT ON THIS JOB</th>
+              <th className="px-3 py-2 text-left">{t("car.analyticsLabels.rank")}</th>
+              <th className="px-3 py-2 text-left">{t("car.analyticsLabels.jobTask")}</th>
+              <th className="px-3 py-2 text-right">{t("car.analyticsLabels.timesPerformed")}</th>
+              <th className="px-3 py-2 text-right">{t("car.analyticsLabels.totalSpentOnJob")}</th>
             </tr>
           </thead>
           <tbody>
+            {rows.length === 0 ? (
+              <tr className="border-t border-border/60">
+                <td colSpan={4} className="px-3 py-4 text-center text-muted-foreground">
+                  {t("car.analyticsLabels.noJobsData")}
+                </td>
+              </tr>
+            ) : null}
             {rows.map((row, idx) => (
               <tr
                 key={`${row.jobName}-${idx}`}

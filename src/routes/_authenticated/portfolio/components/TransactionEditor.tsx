@@ -166,21 +166,23 @@ export function TransactionEditor({
             />
           </Field>
 
-          <div className="col-span-2 flex justify-end gap-2 pt-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="border border-border px-4 py-1.5 text-xs uppercase tracking-widest hover:border-primary"
-            >
-              {t("common.cancel")}
-            </button>
-            <button
-              type="submit"
-              disabled={busy}
-              className="bg-primary px-4 py-1.5 text-xs font-bold uppercase tracking-widest text-primary-foreground disabled:opacity-50"
-            >
-              {busy ? t("portfolio.saving") : t("portfolio.save")}
-            </button>
+          <div className="col-span-2 border-t border-border/40 pt-2">
+            <div role="group" aria-label={t("portfolio.save")} className="inline-flex flex-wrap items-center gap-2">
+              <button
+                type="submit"
+                disabled={busy}
+                className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
+              >
+                {busy ? t("portfolio.saving") : t("common.save")}
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+              >
+                {t("common.cancel")}
+              </button>
+            </div>
           </div>
         </form>
       </div>

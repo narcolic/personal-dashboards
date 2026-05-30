@@ -483,9 +483,9 @@ function PortfoliosModal({
                       onDelete(p.id);
                     }
                   }}
-                  className="text-[10px] uppercase text-bear hover:underline"
+                  className="text-[10px] text-destructive hover:underline"
                 >
-                    {t("common.deleteShort")}
+                    [x]
                 </button>
               </div>
             ))}
