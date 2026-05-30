@@ -13,9 +13,20 @@ export const Route = createFileRoute("/_authenticated/car-service/history")({
 function CarServiceHistory() {
   const { t } = useTranslation();
   const { vehicles } = useVehicles();
+  const [persistedContext] = useState(() => {
+    try {
+      const raw = sessionStorage.getItem("carServiceHistoryContext");
+      if (!raw) return null as { vehicleId?: string; visitId?: string } | null;
+      return JSON.parse(raw) as { vehicleId?: string; visitId?: string };
+    } catch {
+      return null;
+    }
+  });
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
-  const initialExpandedVisitId = searchParams.get("visitId")?.trim() || null;
-  const initialVehicleId = searchParams.get("vehicleId")?.trim() || "all";
+  const initialExpandedVisitId =
+    searchParams.get("visitId")?.trim() || persistedContext?.visitId?.trim() || null;
+  const initialVehicleId =
+    searchParams.get("vehicleId")?.trim() || persistedContext?.vehicleId?.trim() || "all";
   const [selectedVehicleId, setSelectedVehicleId] = useState(initialVehicleId);
 
   const { visits: allVisits, isLoading, error } = useCarServiceData("all");

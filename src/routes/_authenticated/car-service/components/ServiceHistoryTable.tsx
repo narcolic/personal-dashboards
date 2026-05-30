@@ -178,7 +178,17 @@ export function ServiceHistoryTable({
                       to="/car-service/$visitId"
                       params={{ visitId: visit.id }}
                       search={{ vehicleId: selectedVehicleId, visitId: visit.id }}
-                      onClick={(event) => event.stopPropagation()}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        try {
+                          sessionStorage.setItem(
+                            "carServiceHistoryContext",
+                            JSON.stringify({ vehicleId: selectedVehicleId, visitId: visit.id }),
+                          );
+                        } catch {
+                          // ignore storage failures
+                        }
+                      }}
                       className="text-primary uppercase hover:underline"
                     >
                       [{t("common.edit").toUpperCase()}]

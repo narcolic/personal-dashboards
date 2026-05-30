@@ -128,9 +128,23 @@ export function MarketStatusIndicator({ exchanges }: { exchanges: string[] }) {
     return fixed;
   }, [exchanges]);
 
-  const { isLoading, isError, markets } = useMarketStatus(requested);
+  const { isLoading, isError, error, markets } = useMarketStatus(requested);
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Athens";
   const marketMap = useMemo(() => byExchange(markets), [markets]);
+
+  if (isError) {
+    const errorText = error instanceof Error ? error.message : "Unknown error";
+    return (
+      <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-amber-400 group relative">
+        <span aria-hidden="true">⚠</span>
+        <span>Problem</span>
+        <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-max max-w-[320px] border border-border bg-card p-2 text-[10px] uppercase tracking-[0.12em] text-foreground shadow-md group-hover:block">
+          <div className="font-bold text-amber-400">Market Status API</div>
+          <div className="mt-1 text-muted-foreground">{errorText}</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="inline-flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">

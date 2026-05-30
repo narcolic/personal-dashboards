@@ -1,4 +1,10 @@
-﻿import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 import i18n from "@/i18n";
 import { type ThemeMode, useTheme } from "@/theme/theme-provider";
@@ -37,7 +43,7 @@ export function BottomStatusBar() {
       }
     };
 
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onKeyDown = (event: globalThis.KeyboardEvent) => {
       if (event.key === "Escape") {
         setLanguageMenuOpen(false);
         languageButtonRef.current?.focus();
@@ -52,7 +58,7 @@ export function BottomStatusBar() {
     };
   }, [languageMenuOpen]);
 
-  const onThemeKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+  const onThemeKeyDown = (event: ReactKeyboardEvent<HTMLDivElement>) => {
     const currentIndex = themeOptions.findIndex((option) => option.mode === mode);
     if (event.key === "ArrowRight") {
       event.preventDefault();
@@ -69,7 +75,13 @@ export function BottomStatusBar() {
   return (
     <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur">
       <div className="flex h-7 items-center justify-between px-3 text-[10px] uppercase tracking-[0.18em] md:px-4">
-        <div className="text-muted-foreground">STATUS: READY</div>
+        <div className="inline-flex items-center gap-2 text-green-500">
+          <span
+            className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse"
+            aria-hidden="true"
+          />
+          <span>LIVE</span>
+        </div>
 
         <div className="flex items-center text-muted-foreground">
           <div className="inline-flex items-center bg-secondary/20">

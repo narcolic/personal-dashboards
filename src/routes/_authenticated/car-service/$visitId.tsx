@@ -26,8 +26,19 @@ function CarServiceEditVisit() {
   const { jobSuggestions, categorySuggestions } = useCarServiceData();
   const { vehicles } = useVehicles();
   const searchParams = new URLSearchParams(window.location.search);
-  const returnVehicleId = searchParams.get("vehicleId")?.trim() ?? "";
-  const returnVisitId = searchParams.get("visitId")?.trim() ?? "";
+  const persistedContext = (() => {
+    try {
+      const raw = sessionStorage.getItem("carServiceHistoryContext");
+      if (!raw) return null as { vehicleId?: string; visitId?: string } | null;
+      return JSON.parse(raw) as { vehicleId?: string; visitId?: string };
+    } catch {
+      return null;
+    }
+  })();
+  const returnVehicleId =
+    searchParams.get("vehicleId")?.trim() ?? persistedContext?.vehicleId?.trim() ?? "";
+  const returnVisitId =
+    searchParams.get("visitId")?.trim() ?? persistedContext?.visitId?.trim() ?? "";
 
   const [visit, setVisit] = useState<ServiceVisitWithJobs | null>(null);
   const [isLoading, setIsLoading] = useState(true);
