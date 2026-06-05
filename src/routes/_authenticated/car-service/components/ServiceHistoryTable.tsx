@@ -33,24 +33,32 @@ export function ServiceHistoryTable({
 }) {
   const { t } = useTranslation();
   const [userExpandedVisitIds, setUserExpandedVisitIds] = useState<Set<string>>(new Set());
+  const [restoredExpandedVisitId, setRestoredExpandedVisitId] = useState(initialExpandedVisitId);
   const [jobsSortByVisit, setJobsSortByVisit] = useState<
     Record<string, { key: JobsSortKey; dir: JobsSortDirection }>
   >({});
   const expandedVisitIds = useMemo(() => {
     const next = new Set(userExpandedVisitIds);
-    if (initialExpandedVisitId && visits.some((visit) => visit.id === initialExpandedVisitId)) {
-      next.add(initialExpandedVisitId);
+    if (restoredExpandedVisitId && visits.some((visit) => visit.id === restoredExpandedVisitId)) {
+      next.add(restoredExpandedVisitId);
     }
     return next;
-  }, [initialExpandedVisitId, userExpandedVisitIds, visits]);
+  }, [restoredExpandedVisitId, userExpandedVisitIds, visits]);
 
   const toggleExpanded = (visitId: string) => {
     setUserExpandedVisitIds((prev) => {
       const next = new Set(prev);
-      if (next.has(visitId)) next.delete(visitId);
-      else next.add(visitId);
+      const isExpanded = next.has(visitId) || restoredExpandedVisitId === visitId;
+      if (isExpanded) {
+        next.delete(visitId);
+      } else {
+        next.add(visitId);
+      }
       return next;
     });
+    if (restoredExpandedVisitId === visitId) {
+      setRestoredExpandedVisitId(null);
+    }
   };
 
   const toggleJobsSort = (visitId: string, key: JobsSortKey) => {

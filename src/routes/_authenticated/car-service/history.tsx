@@ -1,5 +1,5 @@
-import { Link, createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { ServiceHistoryTable } from "@/routes/_authenticated/car-service/components/ServiceHistoryTable";
 import { VehicleFilterBar } from "@/routes/_authenticated/car-service/components/VehicleFilterBar";
 import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/_authenticated/car-service/history")({
 
 function CarServiceHistory() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const { vehicles } = useVehicles();
   const [persistedContext] = useState(() => {
     try {
@@ -28,6 +29,21 @@ function CarServiceHistory() {
   const initialVehicleId =
     searchParams.get("vehicleId")?.trim() || persistedContext?.vehicleId?.trim() || "all";
   const [selectedVehicleId, setSelectedVehicleId] = useState(initialVehicleId);
+
+  useEffect(() => {
+    try {
+      sessionStorage.removeItem("carServiceHistoryContext");
+    } catch {
+      // ignore storage failures
+    }
+
+    if (!searchParams.get("visitId") && !searchParams.get("vehicleId")) return;
+
+    void navigate({
+      to: "/car-service/history",
+      replace: true,
+    });
+  }, [navigate, searchParams]);
 
   const { visits: allVisits, isLoading, error } = useCarServiceData("all");
   const effectiveSelectedVehicleId = useMemo(() => {
