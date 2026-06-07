@@ -1,7 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import type {
   ServiceReminder,
   ServiceReminderWithStatus,
@@ -11,7 +11,7 @@ import { computeReminderStatus } from "@/routes/_authenticated/car-service/utils
 export function useReminders(vehicleId: string) {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { visits } = useCarServiceData("all");
+  const { visits } = useCarService("all");
   const [serviceReminders, setServiceReminders] = useState<ServiceReminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -121,7 +121,7 @@ export function useReminders(vehicleId: string) {
 export function useAllReminders() {
   const { user } = useAuth();
   const userId = user?.id ?? null;
-  const { visits } = useCarServiceData("all");
+  const { visits } = useCarService("all");
   const [serviceReminders, setServiceReminders] = useState<ServiceReminderWithStatus[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 

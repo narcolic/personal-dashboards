@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ServiceHistoryEditor } from "@/routes/_authenticated/car-service/components/ServiceHistoryEditor";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import { useTranslation } from "react-i18next";
 import {
@@ -23,7 +23,7 @@ function CarServiceEditVisit() {
   const { t } = useTranslation();
   const { visitId } = Route.useParams();
   const navigate = useNavigate();
-  const { jobSuggestions, categorySuggestions } = useCarServiceData();
+  const { jobSuggestions, categorySuggestions } = useCarService();
   const { vehicles } = useVehicles();
   const searchParams = new URLSearchParams(window.location.search);
   const persistedContext = (() => {

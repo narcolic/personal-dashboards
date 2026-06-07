@@ -7,7 +7,7 @@ import type {
   ServiceVisitWithJobs,
 } from "@/routes/_authenticated/car-service/types";
 
-export function useCarServiceData(vehicleId: string = "all") {
+export function useCarService(vehicleId: string = "all") {
   const { user } = useAuth();
   const userId = user?.id ?? null;
   const [visits, setVisits] = useState<ServiceVisitWithJobs[]>([]);
@@ -90,7 +90,9 @@ export function useCarServiceData(vehicleId: string = "all") {
       new Set(jobs.map((job) => job.job_name_snapshot.trim()).filter(Boolean)),
     ).sort((a, b) => a.localeCompare(b));
     const categories = Array.from(
-      new Set(jobs.map((job) => (job.category_snapshot ?? "").trim().toUpperCase()).filter(Boolean)),
+      new Set(
+        jobs.map((job) => (job.category_snapshot ?? "").trim().toUpperCase()).filter(Boolean),
+      ),
     ).sort((a, b) => a.localeCompare(b));
 
     setVisits(baseVisits.map((visit) => ({ ...visit, jobs: jobsByVisit.get(visit.id) ?? [] })));

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { ServiceHistoryEditor } from "@/routes/_authenticated/car-service/components/ServiceHistoryEditor";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import { createServiceVisit } from "@/routes/_authenticated/car-service/hooks/useCarServiceMutations";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import type { ServiceJobInput } from "@/routes/_authenticated/car-service/types";
@@ -17,7 +17,7 @@ function CarServiceAddVisit() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { jobSuggestions, categorySuggestions } = useCarServiceData();
+  const { jobSuggestions, categorySuggestions } = useCarService();
   const { vehicles } = useVehicles();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

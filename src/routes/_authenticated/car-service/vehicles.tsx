@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import {
   createServiceReminder,
   deleteServiceReminder,
@@ -62,7 +62,7 @@ function VehiclesScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
   const { vehicles, isLoading, error, refetch } = useVehicles();
-  const { visits } = useCarServiceData("all");
+  const { visits } = useCarService("all");
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const initialExpandedVehicleId = searchParams.get("vehicleId")?.trim() || null;
   const [expandedVehicleId, setExpandedVehicleId] = useState<string | null>(
@@ -215,7 +215,7 @@ function VehicleAccordionItem({
   onMutated,
 }: {
   vehicle: Vehicle;
-  visits: ReturnType<typeof useCarServiceData>["visits"];
+  visits: ReturnType<typeof useCarService>["visits"];
   visitCount: number;
   isExpanded: boolean;
   busy: boolean;

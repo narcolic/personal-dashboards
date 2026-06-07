@@ -33,7 +33,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <div className="text-xs uppercase tracking-[0.3em] text-destructive">{t("root.systemFault")}</div>
+        <div className="text-xs uppercase tracking-[0.3em] text-destructive">
+          {t("root.systemFault")}
+        </div>
         <h1 className="mt-2 text-2xl text-foreground">{t("root.pageDidNotLoad")}</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
         <div className="mt-6 flex justify-center gap-2">

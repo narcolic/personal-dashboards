@@ -47,7 +47,9 @@ export function TransactionEditor({
     <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-background/80 p-4 backdrop-blur md:items-center">
       <div className="w-full max-w-lg border border-border bg-card">
         <div className="flex justify-between border-b border-border bg-secondary/40 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-primary">
-          <span>&gt; {value.id ? t("portfolio.editTransaction") : t("portfolio.newTransaction")}</span>
+          <span>
+            &gt; {value.id ? t("portfolio.editTransaction") : t("portfolio.newTransaction")}
+          </span>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             x
           </button>
@@ -167,7 +169,11 @@ export function TransactionEditor({
           </Field>
 
           <div className="col-span-2 border-t border-border/40 pt-2">
-            <div role="group" aria-label={t("portfolio.save")} className="inline-flex flex-wrap items-center gap-2">
+            <div
+              role="group"
+              aria-label={t("portfolio.save")}
+              className="inline-flex flex-wrap items-center gap-2"
+            >
               <button
                 type="submit"
                 disabled={busy}

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { CarServiceKpiCard } from "@/routes/_authenticated/car-service/components/CarServiceKpiCard";
 import { ServiceAnalyticsPanel } from "@/routes/_authenticated/car-service/components/ServiceAnalyticsPanel";
 import { VehicleFilterBar } from "@/routes/_authenticated/car-service/components/VehicleFilterBar";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import {
   formatCurrency,
@@ -25,7 +25,7 @@ function CarServiceAnalytics() {
   const { t } = useTranslation();
   const { vehicles } = useVehicles();
   const [selectedVehicleId, setSelectedVehicleId] = useState("all");
-  const { visits, isLoading, error } = useCarServiceData(selectedVehicleId);
+  const { visits, isLoading, error } = useCarService(selectedVehicleId);
 
   const annualSpend = getAnnualSpend(visits);
   const categorySpend = getSpendByCategory(visits);

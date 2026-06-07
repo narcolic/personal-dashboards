@@ -42,7 +42,9 @@ export function PnLBucket({
     >
       <div className={`h-1 ${tone === "bull" ? "bg-bull/40" : "bg-bear/40"}`} />
       {rows.length === 0 ? (
-        <div className="p-6 text-center text-xs text-muted-foreground">{t("portfolio.nothingHere")}</div>
+        <div className="p-6 text-center text-xs text-muted-foreground">
+          {t("portfolio.nothingHere")}
+        </div>
       ) : (
         <TerminalTable>
           <tbody>

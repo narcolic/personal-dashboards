@@ -11,8 +11,6 @@ export const Route = createFileRoute("/login")({
   component: LoginPage,
 });
 
-export { LoginPage };
-
 function LoginPage() {
   const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");

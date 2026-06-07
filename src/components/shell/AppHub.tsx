@@ -4,7 +4,7 @@ import { dashboards } from "@/components/shell/dashboards";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import {
   formatCurrency as formatCarCurrency,
   formatDate as formatCarDate,
@@ -133,7 +133,7 @@ function PortfolioHubSummary() {
 
 function CarServiceHubSummary() {
   const { t } = useTranslation();
-  const { visits, isLoading, error } = useCarServiceData("all");
+  const { visits, isLoading, error } = useCarService("all");
 
   if (isLoading) {
     return (

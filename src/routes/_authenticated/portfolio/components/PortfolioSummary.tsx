@@ -26,7 +26,11 @@ export function PortfolioSummary({
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       <StatCard
-        label={selectedAll ? `${t("portfolio.netWorth")} (${display})` : `${t("portfolio.portfolioValue")} (${display})`}
+        label={
+          selectedAll
+            ? `${t("portfolio.netWorth")} (${display})`
+            : `${t("portfolio.portfolioValue")} (${display})`
+        }
         value={formatCurrency(totals.mv)}
         accent
       />

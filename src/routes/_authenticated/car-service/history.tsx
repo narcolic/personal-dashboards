@@ -2,7 +2,7 @@ import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { ServiceHistoryTable } from "@/routes/_authenticated/car-service/components/ServiceHistoryTable";
 import { VehicleFilterBar } from "@/routes/_authenticated/car-service/components/VehicleFilterBar";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import { useTranslation } from "react-i18next";
 
@@ -45,7 +45,7 @@ function CarServiceHistory() {
     });
   }, [navigate, searchParams]);
 
-  const { visits: allVisits, isLoading, error } = useCarServiceData("all");
+  const { visits: allVisits, isLoading, error } = useCarService("all");
   const effectiveSelectedVehicleId = useMemo(() => {
     if (selectedVehicleId !== "all") return selectedVehicleId;
     if (!initialExpandedVisitId) return "all";

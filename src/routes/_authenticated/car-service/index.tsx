@@ -3,7 +3,7 @@ import { useMemo, useState } from "react";
 import { CarServiceKpiCard } from "@/routes/_authenticated/car-service/components/CarServiceKpiCard";
 import { VehicleFilterBar } from "@/routes/_authenticated/car-service/components/VehicleFilterBar";
 import { ReminderStatusBadge } from "@/routes/_authenticated/car-service/components/ReminderStatusBadge";
-import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import { parseVehicleMeta } from "@/routes/_authenticated/car-service/hooks/useVehicleMutations";
 import { useAllReminders } from "@/routes/_authenticated/car-service/hooks/useReminders";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
@@ -28,7 +28,7 @@ function CarServiceOverview() {
   const { t } = useTranslation();
   const { vehicles } = useVehicles();
   const [selectedVehicleId, setSelectedVehicleId] = useState("all");
-  const { visits, isLoading, error } = useCarServiceData(selectedVehicleId);
+  const { visits, isLoading, error } = useCarService(selectedVehicleId);
   const { serviceReminders } = useAllReminders();
 
   const totalLifetimeCost = getTotalLifetimeCost(visits);

@@ -106,31 +106,52 @@ export function TransactionsTable({
               className="accent-primary"
             />
           </th>
-          <th className="px-3 py-2 text-left cursor-pointer select-none" onClick={() => toggleSort("transaction_date")}>
+          <th
+            className="px-3 py-2 text-left cursor-pointer select-none"
+            onClick={() => toggleSort("transaction_date")}
+          >
             {t("portfolio.date")}
             {sortMark("transaction_date")}
           </th>
-          <th className="px-3 py-2 text-left cursor-pointer select-none" onClick={() => toggleSort("ticker")}>
+          <th
+            className="px-3 py-2 text-left cursor-pointer select-none"
+            onClick={() => toggleSort("ticker")}
+          >
             {t("portfolio.ticker")}
             {sortMark("ticker")}
           </th>
-          <th className="px-3 py-2 text-left cursor-pointer select-none" onClick={() => toggleSort("portfolio")}>
+          <th
+            className="px-3 py-2 text-left cursor-pointer select-none"
+            onClick={() => toggleSort("portfolio")}
+          >
             {t("portfolio.portfolio")}
             {sortMark("portfolio")}
           </th>
-          <th className="px-3 py-2 text-left cursor-pointer select-none" onClick={() => toggleSort("asset_type")}>
+          <th
+            className="px-3 py-2 text-left cursor-pointer select-none"
+            onClick={() => toggleSort("asset_type")}
+          >
             {t("portfolio.type")}
             {sortMark("asset_type")}
           </th>
-          <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => toggleSort("shares")}>
+          <th
+            className="px-3 py-2 text-right cursor-pointer select-none"
+            onClick={() => toggleSort("shares")}
+          >
             {t("portfolio.shares")}
             {sortMark("shares")}
           </th>
-          <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => toggleSort("price")}>
+          <th
+            className="px-3 py-2 text-right cursor-pointer select-none"
+            onClick={() => toggleSort("price")}
+          >
             {t("portfolio.price")}
             {sortMark("price")}
           </th>
-          <th className="px-3 py-2 text-right cursor-pointer select-none" onClick={() => toggleSort("currency")}>
+          <th
+            className="px-3 py-2 text-right cursor-pointer select-none"
+            onClick={() => toggleSort("currency")}
+          >
             {t("portfolio.ccy")}
             {sortMark("currency")}
           </th>
@@ -174,7 +195,9 @@ export function TransactionsTable({
             <td className="px-3 py-2 text-[11px]">{portfolioName(position.portfolio_id)}</td>
             <td className="px-3 py-2 text-[11px] uppercase">{position.asset_type}</td>
             <td className="px-3 py-2 text-right tabular-nums">{Number(position.shares)}</td>
-            <td className="px-3 py-2 text-right tabular-nums">{Number(position.price).toFixed(2)}</td>
+            <td className="px-3 py-2 text-right tabular-nums">
+              {Number(position.price).toFixed(2)}
+            </td>
             <td className="px-3 py-2 text-[11px]">{position.currency}</td>
             <td className="px-3 py-2 text-right whitespace-nowrap">
               <button

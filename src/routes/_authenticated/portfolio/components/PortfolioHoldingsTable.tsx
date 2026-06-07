@@ -49,11 +49,18 @@ export function PortfolioHoldingsTable({
         case "dayChangePct":
           return (a.dayChangePct - b.dayChangePct) * dir;
         case "marketValue":
-          return (convert(a.marketValue, a._nativeCurrency) - convert(b.marketValue, b._nativeCurrency)) * dir;
+          return (
+            (convert(a.marketValue, a._nativeCurrency) -
+              convert(b.marketValue, b._nativeCurrency)) *
+            dir
+          );
         case "tx_count":
           return (a.tx_count - b.tx_count) * dir;
         case "unrealized":
-          return (convert(a.unrealized, a._nativeCurrency) - convert(b.unrealized, b._nativeCurrency)) * dir;
+          return (
+            (convert(a.unrealized, a._nativeCurrency) - convert(b.unrealized, b._nativeCurrency)) *
+            dir
+          );
         case "unrealizedPct":
           return (a.unrealizedPct - b.unrealizedPct) * dir;
       }
@@ -70,50 +77,78 @@ export function PortfolioHoldingsTable({
     setSortDirection("asc");
   };
 
-  const sortMark = (key: SortKey) => (sortKey === key ? (sortDirection === "asc" ? " ↑" : " ↓") : "");
+  const sortMark = (key: SortKey) =>
+    sortKey === key ? (sortDirection === "asc" ? " ↑" : " ↓") : "";
 
   return (
     <TerminalCard
       title={t("portfolio.holdings")}
-      actions={<span className="text-[10px] text-muted-foreground">{`${rows.length} ${t("portfolio.positions")} · ${display}`}</span>}
+      actions={
+        <span className="text-[10px] text-muted-foreground">{`${rows.length} ${t("portfolio.positions")} · ${display}`}</span>
+      }
     >
       <div className="overflow-x-auto">
         <TerminalTable>
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
-              <TerminalTh className="text-left cursor-pointer select-none" onClick={() => toggleSort("ticker")}>
+              <TerminalTh
+                className="text-left cursor-pointer select-none"
+                onClick={() => toggleSort("ticker")}
+              >
                 {t("portfolio.ticker")}
                 {sortMark("ticker")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("shares")}>
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("shares")}
+              >
                 {t("portfolio.quantity")}
                 {sortMark("shares")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("price")}>
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("price")}
+              >
                 {t("portfolio.priceCurrent")}
                 {sortMark("price")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("avg_cost")}>
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("avg_cost")}
+              >
                 {t("portfolio.priceAvg")}
                 {sortMark("avg_cost")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("dayChangePct")}>
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("dayChangePct")}
+              >
                 {t("portfolio.dayPct")}
                 {sortMark("dayChangePct")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("marketValue")}>
-                {t("portfolio.marketValue")} ({display})
-                {sortMark("marketValue")}
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("marketValue")}
+              >
+                {t("portfolio.marketValue")} ({display}){sortMark("marketValue")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("tx_count")}>
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("tx_count")}
+              >
                 {t("portfolio.tx")}
                 {sortMark("tx_count")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("unrealized")}>
-                {t("portfolio.unrealized")} ({display})
-                {sortMark("unrealized")}
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("unrealized")}
+              >
+                {t("portfolio.unrealized")} ({display}){sortMark("unrealized")}
               </TerminalTh>
-              <TerminalTh className="text-right cursor-pointer select-none" onClick={() => toggleSort("unrealizedPct")}>
+              <TerminalTh
+                className="text-right cursor-pointer select-none"
+                onClick={() => toggleSort("unrealizedPct")}
+              >
                 {t("portfolio.pnlPct")}
                 {sortMark("unrealizedPct")}
               </TerminalTh>
@@ -132,14 +167,22 @@ export function PortfolioHoldingsTable({
                       {r.quote?.shortName || r.name || r.asset_type} · {native}
                     </div>
                   </td>
-                  <TerminalTd>{fmt(r.shares, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</TerminalTd>
+                  <TerminalTd>
+                    {fmt(r.shares, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  </TerminalTd>
                   <TerminalTd>{fmtCurrency(r.price, native)}</TerminalTd>
                   <TerminalTd>{fmtCurrency(r.avg_cost, native)}</TerminalTd>
-                  <TerminalTd tone={r.dayChangePct >= 0 ? "bull" : "bear"}>{fmtPct(r.dayChangePct)}</TerminalTd>
+                  <TerminalTd tone={r.dayChangePct >= 0 ? "bull" : "bear"}>
+                    {fmtPct(r.dayChangePct)}
+                  </TerminalTd>
                   <TerminalTd>{formatDisplayCurrency(mvDisp)}</TerminalTd>
                   <TerminalTd>{r.tx_count}</TerminalTd>
-                  <TerminalTd tone={r.unrealized >= 0 ? "bull" : "bear"}>{formatDisplayCurrency(unrealDisp)}</TerminalTd>
-                  <TerminalTd tone={r.unrealizedPct >= 0 ? "bull" : "bear"}>{fmtPct(r.unrealizedPct)}</TerminalTd>
+                  <TerminalTd tone={r.unrealized >= 0 ? "bull" : "bear"}>
+                    {formatDisplayCurrency(unrealDisp)}
+                  </TerminalTd>
+                  <TerminalTd tone={r.unrealizedPct >= 0 ? "bull" : "bear"}>
+                    {fmtPct(r.unrealizedPct)}
+                  </TerminalTd>
                 </tr>
               );
             })}
