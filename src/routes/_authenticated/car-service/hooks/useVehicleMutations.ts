@@ -13,12 +13,16 @@ type VehicleMutationInput = {
   plate: string;
   colour?: string;
   notes?: string;
+  annualServiceIntervalKm?: number;
+  annualServiceIntervalMonths?: number;
 };
 
 function serializeVehicleName(data: VehicleMutationInput): string {
   const meta = {
     colour: data.colour?.trim() || "",
     notes: data.notes?.trim() || "",
+    annualServiceIntervalKm: data.annualServiceIntervalKm ?? 15000,
+    annualServiceIntervalMonths: data.annualServiceIntervalMonths ?? 12,
   };
   return `${data.make.trim()} ${data.model.trim()}||${JSON.stringify(meta)}`;
 }
@@ -26,20 +30,43 @@ function serializeVehicleName(data: VehicleMutationInput): string {
 export function parseVehicleMeta(name: string | null | undefined): {
   colour: string;
   notes: string;
+  annualServiceIntervalKm: number;
+  annualServiceIntervalMonths: number;
 } {
   if (!name || !name.includes("||")) {
-    return { colour: "", notes: "" };
+    return {
+      colour: "",
+      notes: "",
+      annualServiceIntervalKm: 15000,
+      annualServiceIntervalMonths: 12,
+    };
   }
 
   const json = name.split("||")[1];
   try {
-    const parsed = JSON.parse(json) as { colour?: string; notes?: string };
+    const parsed = JSON.parse(json) as {
+      colour?: string;
+      notes?: string;
+      annualServiceIntervalKm?: number;
+      annualServiceIntervalMonths?: number;
+    };
     return {
       colour: parsed.colour ?? "",
       notes: parsed.notes ?? "",
+      annualServiceIntervalKm:
+        typeof parsed.annualServiceIntervalKm === "number" ? parsed.annualServiceIntervalKm : 15000,
+      annualServiceIntervalMonths:
+        typeof parsed.annualServiceIntervalMonths === "number"
+          ? parsed.annualServiceIntervalMonths
+          : 12,
     };
   } catch {
-    return { colour: "", notes: "" };
+    return {
+      colour: "",
+      notes: "",
+      annualServiceIntervalKm: 15000,
+      annualServiceIntervalMonths: 12,
+    };
   }
 }
 

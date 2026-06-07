@@ -1,12 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { CarServiceKpiCard } from "@/routes/_authenticated/car-service/components/CarServiceKpiCard";
 import { VehicleFilterBar } from "@/routes/_authenticated/car-service/components/VehicleFilterBar";
 import { ReminderStatusBadge } from "@/routes/_authenticated/car-service/components/ReminderStatusBadge";
 import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
+import { parseVehicleMeta } from "@/routes/_authenticated/car-service/hooks/useVehicleMutations";
 import { useAllReminders } from "@/routes/_authenticated/car-service/hooks/useReminders";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import {
+  computeAnnualServiceStatus,
   formatCurrency,
   formatDate,
   formatKm,
@@ -35,7 +37,52 @@ function CarServiceOverview() {
   const totalVisits = getTotalVisits(visits);
   const recentVisits = visits.slice(0, 3);
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]));
+  const nowMs = useMemo(() => new Date().getTime(), []);
+  const visibleVehicles =
+    selectedVehicleId === "all"
+      ? vehicles
+      : vehicles.filter((vehicle) => vehicle.id === selectedVehicleId);
+  const annualServiceItems = visibleVehicles.map((vehicle) => {
+    const meta = parseVehicleMeta(vehicle.name);
+    const vehicleVisits = visits.filter((visit) => visit.vehicle_id === vehicle.id);
+    const currentKm = vehicleVisits.reduce(
+      (max, visit) => Math.max(max, Number(visit.odometer_km)),
+      0,
+    );
+    const status = computeAnnualServiceStatus(
+      vehicleVisits,
+      currentKm,
+      meta.annualServiceIntervalKm,
+      meta.annualServiceIntervalMonths,
+    );
+
+    return {
+      type: "annual-service" as const,
+      status: status.status,
+      vehicleId: vehicle.id,
+      title: t("car.annualServiceReminderTitle"),
+      dueInfo:
+        status.daysRemaining != null
+          ? t("car.daysRemaining", { count: status.daysRemaining })
+          : status.kmRemaining != null
+            ? t("car.kmRemaining", { count: status.kmRemaining })
+            : "--",
+      urgency:
+        status.status === "OVERDUE"
+          ? 0
+          : status.status === "DUE SOON"
+            ? 1
+            : status.status === "OK"
+              ? 3
+              : 4,
+      dateSort:
+        status.daysRemaining != null
+          ? nowMs + status.daysRemaining * 24 * 60 * 60 * 1000
+          : Number.MAX_SAFE_INTEGER,
+    };
+  });
   const upcomingItems = [
+    ...annualServiceItems,
     ...serviceReminders.map((item) => ({
       type: "service" as const,
       status: item.status,
@@ -48,10 +95,16 @@ function CarServiceOverview() {
             ? t("car.kmRemaining", { count: item.kmRemaining })
             : "--",
       urgency:
-        item.status === "OVERDUE" ? 0 : item.status === "DUE SOON" ? 1 : item.status === "OK" ? 3 : 4,
+        item.status === "OVERDUE"
+          ? 0
+          : item.status === "DUE SOON"
+            ? 1
+            : item.status === "OK"
+              ? 3
+              : 4,
       dateSort:
         item.daysRemaining != null
-          ? Date.now() + item.daysRemaining * 24 * 60 * 60 * 1000
+          ? nowMs + item.daysRemaining * 24 * 60 * 60 * 1000
           : Number.MAX_SAFE_INTEGER,
     })),
     ...manualReminders.map((item) => ({
@@ -100,7 +153,10 @@ function CarServiceOverview() {
           label={t("car.lastServiceDate")}
           value={isLoading ? "..." : lastVisit ? formatDate(lastVisit.service_date) : "--"}
         />
-        <CarServiceKpiCard label={t("car.totalVisits")} value={isLoading ? "..." : String(totalVisits)} />
+        <CarServiceKpiCard
+          label={t("car.totalVisits")}
+          value={isLoading ? "..." : String(totalVisits)}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -139,7 +195,8 @@ function CarServiceOverview() {
                     {formatDate(visit.service_date)} | {formatKm(visit.odometer_km)}
                   </span>
                   <span className="text-right">
-                    {formatCurrency(Number(visit.total_amount))} | {visit.jobs.length} {t("car.jobs")}
+                    {formatCurrency(Number(visit.total_amount))} | {visit.jobs.length}{" "}
+                    {t("car.jobs")}
                   </span>
                 </Link>
               ))
@@ -157,7 +214,9 @@ function CarServiceOverview() {
             ) : (
               upcomingItems.map((item, idx) => {
                 const vehicle = vehicleById.get(item.vehicleId);
-                const vehicleName = `${vehicle?.make ?? "-"} ${vehicle?.model ?? "-"}`.trim().toUpperCase();
+                const vehicleName = `${vehicle?.make ?? "-"} ${vehicle?.model ?? "-"}`
+                  .trim()
+                  .toUpperCase();
                 return (
                   <Link
                     key={`${item.type}-${idx}-${item.title}`}
