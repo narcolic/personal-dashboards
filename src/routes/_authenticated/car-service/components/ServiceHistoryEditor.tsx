@@ -35,6 +35,7 @@ type FormValues = {
   workshop: string;
   vatRatePct: string;
   notes: string;
+  isAnnualService: boolean;
 };
 
 type FieldErrors = {
@@ -86,6 +87,7 @@ export function ServiceHistoryEditor({
       workshop: string | null;
       notes: string | null;
       vat_rate: number;
+      is_annual_service: boolean;
     };
     jobs: ServiceJobInput[];
   }) => Promise<void>;
@@ -103,6 +105,7 @@ export function ServiceHistoryEditor({
     workshop: initialVisit?.workshop ?? "",
     vatRatePct: initialVisit ? String(Number(initialVisit.vat_rate) * 100) : "24",
     notes: initialVisit?.notes ?? "",
+    isAnnualService: initialVisit?.is_annual_service ?? false,
   });
   const [lines, setLines] = useState<JobLine[]>(
     initialVisit?.jobs.length
@@ -225,6 +228,7 @@ export function ServiceHistoryEditor({
         workshop: form.workshop.trim() || null,
         notes: form.notes.trim() || null,
         vat_rate: Number((Number(form.vatRatePct) / 100).toFixed(4)),
+        is_annual_service: form.isAnnualService,
       },
       jobs: validJobs,
     });
@@ -296,6 +300,16 @@ export function ServiceHistoryEditor({
               className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
+
+          <label className="md:col-span-2 inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={form.isAnnualService}
+              onChange={(e) => setForm((prev) => ({ ...prev, isAnnualService: e.target.checked }))}
+              className="h-4 w-4 accent-primary"
+            />
+            <span>{t("car.editor.markAsAnnualService")}</span>
+          </label>
         </div>
       </section>
 

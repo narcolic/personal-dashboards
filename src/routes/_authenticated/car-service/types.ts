@@ -4,11 +4,17 @@ export type Vehicle = Database["public"]["Tables"]["vehicles"]["Row"];
 export type VehicleInsert = Database["public"]["Tables"]["vehicles"]["Insert"];
 export type VehicleUpdate = Database["public"]["Tables"]["vehicles"]["Update"];
 
-export type ServiceVisit = Database["public"]["Tables"]["service_visits"]["Row"];
+export type ServiceVisit = Database["public"]["Tables"]["service_visits"]["Row"] & {
+  is_annual_service: boolean;
+};
 export type ServiceJob = Database["public"]["Tables"]["service_jobs"]["Row"];
 
-export type ServiceVisitInsert = Database["public"]["Tables"]["service_visits"]["Insert"];
-export type ServiceVisitUpdate = Database["public"]["Tables"]["service_visits"]["Update"];
+export type ServiceVisitInsert = Database["public"]["Tables"]["service_visits"]["Insert"] & {
+  is_annual_service?: boolean;
+};
+export type ServiceVisitUpdate = Database["public"]["Tables"]["service_visits"]["Update"] & {
+  is_annual_service?: boolean;
+};
 export type ServiceJobInsert = Database["public"]["Tables"]["service_jobs"]["Insert"];
 
 export type ServiceVisitWithJobs = ServiceVisit & { jobs: ServiceJob[] };
@@ -49,4 +55,5 @@ export type ServiceVisitFormInput = {
   workshop: string | null;
   notes: string | null;
   vat_rate: number;
+  is_annual_service: boolean;
 };

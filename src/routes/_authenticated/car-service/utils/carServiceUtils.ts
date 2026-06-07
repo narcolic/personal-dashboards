@@ -75,8 +75,10 @@ export function getAverageVisitCost(visits: ServiceVisitWithJobs[]): number {
 }
 
 export function getAverageKmInterval(visits: ServiceVisitWithJobs[]): number | null {
-  if (visits.length < 2) return null;
-  const sorted = visits
+  const annualServiceVisits = visits.filter((visit) => visit.is_annual_service);
+  if (annualServiceVisits.length < 2) return null;
+
+  const sorted = annualServiceVisits
     .slice()
     .sort((a, b) => new Date(a.service_date).getTime() - new Date(b.service_date).getTime());
 

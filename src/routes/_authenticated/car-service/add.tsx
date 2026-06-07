@@ -30,6 +30,7 @@ function CarServiceAddVisit() {
       workshop: string | null;
       notes: string | null;
       vat_rate: number;
+      is_annual_service: boolean;
     };
     jobs: ServiceJobInput[];
   }) => {
@@ -52,6 +53,7 @@ function CarServiceAddVisit() {
           workshop: payload.visit.workshop,
           notes: payload.visit.notes,
           vat_rate: payload.visit.vat_rate,
+          is_annual_service: payload.visit.is_annual_service,
         },
         payload.jobs,
       );

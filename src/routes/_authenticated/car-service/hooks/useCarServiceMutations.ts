@@ -40,6 +40,7 @@ export async function createServiceVisit(
     workshop: visitData.workshop,
     notes: visitData.notes,
     vat_rate: visitData.vat_rate,
+    is_annual_service: visitData.is_annual_service,
   };
 
   const { data: visit, error: visitError } = await client
@@ -79,6 +80,7 @@ export async function updateServiceVisit(
     workshop: visitData.workshop,
     notes: visitData.notes,
     vat_rate: visitData.vat_rate,
+    is_annual_service: visitData.is_annual_service,
   };
 
   if (visitData.vehicle_id) {

@@ -20,6 +20,14 @@ function NoteIcon() {
   );
 }
 
+function TickIcon() {
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
+      <path d="M4.8 9.2 1.9 6.3l.8-.8 2.1 2.1 4.5-4.5.8.8-5.3 5.3Z" className="fill-current" />
+    </svg>
+  );
+}
+
 export function ServiceHistoryTable({
   visits = [],
   isLoading = false,
@@ -80,24 +88,25 @@ export function ServiceHistoryTable({
           <th className="px-3 py-2 text-right">{t("car.jobsCount")}</th>
           <th className="px-3 py-2 text-right">{t("car.subtotal")}</th>
           <th className="px-3 py-2 text-right">{t("car.total")}</th>
-          <th className="px-3 py-2 text-right">{t("car.actions")}</th>
+          <th className="w-12 px-2 py-2 text-center">{t("car.annualServiceShort")}</th>
+          <th className="w-20 px-2 py-2 text-right">{t("car.actions")}</th>
         </tr>
       </thead>
       <tbody>
         {isLoading ? (
           <>
             <tr className="border-t border-border/60 opacity-50">
-              <td colSpan={7} className="px-3 py-3 text-muted-foreground">
+              <td colSpan={8} className="px-3 py-3 text-muted-foreground">
                 ...
               </td>
             </tr>
             <tr className="border-t border-border/60 opacity-50">
-              <td colSpan={7} className="px-3 py-3 text-muted-foreground">
+              <td colSpan={8} className="px-3 py-3 text-muted-foreground">
                 ...
               </td>
             </tr>
             <tr className="border-t border-border/60 opacity-50">
-              <td colSpan={7} className="px-3 py-3 text-muted-foreground">
+              <td colSpan={8} className="px-3 py-3 text-muted-foreground">
                 ...
               </td>
             </tr>
@@ -105,7 +114,7 @@ export function ServiceHistoryTable({
         ) : visits.length === 0 ? (
           <tr className="border-t border-border/60">
             <td
-              colSpan={7}
+              colSpan={8}
               className="p-6 text-center text-muted-foreground uppercase tracking-[0.2em]"
             >
               {t("car.noServiceRecordsFound")}
@@ -181,7 +190,18 @@ export function ServiceHistoryTable({
                   <td className="px-3 py-2 text-right">
                     {formatCurrency(Number(visit.total_amount))}
                   </td>
-                  <td className="px-3 py-2 text-right whitespace-nowrap">
+                  <td className="w-12 px-2 py-2 text-center">
+                    {visit.is_annual_service ? (
+                      <span
+                        className="inline-flex text-bull"
+                        aria-label={t("car.markAsAnnualService")}
+                        title={t("car.markAsAnnualService")}
+                      >
+                        <TickIcon />
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="w-20 px-2 py-2 text-right whitespace-nowrap">
                     <Link
                       to="/car-service/$visitId"
                       params={{ visitId: visit.id }}
@@ -205,7 +225,7 @@ export function ServiceHistoryTable({
                 </tr>
                 {expanded ? (
                   <tr className="border-t border-border/40 bg-secondary/20">
-                    <td colSpan={7} className="px-3 py-3">
+                    <td colSpan={8} className="px-3 py-3">
                       {visit.notes?.trim() ? (
                         <div className="mb-3 border-b border-border/40 pb-2 text-[10px] uppercase tracking-[0.16em]">
                           <span className="text-muted-foreground">{t("car.noteLabel")}:</span>{" "}
