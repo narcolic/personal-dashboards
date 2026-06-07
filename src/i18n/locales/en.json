@@ -98,8 +98,8 @@
     "selectedCount": "{{count}} selected",
     "deleteSelected": "Delete selected",
     "deleting": "Deleting...",
-    "deleteTransactionsConfirm": "Delete {{count}} transactions?",
-    "deleteTransactionConfirm": "Delete transaction for {{ticker}} on {{date}}?",
+    "deleteTransactionsConfirm": "Delete selected transactions?",
+    "deleteTransactionConfirm": "Delete this transaction?",
     "cancel": "Cancel",
     "holdings": "HOLDINGS",
     "positions": "positions",
@@ -146,7 +146,7 @@
     "addPortfolio": "Add Portfolio",
     "noPortfoliosYet": "No portfolios yet",
     "broker": "Broker",
-    "deletePortfolioConfirm": "Delete portfolio \"{{name}}\"? Transactions will become unassigned."
+    "deletePortfolioConfirm": "Delete this portfolio?"
   },
   "car": {
     "overview": "> CAR-SERVICE // OVERVIEW",
@@ -218,6 +218,8 @@
     "intervalRequired": "AT LEAST ONE OF INTERVAL KM OR INTERVAL MONTHS IS REQUIRED.",
     "failedSaveReminder": "FAILED TO SAVE REMINDER.",
     "cannotDeleteLinked": "CANNOT DELETE - {{count}} VISITS LINKED.",
+    "deleteVehicleConfirm": "Delete this vehicle?",
+    "deleteIntervalConfirm": "Delete this service interval?",
     "date": "DATE",
     "km": "KM",
     "garage": "GARAGE",
@@ -295,7 +297,7 @@
       "deleting": "DELETING...",
       "confirmDelete": "CONFIRM DELETE",
       "deleteVisit": "DELETE VISIT",
-      "deleteVisitWarning": "Delete this visit permanently? This cannot be undone.",
+      "deleteVisitWarning": "Delete this visit?",
       "actionsGroupAria": "Visit actions",
       "removeJobAria": "Remove job row {{index}}"
     }

@@ -7,6 +7,7 @@ import type {
 } from "@/routes/_authenticated/car-service/types";
 import { formatCurrency } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 
 const BASE_CATEGORY_SUGGESTIONS = [
   "AC",
@@ -115,7 +116,7 @@ export function ServiceHistoryEditor({
   const [errors, setErrors] = useState<FieldErrors>({});
   const [jobMenuOpenIndex, setJobMenuOpenIndex] = useState<number | null>(null);
   const [categoryMenuOpenIndex, setCategoryMenuOpenIndex] = useState<number | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const mergedCategorySuggestions = useMemo(
     () =>
       Array.from(
@@ -536,43 +537,28 @@ export function ServiceHistoryEditor({
 
             {onDelete ? (
               <div className="border-t border-destructive/40 pt-2">
-                {confirmDelete ? (
-                  <div className="space-y-2" aria-live="polite">
-                    <p className="text-[10px] uppercase tracking-[0.16em] text-destructive">
-                      {t("car.editor.deleteVisitWarning")}
-                    </p>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <button
-                        type="button"
-                        disabled={Boolean(isDeleting)}
-                        onClick={() => void onDelete()}
-                        className="border border-destructive/60 px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:bg-destructive/10 disabled:opacity-60"
-                      >
-                        {isDeleting ? t("car.editor.deleting") : t("car.editor.confirmDelete")}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmDelete(false)}
-                        className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-                      >
-                        {t("common.cancel")}
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDelete(true)}
-                    className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:underline"
-                  >
-                    {t("common.delete")}
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:underline"
+                >
+                  {t("common.delete")}
+                </button>
               </div>
             ) : null}
           </div>
         </div>
       </div>
+
+      <ConfirmDialog
+        open={isDeleteDialogOpen}
+        title={t("common.delete")}
+        description={t("car.editor.deleteVisitWarning")}
+        confirmLabel={isDeleting ? t("car.editor.deleting") : t("common.delete")}
+        isConfirming={Boolean(isDeleting)}
+        onCancel={() => setIsDeleteDialogOpen(false)}
+        onConfirm={() => void onDelete?.()}
+      />
     </form>
   );
 }

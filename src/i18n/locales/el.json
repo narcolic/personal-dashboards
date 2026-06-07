@@ -98,8 +98,8 @@
     "selectedCount": "{{count}} επιλεγμένα",
     "deleteSelected": "Διαγραφή επιλεγμένων",
     "deleting": "Διαγραφή...",
-    "deleteTransactionsConfirm": "Διαγραφή {{count}} συναλλαγών;",
-    "deleteTransactionConfirm": "Διαγραφή συναλλαγής για {{ticker}} στις {{date}};",
+    "deleteTransactionsConfirm": "Διαγραφή επιλεγμένων συναλλαγών;",
+    "deleteTransactionConfirm": "Διαγραφή αυτής της συναλλαγής;",
     "cancel": "Ακύρωση",
     "holdings": "επενδύσεις",
     "positions": "θέσεις",
@@ -146,7 +146,7 @@
     "addPortfolio": "Προσθήκη Χαρτοφυλακίου",
     "noPortfoliosYet": "Δεν υπάρχουν ακόμη χαρτοφυλάκια",
     "broker": "Broker",
-    "deletePortfolioConfirm": "Διαγραφή χαρτοφυλακίου \"{{name}}\"; Οι συναλλαγές θα μείνουν χωρίς ανάθεση."
+    "deletePortfolioConfirm": "Διαγραφή αυτού του χαρτοφυλακίου;"
   },
   "car": {
     "overview": "> Σέρβις // ΕΠΙΣΚΟΠΗΣΗ",
@@ -218,6 +218,8 @@
     "intervalRequired": "ΑΠΑΙΤΕΙΤΑΙ ΤΟΥΛΑΧΙΣΤΟΝ ΕΝΑ ΑΠΟ ΤΑ ΔΙΑΣΤΗΜΑΤΑ ΧΛΜ Ή ΜΗΝΩΝ.",
     "failedSaveReminder": "ΑΠΟΤΥΧΙΑ ΑΠΟΘΗΚΕΥΣΗΣ ΥΠΕΝΘΥΜΙΣΗΣ.",
     "cannotDeleteLinked": "ΔΕΝ ΜΠΟΡΕΙ ΝΑ ΔΙΑΓΡΑΦΕΙ - {{count}} ΕΠΙΣΚΕΨΕΙΣ ΕΙΝΑΙ ΣΥΝΔΕΔΕΜΕΝΕΣ.",
+    "deleteVehicleConfirm": "Διαγραφή αυτού του οχήματος;",
+    "deleteIntervalConfirm": "Διαγραφή αυτού του διαστήματος σέρβις;",
     "date": "ΗΜΕΡΟΜΗΝΙΑ",
     "km": "ΧΛΜ",
     "garage": "ΣΥΝΕΡΓΕΙΟ",
@@ -295,7 +297,7 @@
       "deleting": "ΔΙΑΓΡΑΦΗ...",
       "confirmDelete": "ΕΠΙΒΕΒΑΙΩΣΗ ΔΙΑΓΡΑΦΗΣ",
       "deleteVisit": "ΔΙΑΓΡΑΦΗ ΕΠΙΣΚΕΨΗΣ",
-      "deleteVisitWarning": "Να διαγραφεί μόνιμα η επίσκεψη; Η ενέργεια δεν αναιρείται.",
+      "deleteVisitWarning": "Διαγραφή αυτής της επίσκεψης;",
       "actionsGroupAria": "Ενέργειες επίσκεψης",
       "removeJobAria": "Αφαίρεση γραμμής εργασίας {{index}}"
     }

@@ -17,6 +17,7 @@ import {
 } from "@/routes/_authenticated/car-service/hooks/useVehicleMutations";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import { ReminderStatusBadge } from "@/routes/_authenticated/car-service/components/ReminderStatusBadge";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { ServiceReminderWithStatus, Vehicle } from "@/routes/_authenticated/car-service/types";
 import { useTranslation } from "react-i18next";
 
@@ -238,6 +239,13 @@ function VehicleAccordionItem({
   });
   const [intervalForm, setIntervalForm] = useState<IntervalFormState | null>(null);
   const [editingIntervalId, setEditingIntervalId] = useState<string | null>(null);
+  const [deleteDialog, setDeleteDialog] = useState<{
+    title: string;
+    description: string;
+    confirmLabel: string;
+    isConfirming: boolean;
+    onConfirm: () => Promise<void>;
+  } | null>(null);
 
   const { serviceReminders, error, refetch } = useReminders(vehicle.id);
   const vehicleVisits = useMemo(
@@ -369,7 +377,13 @@ function VehicleAccordionItem({
           <button
             onClick={(e) => {
               e.stopPropagation();
-              void removeVehicle();
+              setDeleteDialog({
+                title: t("common.delete"),
+                description: t("car.deleteVehicleConfirm", { vehicle: rowTitle }),
+                confirmLabel: t("common.delete"),
+                isConfirming: false,
+                onConfirm: removeVehicle,
+              });
             }}
             disabled={busy}
             className="uppercase text-destructive hover:underline disabled:opacity-50"
@@ -467,8 +481,18 @@ function VehicleAccordionItem({
                         });
                       }}
                       onDelete={async () => {
-                        await deleteServiceReminder(supabase, reminder.id);
-                        await refetch();
+                        setDeleteDialog({
+                          title: t("common.delete"),
+                          description: t("car.deleteIntervalConfirm", {
+                            job: reminder.job_name,
+                          }),
+                          confirmLabel: t("common.delete"),
+                          isConfirming: false,
+                          onConfirm: async () => {
+                            await deleteServiceReminder(supabase, reminder.id);
+                            await refetch();
+                          },
+                        });
                       }}
                     />
                   ))
@@ -574,6 +598,19 @@ function VehicleAccordionItem({
           )}
         </div>
       ) : null}
+
+      <ConfirmDialog
+        open={deleteDialog != null}
+        title={deleteDialog?.title ?? t("common.delete")}
+        description={deleteDialog?.description ?? ""}
+        confirmLabel={deleteDialog?.confirmLabel ?? t("common.delete")}
+        isConfirming={busy || deleteDialog?.isConfirming || false}
+        onCancel={() => setDeleteDialog(null)}
+        onConfirm={() => {
+          if (!deleteDialog) return;
+          void deleteDialog.onConfirm().then(() => setDeleteDialog(null));
+        }}
+      />
     </div>
   );
 }

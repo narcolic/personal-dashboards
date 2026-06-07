@@ -7,9 +7,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { mapCsvRows, parseCSV } from "@/lib/csv";
 import { type PortfolioInputType } from "@/lib/portfolio/portfolios/api";
 import { type TransactionInputType } from "@/lib/portfolio/transactions/api";
+import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TransactionsTable } from "@/routes/_authenticated/portfolio/components/TransactionsTable";
 import { TransactionEditor } from "@/routes/_authenticated/portfolio/components/TransactionEditor";
-import { type PortfolioRecord, usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
+import {
+  type PortfolioRecord,
+  usePortfolioData,
+} from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -40,6 +44,14 @@ type TransactionTableRow = {
   portfolio_id: string | null;
 };
 
+type DeleteDialogState = {
+  kind: "transaction" | "bulk-transactions" | "portfolio";
+  title: string;
+  description: string;
+  confirmLabel: string;
+  onConfirm: () => void;
+};
+
 function TransactionsPage() {
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -48,6 +60,7 @@ function TransactionsPage() {
   const [editing, setEditing] = useState<(TransactionInputType & { id?: string }) | null>(null);
   const [showPortfolios, setShowPortfolios] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
 
   const { txQ, transactions, portfolios } = usePortfolioData();
   const data = transactions as TransactionTableRow[];
@@ -108,6 +121,7 @@ function TransactionsPage() {
     },
     onSuccess: () => {
       invalidate();
+      setDeleteDialog(null);
       toast.success(t("portfolio.removed"));
     },
     onError: (e: Error) => toast.error(e.message),
@@ -121,6 +135,7 @@ function TransactionsPage() {
     },
     onSuccess: (result) => {
       invalidate();
+      setDeleteDialog(null);
       setSelected(new Set());
       toast.success(t("portfolio.deletedTransactions", { count: result.deleted }));
     },
@@ -148,6 +163,7 @@ function TransactionsPage() {
     },
     onSuccess: () => {
       invalidate();
+      setDeleteDialog(null);
       toast.success(t("portfolio.portfolioRemoved"));
     },
     onError: (e: Error) => toast.error(e.message),
@@ -293,15 +309,16 @@ function TransactionsPage() {
         </summary>
         <div className="space-y-1 px-3 pb-3 text-muted-foreground">
           <p>
-            <strong className="text-foreground">{t("portfolio.requiredColumns")}</strong> ticker, shares, price,
-            portfolio.
+            <strong className="text-foreground">{t("portfolio.requiredColumns")}</strong> ticker,
+            shares, price, portfolio.
           </p>
           <p>
-            <strong className="text-foreground">{t("portfolio.optionalColumns")}</strong> transaction_date, asset_type,
-            currency, notes.
+            <strong className="text-foreground">{t("portfolio.optionalColumns")}</strong>{" "}
+            transaction_date, asset_type, currency, notes.
           </p>
           <p>
-            <strong className="text-foreground">{t("portfolio.tickers")}</strong> AAPL, AIR.PA, VOD.L, BTC-USD.
+            <strong className="text-foreground">{t("portfolio.tickers")}</strong> AAPL, AIR.PA,
+            VOD.L, BTC-USD.
           </p>
           <pre className="mt-2 overflow-x-auto border border-border bg-background p-2">
             {`transaction_date,ticker,asset_type,currency,shares,price,portfolio
@@ -320,9 +337,14 @@ function TransactionsPage() {
           </span>
           <button
             onClick={() => {
-              if (confirm(t("portfolio.deleteTransactionsConfirm", { count: selected.size }))) {
-                bulkDeleteM.mutate(Array.from(selected));
-              }
+              const ids = Array.from(selected);
+              setDeleteDialog({
+                kind: "bulk-transactions",
+                title: t("portfolio.deleteSelected"),
+                description: t("portfolio.deleteTransactionsConfirm", { count: selected.size }),
+                confirmLabel: t("common.delete"),
+                onConfirm: () => bulkDeleteM.mutate(ids),
+              });
             }}
             disabled={bulkDeleteM.isPending}
             className="border border-bear px-3 py-1 text-[10px] uppercase tracking-widest text-bear hover:bg-bear hover:text-primary-foreground disabled:opacity-50"
@@ -346,9 +368,13 @@ function TransactionsPage() {
         portfolioName={portfolioName}
         setEditing={setEditing}
         onDelete={(id, ticker, transactionDate) => {
-          if (confirm(t("portfolio.deleteTransactionConfirm", { ticker, date: transactionDate }))) {
-            deleteM.mutate(id);
-          }
+          setDeleteDialog({
+            kind: "transaction",
+            title: t("common.delete"),
+            description: t("portfolio.deleteTransactionConfirm", { ticker, date: transactionDate }),
+            confirmLabel: t("common.delete"),
+            onConfirm: () => deleteM.mutate(id),
+          });
         }}
       />
 
@@ -376,15 +402,35 @@ function TransactionsPage() {
               toast.error((e as Error).message);
             }
           }}
-          onDelete={async (id) => {
-            try {
-              await delP.mutateAsync(id);
-            } catch (e) {
-              toast.error((e as Error).message);
-            }
-          }}
+          onRequestDelete={(portfolio) =>
+            setDeleteDialog({
+              kind: "portfolio",
+              title: t("common.delete"),
+              description: t("portfolio.deletePortfolioConfirm", { name: portfolio.name }),
+              confirmLabel: t("common.delete"),
+              onConfirm: () => delP.mutate(portfolio.id),
+            })
+          }
         />
       )}
+
+      <ConfirmDialog
+        open={deleteDialog != null}
+        title={deleteDialog?.title ?? t("common.delete")}
+        description={deleteDialog?.description ?? ""}
+        confirmLabel={deleteDialog?.confirmLabel ?? t("common.delete")}
+        isConfirming={
+          deleteDialog?.kind === "transaction"
+            ? deleteM.isPending
+            : deleteDialog?.kind === "bulk-transactions"
+              ? bulkDeleteM.isPending
+              : deleteDialog?.kind === "portfolio"
+                ? delP.isPending
+                : false
+        }
+        onCancel={() => setDeleteDialog(null)}
+        onConfirm={() => deleteDialog?.onConfirm()}
+      />
     </div>
   );
 }
@@ -393,12 +439,12 @@ function PortfoliosModal({
   portfolios,
   onClose,
   onCreate,
-  onDelete,
+  onRequestDelete,
 }: {
   portfolios: PortfolioRecord[];
   onClose: () => void;
   onCreate: (v: PortfolioInputType) => Promise<void>;
-  onDelete: (id: string) => Promise<void>;
+  onRequestDelete: (portfolio: PortfolioRecord) => void;
 }) {
   const { t } = useTranslation();
   const [name, setName] = useState("");
@@ -472,20 +518,18 @@ function PortfoliosModal({
               >
                 <div>
                   <div className="font-bold">{p.name}</div>
-                  <div className="text-[10px] text-muted-foreground">{t("portfolio.broker")}: {p.broker || "-"}</div>
-                  <div className="text-[10px] text-muted-foreground">{t("portfolio.notes")}: {p.notes || "-"}</div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {t("portfolio.broker")}: {p.broker || "-"}
+                  </div>
+                  <div className="text-[10px] text-muted-foreground">
+                    {t("portfolio.notes")}: {p.notes || "-"}
+                  </div>
                 </div>
                 <button
-                  onClick={() => {
-                    if (
-                      confirm(t("portfolio.deletePortfolioConfirm", { name: p.name }))
-                    ) {
-                      onDelete(p.id);
-                    }
-                  }}
+                  onClick={() => onRequestDelete(p)}
                   className="text-[10px] text-destructive hover:underline"
                 >
-                    [x]
+                  [x]
                 </button>
               </div>
             ))}
