@@ -29,7 +29,7 @@ function CarServiceOverview() {
   const { vehicles } = useVehicles();
   const [selectedVehicleId, setSelectedVehicleId] = useState("all");
   const { visits, isLoading, error } = useCarServiceData(selectedVehicleId);
-  const { serviceReminders, manualReminders } = useAllReminders();
+  const { serviceReminders } = useAllReminders();
 
   const totalLifetimeCost = getTotalLifetimeCost(visits);
   const costThisYear = getCostThisYear(visits);
@@ -106,15 +106,6 @@ function CarServiceOverview() {
         item.daysRemaining != null
           ? nowMs + item.daysRemaining * 24 * 60 * 60 * 1000
           : Number.MAX_SAFE_INTEGER,
-    })),
-    ...manualReminders.map((item) => ({
-      type: "manual" as const,
-      status: "DUE SOON" as const,
-      vehicleId: item.vehicle_id,
-      title: item.title,
-      dueInfo: item.due_date ? t("car.dueDateLabel", { date: item.due_date }) : t("car.noDueDate"),
-      urgency: 2,
-      dateSort: item.due_date ? new Date(item.due_date).getTime() : Number.MAX_SAFE_INTEGER,
     })),
   ]
     .sort((a, b) => a.dateSort - b.dateSort || a.urgency - b.urgency)

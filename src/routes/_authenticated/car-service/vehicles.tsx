@@ -4,11 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
 import {
-  createManualReminder,
   createServiceReminder,
-  deleteManualReminder,
   deleteServiceReminder,
-  toggleManualReminderDone,
   updateServiceReminder,
 } from "@/routes/_authenticated/car-service/hooks/useReminderMutations";
 import { useReminders } from "@/routes/_authenticated/car-service/hooks/useReminders";
@@ -241,13 +238,8 @@ function VehicleAccordionItem({
   });
   const [intervalForm, setIntervalForm] = useState<IntervalFormState | null>(null);
   const [editingIntervalId, setEditingIntervalId] = useState<string | null>(null);
-  const [manualForm, setManualForm] = useState<{
-    title: string;
-    due_date: string;
-    notes: string;
-  } | null>(null);
 
-  const { serviceReminders, manualReminders, error, refetch } = useReminders(vehicle.id);
+  const { serviceReminders, error, refetch } = useReminders(vehicle.id);
   const vehicleVisits = useMemo(
     () => visits.filter((v) => v.vehicle_id === vehicle.id),
     [visits, vehicle.id],
@@ -355,28 +347,6 @@ function VehicleAccordionItem({
       await refetch();
       setIntervalForm(null);
       setEditingIntervalId(null);
-    } catch (e) {
-      onError(e instanceof Error ? e.message : t("car.failedSaveReminder"));
-    } finally {
-      onBusyChange(false);
-    }
-  };
-
-  const saveManualReminder = async () => {
-    if (!manualForm?.title.trim()) return onError(t("car.titleRequired"));
-    onBusyChange(true);
-    onError(null);
-    try {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user?.id) throw new Error(t("car.authRequired"));
-      await createManualReminder(supabase, data.user.id, {
-        vehicle_id: vehicle.id,
-        title: manualForm.title.trim(),
-        due_date: manualForm.due_date || null,
-        notes: manualForm.notes.trim() || null,
-      });
-      await refetch();
-      setManualForm(null);
     } catch (e) {
       onError(e instanceof Error ? e.message : t("car.failedSaveReminder"));
     } finally {
@@ -600,102 +570,6 @@ function VehicleAccordionItem({
               className="mt-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
             >
               [{t("car.addInterval")}]
-            </button>
-          )}
-
-          <SectionHeader title={t("car.manualReminders")} />
-          <div className="space-y-1 text-[11px]">
-            {manualReminders.length === 0 ? (
-              <div className="uppercase tracking-[0.2em] text-muted-foreground">
-                {t("car.noReminders")}
-              </div>
-            ) : (
-              manualReminders.map((reminder) => {
-                const isPastDue =
-                  !reminder.is_done &&
-                  !!reminder.due_date &&
-                  new Date(reminder.due_date) < new Date();
-                return (
-                  <div
-                    key={reminder.id}
-                    className={`flex items-center justify-between border-b border-border pb-1 ${reminder.is_done ? "line-through opacity-50" : ""}`}
-                  >
-                    <button
-                      onClick={() =>
-                        void toggleManualReminderDone(
-                          supabase,
-                          reminder.id,
-                          !reminder.is_done,
-                        ).then(refetch)
-                      }
-                    >
-                      [{reminder.is_done ? "✓" : " "}]
-                    </button>
-                    <span className={`flex-1 px-2 ${isPastDue ? "text-destructive" : ""}`}>
-                      {reminder.title} {reminder.due_date ? `· ${reminder.due_date}` : ""}{" "}
-                      {reminder.notes ? "· ?" : ""}
-                    </span>
-                    <button
-                      onClick={() => void deleteManualReminder(supabase, reminder.id).then(refetch)}
-                      className="text-destructive"
-                    >
-                      [×]
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-          {manualForm ? (
-            <div className="mt-2 border border-border bg-card p-3">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <SmallField
-                  label={t("car.vehiclesLabels.title")}
-                  value={manualForm.title}
-                  onChange={(value) =>
-                    setManualForm((prev) => (prev ? { ...prev, title: value } : prev))
-                  }
-                />
-                <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {t("car.vehiclesLabels.dueDate")}
-                  <input
-                    type="date"
-                    value={manualForm.due_date}
-                    onChange={(e) =>
-                      setManualForm((prev) => (prev ? { ...prev, due_date: e.target.value } : prev))
-                    }
-                    className="mt-1 w-full border border-border bg-input px-2 py-1"
-                  />
-                </label>
-                <SmallField
-                  label={t("car.editor.notes")}
-                  value={manualForm.notes}
-                  onChange={(value) =>
-                    setManualForm((prev) => (prev ? { ...prev, notes: value } : prev))
-                  }
-                />
-              </div>
-              <div className="mt-3 flex gap-3">
-                <button
-                  onClick={() => void saveManualReminder()}
-                  className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
-                >
-                  [{t("common.save").toUpperCase()}]
-                </button>
-                <button
-                  onClick={() => setManualForm(null)}
-                  className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline"
-                >
-                  [{t("common.cancel").toUpperCase()}]
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setManualForm({ title: "", due_date: "", notes: "" })}
-              className="mt-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
-            >
-              [{t("car.addReminder")}]
             </button>
           )}
         </div>

@@ -1,9 +1,6 @@
 ﻿import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Database } from "@/integrations/supabase/types";
 import type {
-  ManualReminder,
-  ManualReminderInsert,
-  ManualReminderUpdate,
   ServiceReminder,
   ServiceReminderInsert,
   ServiceReminderUpdate,
@@ -46,37 +43,3 @@ export async function deleteServiceReminder(
   const { error } = await client.from("service_reminders").delete().eq("id", id);
   if (error) throw new Error(error.message);
 }
-
-export async function createManualReminder(
-  client: SupabaseClient<Database>,
-  userId: string,
-  data: Omit<ManualReminderInsert, "id" | "created_at" | "user_id" | "is_done">,
-): Promise<ManualReminder> {
-  const row: ManualReminderInsert = { ...data, user_id: userId, is_done: false };
-  const { data: inserted, error } = await client
-    .from("manual_reminders")
-    .insert(row)
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
-  return inserted;
-}
-
-export async function toggleManualReminderDone(
-  client: SupabaseClient<Database>,
-  id: string,
-  isDone: boolean,
-): Promise<void> {
-  const payload: ManualReminderUpdate = { is_done: isDone };
-  const { error } = await client.from("manual_reminders").update(payload).eq("id", id);
-  if (error) throw new Error(error.message);
-}
-
-export async function deleteManualReminder(
-  client: SupabaseClient<Database>,
-  id: string,
-): Promise<void> {
-  const { error } = await client.from("manual_reminders").delete().eq("id", id);
-  if (error) throw new Error(error.message);
-}
-

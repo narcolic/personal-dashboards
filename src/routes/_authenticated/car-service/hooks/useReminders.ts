@@ -3,7 +3,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { useCarServiceData } from "@/routes/_authenticated/car-service/hooks/useCarServiceData";
 import type {
-  ManualReminder,
   ServiceReminder,
   ServiceReminderWithStatus,
 } from "@/routes/_authenticated/car-service/types";
@@ -14,14 +13,12 @@ export function useReminders(vehicleId: string) {
   const userId = user?.id ?? null;
   const { visits } = useCarServiceData("all");
   const [serviceReminders, setServiceReminders] = useState<ServiceReminder[]>([]);
-  const [manualReminders, setManualReminders] = useState<ManualReminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const refetch = useCallback(async () => {
     if (!userId) {
       setServiceReminders([]);
-      setManualReminders([]);
       setError(null);
       setIsLoading(false);
       return;
@@ -30,37 +27,67 @@ export function useReminders(vehicleId: string) {
     setIsLoading(true);
     setError(null);
 
-    const [{ data: srData, error: srError }, { data: mrData, error: mrError }] = await Promise.all([
-      supabase
-        .from("service_reminders")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("vehicle_id", vehicleId)
-        .order("created_at", { ascending: true }),
-      supabase
-        .from("manual_reminders")
-        .select("*")
-        .eq("user_id", userId)
-        .eq("vehicle_id", vehicleId)
-        .order("created_at", { ascending: true }),
-    ]);
+    const { data: srData, error: srError } = await supabase
+      .from("service_reminders")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("vehicle_id", vehicleId)
+      .order("created_at", { ascending: true });
 
-    if (srError || mrError) {
+    if (srError) {
       setServiceReminders([]);
-      setManualReminders([]);
-      setError(srError?.message ?? mrError?.message ?? "Failed to fetch reminders.");
+      setError(srError.message ?? "Failed to fetch reminders.");
       setIsLoading(false);
       return;
     }
 
     setServiceReminders(srData ?? []);
-    setManualReminders(mrData ?? []);
     setIsLoading(false);
   }, [userId, vehicleId]);
 
   useEffect(() => {
-    void refetch();
-  }, [refetch]);
+    let isCancelled = false;
+
+    const run = async () => {
+      await Promise.resolve();
+      if (isCancelled) return;
+
+      if (!userId) {
+        setServiceReminders([]);
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      const { data: srData, error: srError } = await supabase
+        .from("service_reminders")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("vehicle_id", vehicleId)
+        .order("created_at", { ascending: true });
+
+      if (isCancelled) return;
+
+      if (srError) {
+        setServiceReminders([]);
+        setError(srError.message ?? "Failed to fetch reminders.");
+        setIsLoading(false);
+        return;
+      }
+
+      setServiceReminders(srData ?? []);
+      setIsLoading(false);
+    };
+
+    void run();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [userId, vehicleId]);
 
   const vehicleVisits = useMemo(
     () => visits.filter((visit) => visit.vehicle_id === vehicleId),
@@ -85,7 +112,6 @@ export function useReminders(vehicleId: string) {
 
   return {
     serviceReminders: serviceRemindersWithStatus,
-    manualReminders,
     isLoading,
     error,
     refetch,
@@ -97,28 +123,35 @@ export function useAllReminders() {
   const userId = user?.id ?? null;
   const { visits } = useCarServiceData("all");
   const [serviceReminders, setServiceReminders] = useState<ServiceReminderWithStatus[]>([]);
-  const [manualReminders, setManualReminders] = useState<ManualReminder[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    let isCancelled = false;
+
     const run = async () => {
+      await Promise.resolve();
+      if (isCancelled) return;
+
       if (!userId) {
         setServiceReminders([]);
-        setManualReminders([]);
         setIsLoading(false);
         return;
       }
 
       setIsLoading(true);
-      const [{ data: srData }, { data: mrData }] = await Promise.all([
-        supabase.from("service_reminders").select("*").eq("user_id", userId).eq("is_active", true),
-        supabase.from("manual_reminders").select("*").eq("user_id", userId).eq("is_done", false),
-      ]);
+      const { data: srData } = await supabase
+        .from("service_reminders")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("is_active", true);
+
+      if (isCancelled) return;
 
       const vehicleLatestKm = new Map<string, number>();
       for (const visit of visits) {
         const prev = vehicleLatestKm.get(visit.vehicle_id);
-        if (prev == null || visit.odometer_km > prev) vehicleLatestKm.set(visit.vehicle_id, visit.odometer_km);
+        if (prev == null || visit.odometer_km > prev)
+          vehicleLatestKm.set(visit.vehicle_id, visit.odometer_km);
       }
 
       const withStatus = (srData ?? []).map((reminder) => {
@@ -128,13 +161,15 @@ export function useAllReminders() {
       });
 
       setServiceReminders(withStatus);
-      setManualReminders(mrData ?? []);
       setIsLoading(false);
     };
 
     void run();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [userId, visits]);
 
-  return { serviceReminders, manualReminders, isLoading };
+  return { serviceReminders, isLoading };
 }
-
