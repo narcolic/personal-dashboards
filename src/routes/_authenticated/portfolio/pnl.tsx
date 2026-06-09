@@ -15,7 +15,59 @@ function PnL() {
   const { enrichedRows } = useQuotes(transactions);
 
   const rows = useMemo(
-    () => enrichedRows.slice().sort((a, b) => b.unrealized - a.unrealized),
+    () => {
+      const groups = new Map<string, (typeof enrichedRows)[number][]>();
+
+      for (const row of enrichedRows) {
+        const name = (row.quote?.shortName || row.name || row.ticker).trim();
+        const currency = (row.currency || row.quote?.currency || "USD").toUpperCase();
+        const key = `${row.ticker.toUpperCase()}|${name.toUpperCase()}|${currency}`;
+        const bucket = groups.get(key) ?? [];
+        bucket.push(row);
+        groups.set(key, bucket);
+      }
+
+      return Array.from(groups.values())
+        .map((items) => {
+          if (items.length === 1) return items[0];
+
+          const first = items[0];
+          const shares = items.reduce((sum, item) => sum + Number(item.shares), 0);
+          const marketValue = items.reduce((sum, item) => sum + Number(item.marketValue), 0);
+          const costBasis = items.reduce((sum, item) => sum + Number(item.costBasis), 0);
+          const unrealized = marketValue - costBasis;
+          const dayChange = items.reduce((sum, item) => sum + Number(item.dayChange), 0);
+          const price = shares ? marketValue / shares : Number(first.price);
+          const prevClose = shares ? price - dayChange / shares : Number(first.prevClose);
+
+          return {
+            ...first,
+            id: `${first.ticker.toUpperCase()}|${(first.quote?.shortName || first.name || first.ticker).trim().toUpperCase()}|${(first.currency || first.quote?.currency || "USD").toUpperCase()}`,
+            shares,
+            avg_cost: shares ? costBasis / shares : Number(first.avg_cost),
+            tx_count: items.reduce((sum, item) => sum + Number(item.tx_count), 0),
+            first_date: items.reduce(
+              (min, item) =>
+                !min || (item.first_date && item.first_date < min) ? item.first_date : min,
+              first.first_date,
+            ),
+            last_date: items.reduce(
+              (max, item) =>
+                !max || (item.last_date && item.last_date > max) ? item.last_date : max,
+              first.last_date,
+            ),
+            marketValue,
+            costBasis,
+            unrealized,
+            unrealizedPct: costBasis ? (unrealized / costBasis) * 100 : 0,
+            dayChange,
+            dayChangePct: prevClose ? ((price - prevClose) / prevClose) * 100 : 0,
+            price,
+            prevClose,
+          };
+        })
+        .sort((a, b) => b.unrealized - a.unrealized);
+    },
     [enrichedRows],
   );
 

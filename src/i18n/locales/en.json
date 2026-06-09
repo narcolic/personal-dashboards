@@ -117,6 +117,7 @@
     "type": "Type",
     "shares": "Shares",
     "price": "Price",
+    "total": "Total",
     "ccy": "Ccy",
     "noTransactionsYet": "No transactions yet",
     "editTransaction": "EDIT TRANSACTION",

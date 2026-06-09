@@ -109,6 +109,45 @@ export type Database = {
         };
         Relationships: [];
       };
+      ticker_catalog: {
+        Row: {
+          asset_type: string | null;
+          created_at: string;
+          currency: string | null;
+          id: string;
+          is_active: boolean;
+          market: string | null;
+          name: string | null;
+          ticker: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          asset_type?: string | null;
+          created_at?: string;
+          currency?: string | null;
+          id?: string;
+          is_active?: boolean;
+          market?: string | null;
+          name?: string | null;
+          ticker: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          asset_type?: string | null;
+          created_at?: string;
+          currency?: string | null;
+          id?: string;
+          is_active?: boolean;
+          market?: string | null;
+          name?: string | null;
+          ticker?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       service_jobs: {
         Row: {
           category_snapshot: string | null;

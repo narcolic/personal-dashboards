@@ -1,4 +1,5 @@
 import { TerminalTable } from "@/components/terminal/TerminalTable";
+import { fmtCurrency } from "@/lib/portfolio/formatters";
 import type { Dispatch, SetStateAction } from "react";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -25,7 +26,7 @@ type SortKey =
   | "asset_type"
   | "shares"
   | "price"
-  | "currency";
+  | "total";
 type SortDirection = "asc" | "desc";
 
 export function TransactionsTable({
@@ -66,8 +67,8 @@ export function TransactionsTable({
             return Number(row.shares);
           case "price":
             return Number(row.price);
-          case "currency":
-            return row.currency;
+          case "total":
+            return Number(row.shares) * Number(row.price);
         }
       };
 
@@ -150,10 +151,10 @@ export function TransactionsTable({
           </th>
           <th
             className="px-3 py-2 text-right cursor-pointer select-none"
-            onClick={() => toggleSort("currency")}
+            onClick={() => toggleSort("total")}
           >
-            {t("portfolio.ccy")}
-            {sortMark("currency")}
+            {t("portfolio.total")}
+            {sortMark("total")}
           </th>
           <th className="px-3 py-2" />
         </tr>
@@ -196,9 +197,11 @@ export function TransactionsTable({
             <td className="px-3 py-2 text-[11px] uppercase">{position.asset_type}</td>
             <td className="px-3 py-2 text-right tabular-nums">{Number(position.shares)}</td>
             <td className="px-3 py-2 text-right tabular-nums">
-              {Number(position.price).toFixed(2)}
+              {fmtCurrency(Number(position.price), position.currency)}
             </td>
-            <td className="px-3 py-2 text-[11px]">{position.currency}</td>
+            <td className="px-3 py-2 text-right tabular-nums">
+              {fmtCurrency(Number(position.shares) * Number(position.price), position.currency)}
+            </td>
             <td className="px-3 py-2 text-right whitespace-nowrap">
               <button
                 onClick={() =>

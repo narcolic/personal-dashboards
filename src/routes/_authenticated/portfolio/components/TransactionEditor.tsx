@@ -1,9 +1,23 @@
 import { useState, type ReactNode } from "react";
 import type { TransactionInputType } from "@/lib/portfolio/transactions/api";
+import { normalizeTicker, type TickerSuggestion } from "@/lib/portfolio/tickerCatalog";
 import { useTranslation } from "react-i18next";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const CURRENCIES = ["USD", "EUR", "GBP", "CHF", "CAD", "AUD", "JPY", "HKD"];
+
+type TransactionDraft = Omit<TransactionInputType, "shares" | "price"> & {
+  shares: string;
+  price: string;
+};
+
+const toDraft = (
+  value: TransactionInputType & { id?: string },
+): TransactionDraft & { id?: string } => ({
+  ...value,
+  shares: value.id == null && value.shares === 0 ? "" : String(value.shares),
+  price: value.id == null && value.price === 0 ? "" : String(value.price),
+});
 
 function Field({
   label,
@@ -27,20 +41,42 @@ function Field({
 export function TransactionEditor({
   value,
   portfolios,
+  tickerSuggestions,
   onSave,
   onClose,
   busy,
 }: {
   value: TransactionInputType & { id?: string };
   portfolios: { id: string; name: string }[];
+  tickerSuggestions: TickerSuggestion[];
   onSave: (v: TransactionInputType) => void;
   onClose: () => void;
   busy: boolean;
 }) {
   const { t } = useTranslation();
-  const [v, setV] = useState(value);
-  const set = <K extends keyof TransactionInputType>(k: K, val: TransactionInputType[K]) => {
+  const [v, setV] = useState(() => toDraft(value));
+  const [tickerMenuOpen, setTickerMenuOpen] = useState(false);
+  const set = <K extends keyof TransactionDraft>(k: K, val: TransactionDraft[K]) => {
     setV((state) => ({ ...state, [k]: val }));
+  };
+  const tickerQuery = v.ticker.trim().toLowerCase();
+  const tickerOptions = tickerSuggestions.filter((item) =>
+    item.ticker.toLowerCase().includes(tickerQuery),
+  );
+  const tickerExactMatch = tickerOptions.some((item) => item.ticker.toLowerCase() === tickerQuery);
+  const applyTickerSuggestion = (item: TickerSuggestion) => {
+    setV((state) => ({
+      ...state,
+      ticker: normalizeTicker(item.ticker),
+      name: item.name ?? state.name ?? "",
+      asset_type:
+        item.asset_type && ASSET_TYPES.includes(item.asset_type as (typeof ASSET_TYPES)[number])
+          ? (item.asset_type as TransactionInputType["asset_type"])
+          : state.asset_type,
+      market: item.market ?? state.market ?? null,
+      currency: item.currency ?? state.currency,
+    }));
+    setTickerMenuOpen(false);
   };
 
   return (
@@ -57,7 +93,11 @@ export function TransactionEditor({
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            onSave(v);
+            onSave({
+              ...v,
+              shares: Number(v.shares),
+              price: Number(v.price),
+            });
           }}
           className="grid grid-cols-2 gap-3 p-4"
         >
@@ -72,13 +112,43 @@ export function TransactionEditor({
           </Field>
 
           <Field label={t("portfolio.ticker")}>
-            <input
-              required
-              value={v.ticker}
-              onChange={(e) => set("ticker", e.target.value.toUpperCase())}
-              placeholder="AAPL"
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
-            />
+            <div className="relative">
+              <input
+                required
+                value={v.ticker}
+                onFocus={() => setTickerMenuOpen(true)}
+                onBlur={() => setTimeout(() => setTickerMenuOpen(false), 120)}
+                onChange={(e) => set("ticker", normalizeTicker(e.target.value))}
+                placeholder="AAPL"
+                className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+              />
+              {tickerMenuOpen && (tickerQuery.length > 0 || tickerOptions.length > 0) ? (
+                <div className="absolute z-10 mt-1 max-h-44 w-full overflow-auto border border-border bg-card">
+                  {tickerOptions.map((item) => (
+                    <button
+                      key={item.ticker}
+                      type="button"
+                      onMouseDown={() => applyTickerSuggestion(item)}
+                      className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                    >
+                      {item.ticker}
+                    </button>
+                  ))}
+                  {tickerQuery.length > 0 && !tickerExactMatch ? (
+                    <button
+                      type="button"
+                      onMouseDown={() => {
+                        set("ticker", normalizeTicker(v.ticker));
+                        setTickerMenuOpen(false);
+                      }}
+                      className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                    >
+                      {t("car.editor.createValue", { value: normalizeTicker(v.ticker) })}
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           </Field>
 
           <Field label={t("portfolio.type")}>
@@ -142,7 +212,7 @@ export function TransactionEditor({
               min="0"
               required
               value={v.shares}
-              onChange={(e) => set("shares", Number(e.target.value))}
+              onChange={(e) => set("shares", e.target.value)}
               className="w-full border border-border bg-input px-2 py-1.5 text-sm tabular-nums focus:border-primary focus:outline-none"
             />
           </Field>
@@ -154,7 +224,7 @@ export function TransactionEditor({
               min="0"
               required
               value={v.price}
-              onChange={(e) => set("price", Number(e.target.value))}
+              onChange={(e) => set("price", e.target.value)}
               className="w-full border border-border bg-input px-2 py-1.5 text-sm tabular-nums focus:border-primary focus:outline-none"
             />
           </Field>

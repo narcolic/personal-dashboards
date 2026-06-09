@@ -5,6 +5,12 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
 import { mapCsvRows, parseCSV } from "@/lib/csv";
+import {
+  normalizeTicker,
+  type TickerSuggestion,
+  upsertTickerCatalogEntries,
+  upsertTickerCatalogEntry,
+} from "@/lib/portfolio/tickerCatalog";
 import { type PortfolioInputType } from "@/lib/portfolio/portfolios/api";
 import { type TransactionInputType } from "@/lib/portfolio/transactions/api";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -14,6 +20,7 @@ import {
   type PortfolioRecord,
   usePortfolioData,
 } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
+import { useTickerCatalog } from "@/routes/_authenticated/portfolio/hooks/useTickerCatalog";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -63,12 +70,43 @@ function TransactionsPage() {
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
 
   const { txQ, transactions, portfolios } = usePortfolioData();
+  const { tickerCatalog } = useTickerCatalog();
   const data = transactions as TransactionTableRow[];
   const isLoading = txQ.isLoading;
+  const tickerSuggestions = useMemo(() => {
+    const map = new Map<string, TickerSuggestion>();
+
+    for (const row of data) {
+      const ticker = normalizeTicker(row.ticker);
+      if (!ticker || map.has(ticker)) continue;
+      map.set(ticker, {
+        ticker,
+        name: row.name ?? null,
+        asset_type: row.asset_type ?? null,
+        market: row.market ?? null,
+        currency: row.currency ?? null,
+      });
+    }
+
+    for (const row of tickerCatalog) {
+      const ticker = normalizeTicker(row.ticker);
+      if (!ticker) continue;
+      map.set(ticker, {
+        ticker,
+        name: row.name ?? map.get(ticker)?.name ?? null,
+        asset_type: row.asset_type ?? map.get(ticker)?.asset_type ?? null,
+        market: row.market ?? map.get(ticker)?.market ?? null,
+        currency: row.currency ?? map.get(ticker)?.currency ?? null,
+      });
+    }
+
+    return Array.from(map.values()).sort((a, b) => a.ticker.localeCompare(b.ticker));
+  }, [data, tickerCatalog]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["positions"] });
     qc.invalidateQueries({ queryKey: ["portfolios"] });
+    qc.invalidateQueries({ queryKey: ["ticker-catalog"] });
   };
 
   const getCurrentUserId = async () => {
@@ -90,6 +128,7 @@ function TransactionsPage() {
       const { error } = await supabase.from("transactions").insert([{ ...value, user_id: userId }]);
 
       if (error) throw new Error(error.message);
+      await upsertTickerCatalogEntry(userId, value);
     },
     onSuccess: () => {
       invalidate();
@@ -101,10 +140,12 @@ function TransactionsPage() {
 
   const updateM = useMutation({
     mutationFn: async (value: TransactionInputType & { id: string }) => {
+      const userId = await getCurrentUserId();
       const { id, ...rest } = value;
       const { error } = await supabase.from("transactions").update(rest).eq("id", id);
 
       if (error) throw new Error(error.message);
+      await upsertTickerCatalogEntry(userId, value);
     },
     onSuccess: () => {
       invalidate();
@@ -248,6 +289,7 @@ function TransactionsPage() {
 
       const { error } = await supabase.from("transactions").insert(payload);
       if (error) throw new Error(error.message);
+      await upsertTickerCatalogEntries(userId, payload);
       return { inserted: payload.length };
     },
     onSuccess: (result) => {
@@ -382,6 +424,7 @@ function TransactionsPage() {
         <TransactionEditor
           value={editing}
           portfolios={portfolios}
+          tickerSuggestions={tickerSuggestions}
           onClose={() => setEditing(null)}
           busy={createM.isPending || updateM.isPending}
           onSave={(value) => {
