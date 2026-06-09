@@ -131,9 +131,17 @@ function VehiclesScreen() {
 
   return (
     <div className="space-y-4 font-mono">
-      <div className="border border-border bg-card px-4 py-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">
-          {t("car.vehiclesTitle")}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl uppercase tracking-[0.2em]">&gt; {t("header.vehicles")}</h1>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={onAddVehicle}
+            className="border border-border px-3 py-2 text-[11px] uppercase tracking-[0.2em] hover:border-primary"
+          >
+            {t("car.addVehicle")}
+          </button>
         </div>
       </div>
 
@@ -190,13 +198,6 @@ function VehiclesScreen() {
               </div>
             </div>
           ) : null}
-
-          <button
-            onClick={onAddVehicle}
-            className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
-          >
-            + ADD VEHICLE
-          </button>
         </div>
       </div>
     </div>

@@ -113,17 +113,17 @@ function CarServiceOverview() {
 
   return (
     <div className="space-y-4 font-mono">
-      <div className="border border-border bg-card px-4 py-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">
-          {t("car.overview")}
-        </div>
+      <div>
+        <h1 className="text-xl uppercase tracking-[0.2em]">&gt; {t("header.overview")}</h1>
       </div>
 
-      <VehicleFilterBar
-        vehicles={vehicles}
-        selectedVehicleId={selectedVehicleId}
-        onSelect={setSelectedVehicleId}
-      />
+      {vehicles.length > 1 ? (
+        <VehicleFilterBar
+          vehicles={vehicles}
+          selectedVehicleId={selectedVehicleId}
+          onSelect={setSelectedVehicleId}
+        />
+      ) : null}
 
       {error ? (
         <div className="border border-border bg-card px-4 py-2 text-[11px] text-bear uppercase tracking-[0.2em]">

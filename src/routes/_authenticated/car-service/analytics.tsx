@@ -19,7 +19,9 @@ import {
 } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 
-export const Route = createFileRoute("/_authenticated/car-service/analytics")({ component: CarServiceAnalytics });
+export const Route = createFileRoute("/_authenticated/car-service/analytics")({
+  component: CarServiceAnalytics,
+});
 
 function CarServiceAnalytics() {
   const { t } = useTranslation();
@@ -49,25 +51,66 @@ function CarServiceAnalytics() {
 
   return (
     <div className="space-y-4 font-mono">
-      <div className="border border-border bg-card px-4 py-2"><div className="text-[11px] uppercase tracking-[0.2em] text-primary">{t("car.analytics")}</div></div>
-      <VehicleFilterBar vehicles={vehicles} selectedVehicleId={selectedVehicleId} onSelect={setSelectedVehicleId} />
+      <div>
+        <h1 className="text-xl uppercase tracking-[0.2em]">&gt; {t("header.analytics")}</h1>
+      </div>
+      {vehicles.length > 1 ? (
+        <VehicleFilterBar
+          vehicles={vehicles}
+          selectedVehicleId={selectedVehicleId}
+          onSelect={setSelectedVehicleId}
+        />
+      ) : null}
 
-      {error ? <div className="border border-border bg-card px-4 py-2 text-[11px] text-destructive uppercase tracking-[0.2em]">{t("car.error")}: {error}</div> : null}
+      {error ? (
+        <div className="border border-border bg-card px-4 py-2 text-[11px] text-destructive uppercase tracking-[0.2em]">
+          {t("car.error")}: {error}
+        </div>
+      ) : null}
 
-      {isLoading ? <AnalyticsLoadingSkeleton /> : visits.length === 0 ? (
+      {isLoading ? (
+        <AnalyticsLoadingSkeleton />
+      ) : visits.length === 0 ? (
         <div className="border border-border bg-card p-8 text-center">
-          <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{t("car.noDataYet")}</div>
-          <Link to="/car-service/add" className="mt-4 inline-block text-[11px] uppercase tracking-[0.2em] text-primary hover:underline">{t("car.goToAddService")}</Link>
+          <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+            {t("car.noDataYet")}
+          </div>
+          <Link
+            to="/car-service/add"
+            className="mt-4 inline-block text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
+          >
+            {t("car.goToAddService")}
+          </Link>
         </div>
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-            <CarServiceKpiCard label={t("car.avgCostPerVisit")} value={formatCurrency(avgVisitCost)} />
-            <CarServiceKpiCard label={t("car.avgKmBetween")} value={avgKmInterval === null ? "--" : formatKm(Math.round(avgKmInterval))} />
-            <CarServiceKpiCard label={t("car.costPer1000km")} value={costPer1000km === null ? "--" : formatCurrency(costPer1000km)} />
-            <CarServiceKpiCard label={t("car.mostExpensiveVisit")} value={mostExpensiveVisit ? `${formatDate(mostExpensiveVisit.service_date)} ${formatCurrency(Number(mostExpensiveVisit.total_amount))}` : "--"} />
+            <CarServiceKpiCard
+              label={t("car.avgCostPerVisit")}
+              value={formatCurrency(avgVisitCost)}
+            />
+            <CarServiceKpiCard
+              label={t("car.avgKmBetween")}
+              value={avgKmInterval === null ? "--" : formatKm(Math.round(avgKmInterval))}
+            />
+            <CarServiceKpiCard
+              label={t("car.costPer1000km")}
+              value={costPer1000km === null ? "--" : formatCurrency(costPer1000km)}
+            />
+            <CarServiceKpiCard
+              label={t("car.mostExpensiveVisit")}
+              value={
+                mostExpensiveVisit
+                  ? `${formatDate(mostExpensiveVisit.service_date)} ${formatCurrency(Number(mostExpensiveVisit.total_amount))}`
+                  : "--"
+              }
+            />
           </div>
-          <ServiceAnalyticsPanel annualSpend={annualSpend} categorySpend={categorySpend} topJobs={topJobs} />
+          <ServiceAnalyticsPanel
+            annualSpend={annualSpend}
+            categorySpend={categorySpend}
+            topJobs={topJobs}
+          />
         </>
       )}
     </div>
@@ -77,8 +120,15 @@ function CarServiceAnalytics() {
 function AnalyticsLoadingSkeleton() {
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{Array.from({ length: 4 }).map((_, i) => (<div key={i} className="h-20 border border-border bg-card animate-pulse" />))}</div>
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2"><div className="h-72 border border-border bg-card animate-pulse" /><div className="h-72 border border-border bg-card animate-pulse" /></div>
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="h-20 border border-border bg-card animate-pulse" />
+        ))}
+      </div>
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="h-72 border border-border bg-card animate-pulse" />
+        <div className="h-72 border border-border bg-card animate-pulse" />
+      </div>
       <div className="h-72 border border-border bg-card animate-pulse" />
     </div>
   );

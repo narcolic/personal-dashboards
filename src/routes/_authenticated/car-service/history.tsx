@@ -29,6 +29,8 @@ function CarServiceHistory() {
   const initialVehicleId =
     searchParams.get("vehicleId")?.trim() || persistedContext?.vehicleId?.trim() || "all";
   const [selectedVehicleId, setSelectedVehicleId] = useState(initialVehicleId);
+  const [userExpandedVisitIds, setUserExpandedVisitIds] = useState<Set<string>>(new Set());
+  const [restoredExpandedVisitId, setRestoredExpandedVisitId] = useState(initialExpandedVisitId);
 
   useEffect(() => {
     try {
@@ -57,25 +59,86 @@ function CarServiceHistory() {
     if (effectiveSelectedVehicleId === "all") return allVisits;
     return allVisits.filter((visit) => visit.vehicle_id === effectiveSelectedVehicleId);
   }, [allVisits, effectiveSelectedVehicleId]);
+  const selectedVehicleLabel = useMemo(() => {
+    if (effectiveSelectedVehicleId === "all") return null;
+    const vehicle = vehicles.find((item) => item.id === effectiveSelectedVehicleId);
+    if (!vehicle) return null;
+    const make = vehicle.make?.trim() || "-";
+    const model = vehicle.model?.trim() || "-";
+    const year = vehicle.year ? String(vehicle.year) : "-";
+    return `${make} ${model} · ${year}`.toUpperCase();
+  }, [effectiveSelectedVehicleId, vehicles]);
+  const expandedVisitIds = useMemo(() => {
+    const next = new Set(userExpandedVisitIds);
+    if (restoredExpandedVisitId && visits.some((visit) => visit.id === restoredExpandedVisitId)) {
+      next.add(restoredExpandedVisitId);
+    }
+    return next;
+  }, [restoredExpandedVisitId, userExpandedVisitIds, visits]);
+  const allExpanded = visits.length > 0 && visits.every((visit) => expandedVisitIds.has(visit.id));
+
+  const toggleExpanded = (visitId: string) => {
+    setUserExpandedVisitIds((prev) => {
+      const next = new Set(prev);
+      const isExpanded = next.has(visitId) || restoredExpandedVisitId === visitId;
+      if (isExpanded) next.delete(visitId);
+      else next.add(visitId);
+      return next;
+    });
+    if (restoredExpandedVisitId === visitId) {
+      setRestoredExpandedVisitId(null);
+    }
+  };
+
+  const toggleAllExpanded = () => {
+    if (allExpanded) {
+      setUserExpandedVisitIds(new Set());
+      setRestoredExpandedVisitId(null);
+      return;
+    }
+
+    setUserExpandedVisitIds(new Set(visits.map((visit) => visit.id)));
+    setRestoredExpandedVisitId(null);
+  };
 
   return (
     <div className="space-y-4 font-mono">
-      <div className="border border-border bg-card px-4 py-2 flex items-center justify-between gap-3">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">
-          {t("car.history")}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-xl uppercase tracking-[0.2em]">&gt; {t("header.history")}</h1>
         </div>
-        <Link
-          to="/car-service/add"
-          className="bg-primary px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90"
-        >
-          {t("car.new")}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          {visits.length > 0 ? (
+            <button
+              type="button"
+              onClick={toggleAllExpanded}
+              className="border border-border px-3 py-2 text-[11px] uppercase tracking-[0.2em] hover:border-primary"
+            >
+              [{allExpanded ? t("car.collapseAll") : t("car.expandAll")}]
+            </button>
+          ) : null}
+          <Link
+            to="/car-service/add"
+            className="bg-primary px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90"
+          >
+            {t("car.new")}
+          </Link>
+        </div>
       </div>
-      <VehicleFilterBar
-        vehicles={vehicles}
-        selectedVehicleId={effectiveSelectedVehicleId}
-        onSelect={setSelectedVehicleId}
-      />
+
+      {selectedVehicleLabel ? (
+        <div className="border border-border bg-card/50 px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+          &gt; {selectedVehicleLabel}
+        </div>
+      ) : null}
+
+      {vehicles.length > 1 ? (
+        <VehicleFilterBar
+          vehicles={vehicles}
+          selectedVehicleId={effectiveSelectedVehicleId}
+          onSelect={setSelectedVehicleId}
+        />
+      ) : null}
 
       {error ? (
         <div className="border border-border bg-card px-4 py-2 text-[11px] text-bear uppercase tracking-[0.2em]">
@@ -86,8 +149,9 @@ function CarServiceHistory() {
       <ServiceHistoryTable
         visits={visits}
         isLoading={isLoading}
-        initialExpandedVisitId={initialExpandedVisitId}
         selectedVehicleId={effectiveSelectedVehicleId}
+        expandedVisitIds={expandedVisitIds}
+        onToggleExpanded={toggleExpanded}
       />
     </div>
   );

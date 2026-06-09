@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useState } from "react";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import type { ServiceVisitWithJobs } from "@/routes/_authenticated/car-service/types";
 import {
@@ -20,10 +20,13 @@ function NoteIcon() {
   );
 }
 
-function TickIcon() {
+function WrenchIcon() {
   return (
     <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
-      <path d="M4.8 9.2 1.9 6.3l.8-.8 2.1 2.1 4.5-4.5.8.8-5.3 5.3Z" className="fill-current" />
+      <path
+        d="M7.8 1.2a2.6 2.6 0 0 0-1.6 4.6L2.1 9.9a.7.7 0 0 0 0 1l.3.3a.7.7 0 0 0 1 0l4.1-4.1a2.6 2.6 0 0 0 3-4l-1.4 1.4-1.5-.3-.3-1.5 1.4-1.4a2.6 2.6 0 0 0-.9-.1Z"
+        className="fill-current"
+      />
     </svg>
   );
 }
@@ -31,43 +34,20 @@ function TickIcon() {
 export function ServiceHistoryTable({
   visits = [],
   isLoading = false,
-  initialExpandedVisitId,
   selectedVehicleId = "all",
+  expandedVisitIds,
+  onToggleExpanded,
 }: {
   visits?: ServiceVisitWithJobs[];
   isLoading?: boolean;
-  initialExpandedVisitId?: string | null;
   selectedVehicleId?: string;
+  expandedVisitIds: Set<string>;
+  onToggleExpanded: (visitId: string) => void;
 }) {
   const { t } = useTranslation();
-  const [userExpandedVisitIds, setUserExpandedVisitIds] = useState<Set<string>>(new Set());
-  const [restoredExpandedVisitId, setRestoredExpandedVisitId] = useState(initialExpandedVisitId);
   const [jobsSortByVisit, setJobsSortByVisit] = useState<
     Record<string, { key: JobsSortKey; dir: JobsSortDirection }>
   >({});
-  const expandedVisitIds = useMemo(() => {
-    const next = new Set(userExpandedVisitIds);
-    if (restoredExpandedVisitId && visits.some((visit) => visit.id === restoredExpandedVisitId)) {
-      next.add(restoredExpandedVisitId);
-    }
-    return next;
-  }, [restoredExpandedVisitId, userExpandedVisitIds, visits]);
-
-  const toggleExpanded = (visitId: string) => {
-    setUserExpandedVisitIds((prev) => {
-      const next = new Set(prev);
-      const isExpanded = next.has(visitId) || restoredExpandedVisitId === visitId;
-      if (isExpanded) {
-        next.delete(visitId);
-      } else {
-        next.add(visitId);
-      }
-      return next;
-    });
-    if (restoredExpandedVisitId === visitId) {
-      setRestoredExpandedVisitId(null);
-    }
-  };
 
   const toggleJobsSort = (visitId: string, key: JobsSortKey) => {
     setJobsSortByVisit((prev) => {
@@ -88,7 +68,7 @@ export function ServiceHistoryTable({
           <th className="px-3 py-2 text-right">{t("car.jobsCount")}</th>
           <th className="px-3 py-2 text-right">{t("car.subtotal")}</th>
           <th className="px-3 py-2 text-right">{t("car.total")}</th>
-          <th className="w-12 px-2 py-2 text-center">{t("car.annualServiceShort")}</th>
+          <th className="w-16 px-2 py-2 text-right" aria-label={t("car.indicators")}></th>
           <th className="w-20 px-2 py-2 text-right">{t("car.actions")}</th>
         </tr>
       </thead>
@@ -121,11 +101,13 @@ export function ServiceHistoryTable({
             </td>
           </tr>
         ) : (
-          visits.map((visit) => {
+          visits.map((visit, index) => {
             const expanded = expandedVisitIds.has(visit.id);
             const sort = jobsSortByVisit[visit.id] ?? { key: "job" as const, dir: "asc" as const };
             const mark = (key: JobsSortKey) =>
               sort.key === key ? (sort.dir === "asc" ? " ↑" : " ↓") : "";
+
+            const collapsedTone = index % 2 === 0 ? "bg-transparent" : "bg-secondary/10";
 
             const sortedJobs = [...visit.jobs].sort((a, b) => {
               const dir = sort.dir === "asc" ? 1 : -1;
@@ -152,15 +134,19 @@ export function ServiceHistoryTable({
             return (
               <Fragment key={visit.id}>
                 <tr
-                  className="border-t border-border/60 hover:bg-secondary/30 cursor-pointer"
-                  onClick={() => toggleExpanded(visit.id)}
+                  className={`border-t cursor-pointer transition-colors ${
+                    expanded
+                      ? "border-primary/40 bg-primary/5 text-foreground/90 shadow-[inset_3px_0_0_0_rgba(255,153,0,0.75)]"
+                      : `border-border/60 text-foreground/80 hover:bg-secondary/30 ${collapsedTone}`
+                  }`}
+                  onClick={() => onToggleExpanded(visit.id)}
                 >
-                  <td className="px-3 py-2 text-left">
+                  <td className="px-3 py-2 text-left font-normal">
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        toggleExpanded(visit.id);
+                        onToggleExpanded(visit.id);
                       }}
                       className="mr-2 text-muted-foreground hover:text-foreground"
                       aria-expanded={expanded}
@@ -168,40 +154,44 @@ export function ServiceHistoryTable({
                     >
                       {expanded ? "\u25BC" : "\u25B6"}
                     </button>
-                    {visit.notes?.trim() ? (
-                      <span
-                        className="mr-2 inline-flex align-middle text-muted-foreground hover:text-foreground"
-                        aria-label={t("car.visitHasNote")}
-                        title={t("car.visitHasNote")}
-                      >
-                        <NoteIcon />
-                      </span>
-                    ) : null}
                     {formatDate(visit.service_date)}
                   </td>
-                  <td className="px-3 py-2 text-right">{formatKm(visit.odometer_km)}</td>
-                  <td className="px-3 py-2 text-left">{visit.workshop ?? "-"}</td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right font-normal">
+                    {formatKm(visit.odometer_km)}
+                  </td>
+                  <td className="px-3 py-2 text-left font-normal">{visit.workshop ?? "-"}</td>
+                  <td className="px-3 py-2 text-right font-normal">
                     {visit.jobs.length} {t("car.jobs")}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right font-normal">
                     {formatCurrency(Number(visit.subtotal_ex_vat))}
                   </td>
-                  <td className="px-3 py-2 text-right">
+                  <td className="px-3 py-2 text-right font-normal">
                     {formatCurrency(Number(visit.total_amount))}
                   </td>
-                  <td className="w-12 px-2 py-2 text-center">
-                    {visit.is_annual_service ? (
-                      <span
-                        className="inline-flex text-bull"
-                        aria-label={t("car.markAsAnnualService")}
-                        title={t("car.markAsAnnualService")}
-                      >
-                        <TickIcon />
-                      </span>
-                    ) : null}
+                  <td className="w-16 px-2 py-2">
+                    <div className="flex items-center justify-end gap-2">
+                      {visit.notes?.trim() ? (
+                        <span
+                          className="inline-flex text-muted-foreground hover:text-foreground"
+                          aria-label={t("car.visitHasNote")}
+                          title={t("car.visitHasNote")}
+                        >
+                          <NoteIcon />
+                        </span>
+                      ) : null}
+                      {visit.is_annual_service ? (
+                        <span
+                          className="inline-flex text-primary"
+                          aria-label={t("car.markAsAnnualService")}
+                          title={t("car.markAsAnnualService")}
+                        >
+                          <WrenchIcon />
+                        </span>
+                      ) : null}
+                    </div>
                   </td>
-                  <td className="w-20 px-2 py-2 text-right whitespace-nowrap">
+                  <td className="w-20 px-2 py-2 text-right whitespace-nowrap font-normal">
                     <Link
                       to="/car-service/$visitId"
                       params={{ visitId: visit.id }}
@@ -224,96 +214,118 @@ export function ServiceHistoryTable({
                   </td>
                 </tr>
                 {expanded ? (
-                  <tr className="border-t border-border/40 bg-secondary/20">
+                  <tr className="border-t border-primary/20 bg-background/70">
                     <td colSpan={8} className="px-3 py-3">
-                      {visit.notes?.trim() ? (
-                        <div className="mb-3 border-b border-border/40 pb-2 text-[10px] uppercase tracking-[0.16em]">
-                          <span className="text-muted-foreground">{t("car.noteLabel")}:</span>{" "}
-                          <span className="text-foreground normal-case tracking-normal">
-                            {visit.notes.trim()}
+                      <div className="border border-primary/20 bg-secondary/10 shadow-[inset_0_1px_0_rgba(255,153,0,0.08)]">
+                        <div className="flex items-center justify-between border-b border-primary/15 px-3 py-2 text-[10px] uppercase tracking-[0.2em] text-primary">
+                          <span>{t("car.details")}</span>
+                          <span className="text-muted-foreground">
+                            {formatDate(visit.service_date)} // {visit.jobs.length} {t("car.jobs")}
                           </span>
                         </div>
-                      ) : null}
-                      {visit.jobs.length === 0 ? (
-                        <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                          {t("car.noJobDetails")}
+                        <div className="px-3 py-3">
+                          {visit.notes?.trim() ? (
+                            <div className="mb-3 border-b border-primary/10 pb-2 text-[10px] uppercase tracking-[0.16em]">
+                              <span className="text-muted-foreground">{t("car.noteLabel")}:</span>{" "}
+                              <span className="text-foreground normal-case tracking-normal">
+                                {visit.notes.trim()}
+                              </span>
+                            </div>
+                          ) : null}
+                          {visit.jobs.length === 0 ? (
+                            <div className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                              {t("car.noJobDetails")}
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto border border-border/50 bg-background/40">
+                              <table className="w-full text-[10px] uppercase tracking-[0.16em]">
+                                <thead className="bg-secondary/30 text-muted-foreground">
+                                  <tr>
+                                    <th
+                                      className="px-2 py-2 text-left cursor-pointer select-none"
+                                      onClick={() => toggleJobsSort(visit.id, "job")}
+                                    >
+                                      {t("car.job")}
+                                      {mark("job")}
+                                    </th>
+                                    <th
+                                      className="px-2 py-2 text-left cursor-pointer select-none"
+                                      onClick={() => toggleJobsSort(visit.id, "category")}
+                                    >
+                                      {t("car.category")}
+                                      {mark("category")}
+                                    </th>
+                                    <th
+                                      className="px-2 py-2 text-right cursor-pointer select-none"
+                                      onClick={() => toggleJobsSort(visit.id, "qty")}
+                                    >
+                                      {t("car.qty")}
+                                      {mark("qty")}
+                                    </th>
+                                    <th
+                                      className="px-2 py-2 text-right cursor-pointer select-none"
+                                      onClick={() => toggleJobsSort(visit.id, "unit")}
+                                    >
+                                      {t("car.unit")}
+                                      {mark("unit")}
+                                    </th>
+                                    <th
+                                      className="px-2 py-2 text-right cursor-pointer select-none"
+                                      onClick={() => toggleJobsSort(visit.id, "subtotal")}
+                                    >
+                                      {t("car.subtotal")}
+                                      {mark("subtotal")}
+                                    </th>
+                                    <th
+                                      className="px-2 py-2 text-right cursor-pointer select-none"
+                                      onClick={() => toggleJobsSort(visit.id, "total")}
+                                    >
+                                      {t("car.total")}
+                                      {mark("total")}
+                                    </th>
+                                    <th className="px-2 py-2 text-left">{t("portfolio.notes")}</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {sortedJobs.map((job, jobIndex) => (
+                                    <tr
+                                      key={job.id}
+                                      className={`border-t border-border/40 text-foreground/80 hover:bg-secondary/10 ${
+                                        jobIndex % 2 === 0 ? "bg-transparent" : "bg-secondary/10"
+                                      }`}
+                                    >
+                                      <td className="px-2 py-1.5 text-left font-normal">
+                                        {job.job_name_snapshot}
+                                      </td>
+                                      <td className="px-2 py-1 text-left font-normal">
+                                        {job.category_snapshot ?? "-"}
+                                      </td>
+                                      <td className="px-2 py-1 text-right font-normal">
+                                        {job.quantity}
+                                      </td>
+                                      <td className="px-2 py-1 text-right font-normal">
+                                        {formatCurrency(Number(job.unit_price_ex_vat))}
+                                      </td>
+                                      <td className="px-2 py-1 text-right font-normal">
+                                        {formatCurrency(Number(job.line_total_ex_vat))}
+                                      </td>
+                                      <td className="px-2 py-1 text-right font-normal">
+                                        {formatCurrency(
+                                          Number(job.line_total_ex_vat) *
+                                            (1 + Number(visit.vat_rate)),
+                                        )}
+                                      </td>
+                                      <td className="px-2 py-1 text-left font-normal">
+                                        {job.notes ?? "-"}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
                         </div>
-                      ) : (
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-[10px] uppercase tracking-[0.16em]">
-                            <thead className="text-muted-foreground">
-                              <tr>
-                                <th
-                                  className="px-2 py-1 text-left cursor-pointer select-none"
-                                  onClick={() => toggleJobsSort(visit.id, "job")}
-                                >
-                                  {t("car.job")}
-                                  {mark("job")}
-                                </th>
-                                <th
-                                  className="px-2 py-1 text-left cursor-pointer select-none"
-                                  onClick={() => toggleJobsSort(visit.id, "category")}
-                                >
-                                  {t("car.category")}
-                                  {mark("category")}
-                                </th>
-                                <th
-                                  className="px-2 py-1 text-right cursor-pointer select-none"
-                                  onClick={() => toggleJobsSort(visit.id, "qty")}
-                                >
-                                  {t("car.qty")}
-                                  {mark("qty")}
-                                </th>
-                                <th
-                                  className="px-2 py-1 text-right cursor-pointer select-none"
-                                  onClick={() => toggleJobsSort(visit.id, "unit")}
-                                >
-                                  {t("car.unit")}
-                                  {mark("unit")}
-                                </th>
-                                <th
-                                  className="px-2 py-1 text-right cursor-pointer select-none"
-                                  onClick={() => toggleJobsSort(visit.id, "subtotal")}
-                                >
-                                  {t("car.subtotal")}
-                                  {mark("subtotal")}
-                                </th>
-                                <th
-                                  className="px-2 py-1 text-right cursor-pointer select-none"
-                                  onClick={() => toggleJobsSort(visit.id, "total")}
-                                >
-                                  {t("car.total")}
-                                  {mark("total")}
-                                </th>
-                                <th className="px-2 py-1 text-left">{t("portfolio.notes")}</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {sortedJobs.map((job) => (
-                                <tr key={job.id} className="border-t border-border/40">
-                                  <td className="px-2 py-1 text-left">{job.job_name_snapshot}</td>
-                                  <td className="px-2 py-1 text-left">
-                                    {job.category_snapshot ?? "-"}
-                                  </td>
-                                  <td className="px-2 py-1 text-right">{job.quantity}</td>
-                                  <td className="px-2 py-1 text-right">
-                                    {formatCurrency(Number(job.unit_price_ex_vat))}
-                                  </td>
-                                  <td className="px-2 py-1 text-right">
-                                    {formatCurrency(Number(job.line_total_ex_vat))}
-                                  </td>
-                                  <td className="px-2 py-1 text-right">
-                                    {formatCurrency(
-                                      Number(job.line_total_ex_vat) * (1 + Number(visit.vat_rate)),
-                                    )}
-                                  </td>
-                                  <td className="px-2 py-1 text-left">{job.notes ?? "-"}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
+                      </div>
                     </td>
                   </tr>
                 ) : null}
