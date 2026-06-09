@@ -23,6 +23,7 @@ import {
 import { useTickerCatalog } from "@/routes/_authenticated/portfolio/hooks/useTickerCatalog";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
+const TRANSACTIONS_PAGE_SIZE = 25;
 const today = () => new Date().toISOString().slice(0, 10);
 
 const empty = (): TransactionInputType => ({
@@ -43,6 +44,7 @@ type TransactionTableRow = {
   ticker: string;
   name: string | null;
   asset_type: string;
+  market: string | null;
   currency: string;
   shares: number;
   price: number;
@@ -68,11 +70,17 @@ function TransactionsPage() {
   const [showPortfolios, setShowPortfolios] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
+  const [page, setPage] = useState(1);
 
-  const { txQ, transactions, portfolios } = usePortfolioData();
+  const { txQ, transactions, transactionCount, portfolios } = usePortfolioData({
+    transactionPagination: { page, pageSize: TRANSACTIONS_PAGE_SIZE },
+  });
   const { tickerCatalog } = useTickerCatalog();
   const data = transactions as TransactionTableRow[];
   const isLoading = txQ.isLoading;
+  const pageCount = Math.max(1, Math.ceil(transactionCount / TRANSACTIONS_PAGE_SIZE));
+  const pageStart = transactionCount === 0 ? 0 : (page - 1) * TRANSACTIONS_PAGE_SIZE + 1;
+  const pageEnd = Math.min(page * TRANSACTIONS_PAGE_SIZE, transactionCount);
   const tickerSuggestions = useMemo(() => {
     const map = new Map<string, TickerSuggestion>();
 
@@ -120,7 +128,7 @@ function TransactionsPage() {
   const portfolioName = useMemo(() => {
     const map = new Map(portfolios.map((p) => [p.id, p.name]));
     return (id: string | null) => (id ? (map.get(id) ?? "-") : t("portfolio.unassigned"));
-  }, [portfolios]);
+  }, [portfolios, t]);
 
   const createM = useMutation({
     mutationFn: async (value: TransactionInputType) => {
@@ -132,6 +140,7 @@ function TransactionsPage() {
     },
     onSuccess: () => {
       invalidate();
+      setPage(1);
       setEditing(null);
       toast.success(t("portfolio.transactionAdded"));
     },
@@ -161,6 +170,9 @@ function TransactionsPage() {
       if (error) throw new Error(error.message);
     },
     onSuccess: () => {
+      if (data.length === 1 && page > 1) {
+        setPage((current) => current - 1);
+      }
       invalidate();
       setDeleteDialog(null);
       toast.success(t("portfolio.removed"));
@@ -175,6 +187,9 @@ function TransactionsPage() {
       return { deleted: ids.length };
     },
     onSuccess: (result) => {
+      if (result.deleted >= data.length && page > 1) {
+        setPage((current) => current - 1);
+      }
       invalidate();
       setDeleteDialog(null);
       setSelected(new Set());
@@ -294,6 +309,7 @@ function TransactionsPage() {
     },
     onSuccess: (result) => {
       invalidate();
+      setPage(1);
       toast.success(t("portfolio.importedTransactions", { count: result.inserted }));
     },
     onError: (e: Error) => toast.error(e.message),
@@ -419,6 +435,43 @@ function TransactionsPage() {
           });
         }}
       />
+
+      {transactionCount > 0 && (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card/50 px-3 py-2 text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+          <div>
+            {t("portfolio.transactionsRange", {
+              start: pageStart,
+              end: pageEnd,
+              total: transactionCount,
+            })}
+          </div>
+          <div className="flex items-center gap-2">
+            <span>{t("portfolio.pageStatus", { page, total: pageCount })}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected(new Set());
+                setPage((current) => Math.max(1, current - 1));
+              }}
+              disabled={page <= 1}
+              className="border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-foreground hover:border-primary disabled:opacity-40"
+            >
+              {t("portfolio.previousPage")}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelected(new Set());
+                setPage((current) => Math.min(pageCount, current + 1));
+              }}
+              disabled={page >= pageCount}
+              className="border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-foreground hover:border-primary disabled:opacity-40"
+            >
+              {t("portfolio.nextPage")}
+            </button>
+          </div>
+        </div>
+      )}
 
       {editing && (
         <TransactionEditor

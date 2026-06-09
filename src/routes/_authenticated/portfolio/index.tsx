@@ -59,7 +59,9 @@ function Dashboard() {
           const data = (await response.json()) as { rates?: Record<string, number> };
           if (data.rates) return { rates: toUsdPerUnit(data.rates) };
         }
-      } catch {}
+      } catch (error) {
+        void error;
+      }
       return { rates: { USD: 1, EUR: 1 } };
     },
     staleTime: 10 * 60_000,
@@ -139,7 +141,7 @@ function Dashboard() {
   );
 
   if (txQ.isLoading) return <Skeleton />;
-  if ((txQ.data ?? []).length === 0) return <EmptyState />;
+  if (transactions.length === 0) return <EmptyState />;
 
   const tabs = [
     { id: allId, label: t("portfolio.all") },
