@@ -4,6 +4,7 @@ import { classifyHolding } from "@/lib/portfolio/transactions/mappers";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
 import type { Enriched } from "@/lib/portfolio/types";
 import { PortfolioSummary } from "@/routes/_authenticated/portfolio/components/PortfolioSummary";
+import { PortfolioSnapshotStats } from "@/routes/_authenticated/portfolio/components/PortfolioSnapshotStats";
 import { PortfolioChart } from "@/routes/_authenticated/portfolio/components/PortfolioChart";
 import { PortfolioHoldingsTable } from "@/routes/_authenticated/portfolio/components/PortfolioHoldingsTable";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
@@ -187,6 +188,8 @@ function Dashboard() {
         totals={totals}
         formatCurrency={dispFmt}
       />
+
+      <PortfolioSnapshotStats defaultCurrency={display} />
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <PortfolioChart

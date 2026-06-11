@@ -46,5 +46,3 @@ export type ServiceVisitFormInput = {
   vat_rate: number;
   is_annual_service: boolean;
 };
-
-

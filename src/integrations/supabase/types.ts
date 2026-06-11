@@ -109,6 +109,77 @@ export type Database = {
         };
         Relationships: [];
       };
+      portfolio_value_snapshots: {
+        Row: {
+          cost_basis_eur: number;
+          cost_basis_usd: number;
+          created_at: string;
+          fx_metadata: Json;
+          id: string;
+          market_value_eur: number;
+          market_value_usd: number;
+          portfolio_id: string | null;
+          portfolio_name: string | null;
+          quote_metadata: Json;
+          scope: string;
+          scope_key: string;
+          snapshot_at: string;
+          snapshot_date: string;
+          unrealized_eur: number;
+          unrealized_usd: number;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          cost_basis_eur?: number;
+          cost_basis_usd?: number;
+          created_at?: string;
+          fx_metadata?: Json;
+          id?: string;
+          market_value_eur?: number;
+          market_value_usd?: number;
+          portfolio_id?: string | null;
+          portfolio_name?: string | null;
+          quote_metadata?: Json;
+          scope: string;
+          scope_key: string;
+          snapshot_at: string;
+          snapshot_date: string;
+          unrealized_eur?: number;
+          unrealized_usd?: number;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          cost_basis_eur?: number;
+          cost_basis_usd?: number;
+          created_at?: string;
+          fx_metadata?: Json;
+          id?: string;
+          market_value_eur?: number;
+          market_value_usd?: number;
+          portfolio_id?: string | null;
+          portfolio_name?: string | null;
+          quote_metadata?: Json;
+          scope?: string;
+          scope_key?: string;
+          snapshot_at?: string;
+          snapshot_date?: string;
+          unrealized_eur?: number;
+          unrealized_usd?: number;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_value_snapshots_portfolio_id_fkey";
+            columns: ["portfolio_id"];
+            isOneToOne: false;
+            referencedRelation: "portfolios";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       ticker_catalog: {
         Row: {
           asset_type: string | null;
