@@ -9,7 +9,7 @@ import {
   type SnapshotEnrichedHolding,
   type SnapshotQuote,
   type SnapshotTransaction,
-} from "../src/lib/portfolio/snapshots/calculations";
+} from "../src/lib/portfolio/snapshots/calculations.js";
 
 type ApiRequest = {
   method?: string;
