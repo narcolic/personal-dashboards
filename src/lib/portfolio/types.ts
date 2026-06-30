@@ -35,6 +35,7 @@ export type HoldingRegionClassification = {
 export type TransactionRow = {
   id: string;
   ticker: string;
+  action: "buy" | "sell" | "dividend" | "fee";
   name: string | null;
   asset_type: string;
   market: string | null;

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { StatCard } from "@/components/terminal/StatCard";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
@@ -47,12 +47,18 @@ function formatDate(date: string | null | undefined) {
   }).format(new Date(`${date}T00:00:00`));
 }
 
-export function PortfolioSnapshotStats({ defaultCurrency }: { defaultCurrency: string }) {
+export function PortfolioSnapshotStats({
+  currency,
+  onCardClick,
+  title,
+}: {
+  currency: string;
+  onCardClick?: () => void;
+  title?: string;
+}) {
   const { t } = useTranslation();
   const snapshotsQ = usePortfolioSnapshots();
-  const [currency, setCurrency] = useState<SnapshotCurrency>(
-    defaultCurrency.toUpperCase() === "USD" ? "USD" : "EUR",
-  );
+  const selectedCurrency: SnapshotCurrency = currency.toUpperCase() === "USD" ? "USD" : "EUR";
 
   const stats = useMemo(() => {
     const rows = snapshotsQ.data ?? [];
@@ -69,49 +75,31 @@ export function PortfolioSnapshotStats({ defaultCurrency }: { defaultCurrency: s
     return {
       totalRows,
       latestTotal: latest(totalRows),
-      marketHigh: extreme(totalRows, currency, "market", "high"),
-      marketLow: extreme(totalRows, currency, "market", "low"),
-      unrealizedHigh: extreme(totalRows, currency, "unrealized", "high"),
-      unrealizedLow: extreme(totalRows, currency, "unrealized", "low"),
+      marketHigh: extreme(totalRows, selectedCurrency, "market", "high"),
+      marketLow: extreme(totalRows, selectedCurrency, "market", "low"),
+      unrealizedHigh: extreme(totalRows, selectedCurrency, "unrealized", "high"),
+      unrealizedLow: extreme(totalRows, selectedCurrency, "unrealized", "low"),
       portfolios: Array.from(portfolioGroups.values())
         .map((group) => ({
           key: group[0]?.scope_key ?? "",
           name: group[0]?.portfolio_name ?? t("portfolio.unassigned"),
           latest: latest(group),
-          marketHigh: extreme(group, currency, "market", "high"),
-          marketLow: extreme(group, currency, "market", "low"),
-          unrealizedHigh: extreme(group, currency, "unrealized", "high"),
-          unrealizedLow: extreme(group, currency, "unrealized", "low"),
+          marketHigh: extreme(group, selectedCurrency, "market", "high"),
+          marketLow: extreme(group, selectedCurrency, "market", "low"),
+          unrealizedHigh: extreme(group, selectedCurrency, "unrealized", "high"),
+          unrealizedLow: extreme(group, selectedCurrency, "unrealized", "low"),
         }))
         .sort(
           (a, b) =>
-            metricValue(b.latest ?? b.marketHigh ?? b.marketLow!, currency, "market") -
-            metricValue(a.latest ?? a.marketHigh ?? a.marketLow!, currency, "market"),
+            metricValue(b.latest ?? b.marketHigh ?? b.marketLow!, selectedCurrency, "market") -
+            metricValue(a.latest ?? a.marketHigh ?? a.marketLow!, selectedCurrency, "market"),
         ),
     };
-  }, [currency, snapshotsQ.data, t]);
-
-  const actions = (
-    <div className="flex border border-border">
-      {(["EUR", "USD"] as const).map((option) => (
-        <button
-          key={option}
-          onClick={() => setCurrency(option)}
-          className={`px-3 py-1 text-[10px] uppercase tracking-[0.2em] border-r border-border last:border-r-0 ${
-            currency === option
-              ? "bg-primary text-primary-foreground font-bold"
-              : "hover:text-primary"
-          }`}
-        >
-          {option}
-        </button>
-      ))}
-    </div>
-  );
+  }, [selectedCurrency, snapshotsQ.data, t]);
 
   if (snapshotsQ.isLoading) {
     return (
-      <TerminalCard title={t("portfolio.snapshotHistory")} actions={actions}>
+      <TerminalCard title={title ?? t("portfolio.snapshotHistory")} onClick={onCardClick}>
         <div className="h-24 animate-pulse bg-secondary/40" />
       </TerminalCard>
     );
@@ -119,45 +107,52 @@ export function PortfolioSnapshotStats({ defaultCurrency }: { defaultCurrency: s
 
   if (!stats.latestTotal) {
     return (
-      <TerminalCard title={t("portfolio.snapshotHistory")} actions={actions}>
+      <TerminalCard title={title ?? t("portfolio.snapshotHistory")} onClick={onCardClick}>
         <div className="text-xs text-muted-foreground">{t("portfolio.noSnapshotsYet")}</div>
       </TerminalCard>
     );
   }
 
-  const currencyFormat = (value: number) => fmtCurrency(value, currency);
+  const currencyFormat = (value: number) => fmtCurrency(value, selectedCurrency);
 
   return (
-    <TerminalCard title={t("portfolio.snapshotHistory")} actions={actions}>
+    <TerminalCard title={title ?? t("portfolio.snapshotHistory")} onClick={onCardClick}>
       <div className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
-            label={t("portfolio.latestSnapshot")}
-            value={currencyFormat(metricValue(stats.latestTotal, currency, "market"))}
-            sub={formatDate(stats.latestTotal.snapshot_date)}
+            label={t("portfolio.peakValue")}
+            value={currencyFormat(metricValue(stats.marketHigh!, selectedCurrency, "market"))}
+            sub={formatDate(stats.marketHigh?.snapshot_date)}
             accent
           />
           <StatCard
-            label={t("portfolio.peakValue")}
-            value={currencyFormat(metricValue(stats.marketHigh!, currency, "market"))}
-            sub={formatDate(stats.marketHigh?.snapshot_date)}
-          />
-          <StatCard
             label={t("portfolio.lowValue")}
-            value={currencyFormat(metricValue(stats.marketLow!, currency, "market"))}
+            value={currencyFormat(metricValue(stats.marketLow!, selectedCurrency, "market"))}
             sub={formatDate(stats.marketLow?.snapshot_date)}
           />
           <StatCard
             label={t("portfolio.peakUnrealized")}
-            value={currencyFormat(metricValue(stats.unrealizedHigh!, currency, "unrealized"))}
+            value={currencyFormat(
+              metricValue(stats.unrealizedHigh!, selectedCurrency, "unrealized"),
+            )}
             sub={formatDate(stats.unrealizedHigh?.snapshot_date)}
-            tone={metricValue(stats.unrealizedHigh!, currency, "unrealized") >= 0 ? "bull" : "bear"}
+            tone={
+              metricValue(stats.unrealizedHigh!, selectedCurrency, "unrealized") >= 0
+                ? "bull"
+                : "bear"
+            }
           />
           <StatCard
             label={t("portfolio.lowUnrealized")}
-            value={currencyFormat(metricValue(stats.unrealizedLow!, currency, "unrealized"))}
+            value={currencyFormat(
+              metricValue(stats.unrealizedLow!, selectedCurrency, "unrealized"),
+            )}
             sub={formatDate(stats.unrealizedLow?.snapshot_date)}
-            tone={metricValue(stats.unrealizedLow!, currency, "unrealized") >= 0 ? "bull" : "bear"}
+            tone={
+              metricValue(stats.unrealizedLow!, selectedCurrency, "unrealized") >= 0
+                ? "bull"
+                : "bear"
+            }
           />
         </div>
 
@@ -179,19 +174,23 @@ export function PortfolioSnapshotStats({ defaultCurrency }: { defaultCurrency: s
                   <tr key={row.key} className="border-t border-border">
                     <td className="px-3 py-2 uppercase">{row.name}</td>
                     <td className="px-3 py-2 text-right">
-                      {currencyFormat(metricValue(row.latest!, currency, "market"))}
+                      {currencyFormat(metricValue(row.latest!, selectedCurrency, "market"))}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {currencyFormat(metricValue(row.marketHigh!, currency, "market"))}
+                      {currencyFormat(metricValue(row.marketHigh!, selectedCurrency, "market"))}
                     </td>
                     <td className="px-3 py-2 text-right">
-                      {currencyFormat(metricValue(row.marketLow!, currency, "market"))}
+                      {currencyFormat(metricValue(row.marketLow!, selectedCurrency, "market"))}
                     </td>
                     <td className="px-3 py-2 text-right text-bull">
-                      {currencyFormat(metricValue(row.unrealizedHigh!, currency, "unrealized"))}
+                      {currencyFormat(
+                        metricValue(row.unrealizedHigh!, selectedCurrency, "unrealized"),
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right text-bear">
-                      {currencyFormat(metricValue(row.unrealizedLow!, currency, "unrealized"))}
+                      {currencyFormat(
+                        metricValue(row.unrealizedLow!, selectedCurrency, "unrealized"),
+                      )}
                     </td>
                   </tr>
                 ))}

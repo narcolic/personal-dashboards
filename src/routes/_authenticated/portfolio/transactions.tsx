@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -24,10 +24,12 @@ import { useTickerCatalog } from "@/routes/_authenticated/portfolio/hooks/useTic
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const TRANSACTIONS_PAGE_SIZE = 25;
+const ALL_FILTER = "__all__";
 const today = () => new Date().toISOString().slice(0, 10);
 
 const empty = (): TransactionInputType => ({
   ticker: "",
+  action: "buy",
   name: "",
   asset_type: "stock",
   market: null,
@@ -42,6 +44,7 @@ const empty = (): TransactionInputType => ({
 type TransactionTableRow = {
   id: string;
   ticker: string;
+  action?: TransactionInputType["action"];
   name: string | null;
   asset_type: string;
   market: string | null;
@@ -71,8 +74,22 @@ function TransactionsPage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
   const [page, setPage] = useState(1);
+  const [tickerFilter, setTickerFilter] = useState("");
+  const [portfolioFilter, setPortfolioFilter] = useState(ALL_FILTER);
+  const [typeFilter, setTypeFilter] = useState(ALL_FILTER);
+  const [currencyFilter, setCurrencyFilter] = useState(ALL_FILTER);
+  const [dateFromFilter, setDateFromFilter] = useState("");
+  const [dateToFilter, setDateToFilter] = useState("");
 
   const { txQ, transactions, transactionCount, portfolios } = usePortfolioData({
+    transactionFilters: {
+      ticker: tickerFilter.trim() || undefined,
+      portfolioId: portfolioFilter === ALL_FILTER ? undefined : portfolioFilter,
+      assetType: typeFilter === ALL_FILTER ? undefined : typeFilter,
+      currency: currencyFilter === ALL_FILTER ? undefined : currencyFilter,
+      dateFrom: dateFromFilter || undefined,
+      dateTo: dateToFilter || undefined,
+    },
     transactionPagination: { page, pageSize: TRANSACTIONS_PAGE_SIZE },
   });
   const { tickerCatalog } = useTickerCatalog();
@@ -110,6 +127,23 @@ function TransactionsPage() {
 
     return Array.from(map.values()).sort((a, b) => a.ticker.localeCompare(b.ticker));
   }, [data, tickerCatalog]);
+  const currencyOptions = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [
+            ...data.map((row) => (row.currency || "").toUpperCase()),
+            ...tickerCatalog.map((row) => (row.currency || "").toUpperCase()),
+          ].filter(Boolean),
+        ),
+      ).sort(),
+    [data, tickerCatalog],
+  );
+
+  useEffect(() => {
+    setPage(1);
+    setSelected(new Set());
+  }, [tickerFilter, portfolioFilter, typeFilter, currencyFilter, dateFromFilter, dateToFilter]);
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["positions"] });
@@ -287,6 +321,7 @@ function TransactionsPage() {
 
         return {
           ticker: row.ticker,
+          action: "buy" as const,
           name: row.name ?? null,
           asset_type: (ASSET_TYPES as readonly string[]).includes(row.asset_type ?? "")
             ? (row.asset_type as TransactionInputType["asset_type"])
@@ -329,7 +364,7 @@ function TransactionsPage() {
             onClick={() => setShowPortfolios(true)}
             className="border border-border px-3 py-2 text-[11px] uppercase tracking-[0.2em] hover:border-primary"
           >
-            {t("portfolio.portfolios")} ({portfolios.length})
+            {t("portfolio.managePortfolios")} ({portfolios.length})
           </button>
 
           <input
@@ -356,7 +391,7 @@ function TransactionsPage() {
             onClick={() => setEditing(empty())}
             className="bg-primary px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90"
           >
-            {t("portfolio.new")}
+            {t("portfolio.addTransactionAction")}
           </button>
         </div>
       </div>
@@ -387,6 +422,121 @@ function TransactionsPage() {
           </pre>
         </div>
       </details>
+
+      <div className="border border-border bg-card/50 p-3">
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            {t("portfolio.filters")}
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setTickerFilter("");
+              setPortfolioFilter(ALL_FILTER);
+              setTypeFilter(ALL_FILTER);
+              setCurrencyFilter(ALL_FILTER);
+              setDateFromFilter("");
+              setDateToFilter("");
+            }}
+            className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground hover:text-primary"
+          >
+            {t("portfolio.clearFilters")}
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
+          <label className="space-y-1">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              {t("portfolio.tickerSearch")}
+            </span>
+            <input
+              value={tickerFilter}
+              onChange={(e) => setTickerFilter(e.target.value)}
+              placeholder={t("portfolio.tickerSearchPlaceholder")}
+              className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
+            />
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              {t("portfolio.portfolio")}
+            </span>
+            <select
+              value={portfolioFilter}
+              onChange={(e) => setPortfolioFilter(e.target.value)}
+              className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
+            >
+              <option value={ALL_FILTER}>{t("portfolio.all")}</option>
+              {portfolios.map((portfolio) => (
+                <option key={portfolio.id} value={portfolio.id}>
+                  {portfolio.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              {t("portfolio.type")}
+            </span>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="w-full border border-border bg-input px-2 py-2 text-sm uppercase focus:border-primary focus:outline-none"
+            >
+              <option value={ALL_FILTER}>{t("portfolio.all")}</option>
+              {ASSET_TYPES.map((assetType) => (
+                <option key={assetType} value={assetType}>
+                  {assetType}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1">
+            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              {t("portfolio.currency")}
+            </span>
+            <select
+              value={currencyFilter}
+              onChange={(e) => setCurrencyFilter(e.target.value)}
+              className="w-full border border-border bg-input px-2 py-2 text-sm uppercase focus:border-primary focus:outline-none"
+            >
+              <option value={ALL_FILTER}>{t("portfolio.all")}</option>
+              {currencyOptions.map((currency) => (
+                <option key={currency} value={currency}>
+                  {currency}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <div className="grid grid-cols-2 gap-2">
+            <label className="space-y-1">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                {t("portfolio.dateFrom")}
+              </span>
+              <input
+                type="date"
+                value={dateFromFilter}
+                onChange={(e) => setDateFromFilter(e.target.value)}
+                className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </label>
+            <label className="space-y-1">
+              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                {t("portfolio.dateTo")}
+              </span>
+              <input
+                type="date"
+                value={dateToFilter}
+                onChange={(e) => setDateToFilter(e.target.value)}
+                className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
+              />
+            </label>
+          </div>
+        </div>
+      </div>
 
       {selected.size > 0 && (
         <div className="flex items-center gap-3 border border-bear/30 bg-bear/5 px-3 py-2 text-[11px]">

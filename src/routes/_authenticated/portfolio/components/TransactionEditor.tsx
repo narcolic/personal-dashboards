@@ -1,9 +1,11 @@
 import { useState, type ReactNode } from "react";
 import type { TransactionInputType } from "@/lib/portfolio/transactions/api";
+import { fmtCurrency } from "@/lib/portfolio/formatters";
 import { normalizeTicker, type TickerSuggestion } from "@/lib/portfolio/tickerCatalog";
 import { useTranslation } from "react-i18next";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
+const TRANSACTION_ACTIONS = ["buy", "sell", "dividend", "fee"] as const;
 const CURRENCIES = ["USD", "EUR", "GBP", "CHF", "CAD", "AUD", "JPY", "HKD"];
 
 type TransactionDraft = Omit<TransactionInputType, "shares" | "price"> & {
@@ -15,6 +17,7 @@ const toDraft = (
   value: TransactionInputType & { id?: string },
 ): TransactionDraft & { id?: string } => ({
   ...value,
+  action: value.action ?? "buy",
   shares: value.id == null && value.shares === 0 ? "" : String(value.shares),
   price: value.id == null && value.price === 0 ? "" : String(value.price),
 });
@@ -64,6 +67,14 @@ export function TransactionEditor({
     item.ticker.toLowerCase().includes(tickerQuery),
   );
   const tickerExactMatch = tickerOptions.some((item) => item.ticker.toLowerCase() === tickerQuery);
+  const sharesValue = Number(v.shares);
+  const priceValue = Number(v.price);
+  const totalPreview = sharesValue * priceValue;
+  const hasValidTotalPreview =
+    Number.isFinite(sharesValue) &&
+    Number.isFinite(priceValue) &&
+    v.shares !== "" &&
+    v.price !== "";
   const applyTickerSuggestion = (item: TickerSuggestion) => {
     setV((state) => ({
       ...state,
@@ -81,7 +92,7 @@ export function TransactionEditor({
 
   return (
     <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-background/80 p-4 backdrop-blur md:items-center">
-      <div className="w-full max-w-lg border border-border bg-card">
+      <div className="w-full max-w-xl border border-border bg-card">
         <div className="flex justify-between border-b border-border bg-secondary/40 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-primary">
           <span>
             &gt; {value.id ? t("portfolio.editTransaction") : t("portfolio.newTransaction")}
@@ -109,6 +120,20 @@ export function TransactionEditor({
               onChange={(e) => set("transaction_date", e.target.value)}
               className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
             />
+          </Field>
+
+          <Field label={t("portfolio.action")}>
+            <select
+              value={v.action}
+              onChange={(e) => set("action", e.target.value as TransactionInputType["action"])}
+              className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+            >
+              {TRANSACTION_ACTIONS.map((action) => (
+                <option key={action} value={action}>
+                  {transactionActionLabel(action, t)}
+                </option>
+              ))}
+            </select>
           </Field>
 
           <Field label={t("portfolio.ticker")}>
@@ -151,7 +176,7 @@ export function TransactionEditor({
             </div>
           </Field>
 
-          <Field label={t("portfolio.type")}>
+          <Field label={t("portfolio.assetType")}>
             <select
               value={v.asset_type}
               onChange={(e) =>
@@ -161,7 +186,7 @@ export function TransactionEditor({
             >
               {ASSET_TYPES.map((type) => (
                 <option key={type} value={type}>
-                  {type}
+                  {assetTypeLabel(type)}
                 </option>
               ))}
             </select>
@@ -239,29 +264,73 @@ export function TransactionEditor({
           </Field>
 
           <div className="col-span-2 border-t border-border/40 pt-2">
-            <div
-              role="group"
-              aria-label={t("portfolio.save")}
-              className="inline-flex flex-wrap items-center gap-2"
-            >
-              <button
-                type="submit"
-                disabled={busy}
-                className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div className="border border-border bg-background px-3 py-2">
+                <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+                  {t("portfolio.totalPreview")}
+                </div>
+                <div className="mt-1 text-sm font-bold text-foreground tabular-nums">
+                  {hasValidTotalPreview ? fmtCurrency(totalPreview, v.currency) : "-"}
+                </div>
+              </div>
+
+              <div
+                role="group"
+                aria-label={t("portfolio.save")}
+                className="inline-flex flex-wrap items-center gap-2"
               >
-                {busy ? t("portfolio.saving") : t("common.save")}
-              </button>
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
-              >
-                {t("common.cancel")}
-              </button>
+                <button
+                  type="submit"
+                  disabled={busy}
+                  className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                >
+                  {busy ? t("portfolio.saving") : t("common.save")}
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                >
+                  {t("common.cancel")}
+                </button>
+              </div>
             </div>
           </div>
         </form>
       </div>
     </div>
   );
+}
+
+function assetTypeLabel(type: (typeof ASSET_TYPES)[number]) {
+  switch (type) {
+    case "etf":
+      return "ETF";
+    case "stock":
+      return "Stock";
+    case "crypto":
+      return "Crypto";
+    case "bond":
+      return "Bond";
+    case "fund":
+      return "Fund";
+    case "other":
+      return "Other";
+  }
+}
+
+function transactionActionLabel(
+  action: (typeof TRANSACTION_ACTIONS)[number],
+  t: ReturnType<typeof useTranslation>["t"],
+) {
+  switch (action) {
+    case "buy":
+      return t("portfolio.actionBuy");
+    case "sell":
+      return t("portfolio.actionSell");
+    case "dividend":
+      return t("portfolio.actionDividend");
+    case "fee":
+      return t("portfolio.actionFee");
+  }
 }

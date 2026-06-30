@@ -1,13 +1,15 @@
+import { type ReactNode, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable, TerminalTd, TerminalTh } from "@/components/terminal/TerminalTable";
 import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
 import type { Enriched } from "@/lib/portfolio/types";
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 type RowWithNative = Enriched & { _nativeCurrency: string };
+type TableMode = "dashboard" | "holdings";
 type SortKey =
   | "ticker"
+  | "name"
   | "shares"
   | "price"
   | "avg_cost"
@@ -23,15 +25,32 @@ export function PortfolioHoldingsTable({
   display,
   convert,
   formatDisplayCurrency,
+  mode = "dashboard",
+  totalCount,
+  footer,
+  onCardClick,
+  title,
+  onRowClick,
 }: {
   rows: RowWithNative[];
   display: string;
   convert: (amount: number, from: string) => number;
   formatDisplayCurrency: (n: number) => string;
+  mode?: TableMode;
+  totalCount?: number;
+  footer?: ReactNode;
+  onCardClick?: () => void;
+  title?: string;
+  onRowClick?: (row: RowWithNative) => void;
 }) {
   const { t } = useTranslation();
-  const [sortKey, setSortKey] = useState<SortKey>("ticker");
-  const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
+  const isDashboardPreview = mode === "dashboard";
+  const showNameColumn = mode === "holdings";
+  const showDayChangeColumn = isDashboardPreview;
+  const [sortKey, setSortKey] = useState<SortKey>(isDashboardPreview ? "marketValue" : "ticker");
+  const [sortDirection, setSortDirection] = useState<SortDirection>(
+    isDashboardPreview || showNameColumn ? "desc" : "asc",
+  );
 
   const sortedRows = useMemo(() => {
     const out = rows.slice();
@@ -40,6 +59,8 @@ export function PortfolioHoldingsTable({
       switch (sortKey) {
         case "ticker":
           return a.ticker.localeCompare(b.ticker) * dir;
+        case "name":
+          return getRowName(a).localeCompare(getRowName(b)) * dir;
         case "shares":
           return (a.shares - b.shares) * dir;
         case "price":
@@ -70,24 +91,26 @@ export function PortfolioHoldingsTable({
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"));
       return;
     }
     setSortKey(key);
     setSortDirection("asc");
   };
 
-  const sortMark = (key: SortKey) =>
-    sortKey === key ? (sortDirection === "asc" ? " ↑" : " ↓") : "";
+  const sortMark = (key: SortKey) => (sortKey !== key ? "" : sortDirection === "asc" ? " ↑" : " ↓");
+  const positionsLabel =
+    totalCount && totalCount !== rows.length
+      ? `${rows.length} / ${totalCount} ${t("portfolio.positions")} | ${display}`
+      : `${rows.length} ${t("portfolio.positions")} | ${display}`;
 
   return (
     <TerminalCard
-      title={t("portfolio.holdings")}
-      actions={
-        <span className="text-[10px] text-muted-foreground">{`${rows.length} ${t("portfolio.positions")} · ${display}`}</span>
-      }
+      title={title ?? t("portfolio.holdings")}
+      actions={<span className="text-[10px] text-muted-foreground">{positionsLabel}</span>}
+      onClick={onCardClick}
     >
-      <div className="overflow-x-auto">
+      <div onClick={(event) => event.stopPropagation()}>
         <TerminalTable>
           <thead className="text-[10px] uppercase tracking-widest text-muted-foreground">
             <tr className="border-b border-border">
@@ -98,47 +121,64 @@ export function PortfolioHoldingsTable({
                 {t("portfolio.ticker")}
                 {sortMark("ticker")}
               </TerminalTh>
-              <TerminalTh
-                className="text-right cursor-pointer select-none"
-                onClick={() => toggleSort("shares")}
-              >
-                {t("portfolio.quantity")}
-                {sortMark("shares")}
-              </TerminalTh>
-              <TerminalTh
-                className="text-right cursor-pointer select-none"
-                onClick={() => toggleSort("price")}
-              >
-                {t("portfolio.priceCurrent")}
-                {sortMark("price")}
-              </TerminalTh>
-              <TerminalTh
-                className="text-right cursor-pointer select-none"
-                onClick={() => toggleSort("avg_cost")}
-              >
-                {t("portfolio.priceAvg")}
-                {sortMark("avg_cost")}
-              </TerminalTh>
-              <TerminalTh
-                className="text-right cursor-pointer select-none"
-                onClick={() => toggleSort("dayChangePct")}
-              >
-                {t("portfolio.dayPct")}
-                {sortMark("dayChangePct")}
-              </TerminalTh>
+              {showNameColumn ? (
+                <TerminalTh
+                  className="text-left cursor-pointer select-none"
+                  onClick={() => toggleSort("name")}
+                >
+                  {t("portfolio.name")}
+                  {sortMark("name")}
+                </TerminalTh>
+              ) : null}
+              {!isDashboardPreview ? (
+                <>
+                  <TerminalTh
+                    className="text-right cursor-pointer select-none"
+                    onClick={() => toggleSort("shares")}
+                  >
+                    {t("portfolio.quantity")}
+                    {sortMark("shares")}
+                  </TerminalTh>
+                  <TerminalTh
+                    className="text-right cursor-pointer select-none"
+                    onClick={() => toggleSort("price")}
+                  >
+                    {t("portfolio.priceCurrent")}
+                    {sortMark("price")}
+                  </TerminalTh>
+                  <TerminalTh
+                    className="text-right cursor-pointer select-none"
+                    onClick={() => toggleSort("avg_cost")}
+                  >
+                    {t("portfolio.priceAvg")}
+                    {sortMark("avg_cost")}
+                  </TerminalTh>
+                </>
+              ) : null}
+              {showDayChangeColumn ? (
+                <TerminalTh
+                  className="text-right cursor-pointer select-none"
+                  onClick={() => toggleSort("dayChangePct")}
+                >
+                  {t("portfolio.dayPct")}
+                  {sortMark("dayChangePct")}
+                </TerminalTh>
+              ) : null}
               <TerminalTh
                 className="text-right cursor-pointer select-none"
                 onClick={() => toggleSort("marketValue")}
               >
                 {t("portfolio.marketValue")} ({display}){sortMark("marketValue")}
               </TerminalTh>
-              <TerminalTh
-                className="text-right cursor-pointer select-none"
-                onClick={() => toggleSort("tx_count")}
-              >
-                {t("portfolio.tx")}
-                {sortMark("tx_count")}
-              </TerminalTh>
+              {!isDashboardPreview ? (
+                <TerminalTh
+                  className="text-right cursor-pointer select-none"
+                  onClick={() => toggleSort("tx_count")}
+                >
+                  {t("portfolio.tx")}
+                  {sortMark("tx_count")}
+                </TerminalTh>
+              ) : null}
               <TerminalTh
                 className="text-right cursor-pointer select-none"
                 onClick={() => toggleSort("unrealized")}
@@ -155,33 +195,62 @@ export function PortfolioHoldingsTable({
             </tr>
           </thead>
           <tbody>
-            {sortedRows.map((r) => {
-              const native = r._nativeCurrency;
-              const mvDisp = convert(r.marketValue, native);
-              const unrealDisp = convert(r.unrealized, native);
+            {sortedRows.map((row) => {
+              const nativeCurrency = row._nativeCurrency;
+              const marketValue = convert(row.marketValue, nativeCurrency);
+              const unrealized = convert(row.unrealized, nativeCurrency);
+
               return (
-                <tr key={r.id} className="border-b border-border/60 hover:bg-secondary/40">
-                  <td className="py-2 px-2">
-                    <div className="font-bold text-primary">{r.ticker}</div>
-                    <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">
-                      {r.quote?.shortName || r.name || r.asset_type} · {native}
-                    </div>
+                <tr
+                  key={row.id}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          event.stopPropagation();
+                          onRowClick(row);
+                        }
+                      : undefined
+                  }
+                  className={`border-b border-border/60 hover:bg-secondary/40 ${
+                    onRowClick ? "cursor-pointer" : ""
+                  }`}
+                >
+                  <td className="py-2 px-2 text-left">
+                    <div className="font-bold text-primary">{row.ticker}</div>
+                    {showNameColumn ? (
+                      <div className="text-[10px] text-muted-foreground">{nativeCurrency}</div>
+                    ) : (
+                      <div className="text-[10px] text-muted-foreground truncate max-w-[180px]">
+                        {getRowName(row)} | {nativeCurrency}
+                      </div>
+                    )}
                   </td>
-                  <TerminalTd>
-                    {fmt(r.shares, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                  {showNameColumn ? (
+                    <td className="py-2 px-2 text-left">
+                      <div className="truncate max-w-[260px]">{getRowName(row)}</div>
+                    </td>
+                  ) : null}
+                  {!isDashboardPreview ? (
+                    <>
+                      <TerminalTd>
+                        {fmt(row.shares, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                      </TerminalTd>
+                      <TerminalTd>{fmtCurrency(row.price, nativeCurrency)}</TerminalTd>
+                      <TerminalTd>{fmtCurrency(row.avg_cost, nativeCurrency)}</TerminalTd>
+                    </>
+                  ) : null}
+                  {showDayChangeColumn ? (
+                    <TerminalTd tone={row.dayChangePct >= 0 ? "bull" : "bear"}>
+                      {fmtPct(row.dayChangePct)}
+                    </TerminalTd>
+                  ) : null}
+                  <TerminalTd>{formatDisplayCurrency(marketValue)}</TerminalTd>
+                  {!isDashboardPreview ? <TerminalTd>{row.tx_count}</TerminalTd> : null}
+                  <TerminalTd tone={row.unrealized >= 0 ? "bull" : "bear"}>
+                    {formatDisplayCurrency(unrealized)}
                   </TerminalTd>
-                  <TerminalTd>{fmtCurrency(r.price, native)}</TerminalTd>
-                  <TerminalTd>{fmtCurrency(r.avg_cost, native)}</TerminalTd>
-                  <TerminalTd tone={r.dayChangePct >= 0 ? "bull" : "bear"}>
-                    {fmtPct(r.dayChangePct)}
-                  </TerminalTd>
-                  <TerminalTd>{formatDisplayCurrency(mvDisp)}</TerminalTd>
-                  <TerminalTd>{r.tx_count}</TerminalTd>
-                  <TerminalTd tone={r.unrealized >= 0 ? "bull" : "bear"}>
-                    {formatDisplayCurrency(unrealDisp)}
-                  </TerminalTd>
-                  <TerminalTd tone={r.unrealizedPct >= 0 ? "bull" : "bear"}>
-                    {fmtPct(r.unrealizedPct)}
+                  <TerminalTd tone={row.unrealizedPct >= 0 ? "bull" : "bear"}>
+                    {fmtPct(row.unrealizedPct)}
                   </TerminalTd>
                 </tr>
               );
@@ -189,6 +258,15 @@ export function PortfolioHoldingsTable({
           </tbody>
         </TerminalTable>
       </div>
+      {footer ? (
+        <div className="mt-3 flex justify-end" onClick={(event) => event.stopPropagation()}>
+          {footer}
+        </div>
+      ) : null}
     </TerminalCard>
   );
+}
+
+function getRowName(row: RowWithNative) {
+  return row.quote?.shortName || row.name || row.asset_type;
 }

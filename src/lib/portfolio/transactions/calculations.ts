@@ -3,6 +3,7 @@ import type { Quote } from "@/lib/portfolio/types";
 export function aggregateTransactions(txs: import("@/lib/portfolio/types").TransactionRow[]) {
   const groups = new Map<string, import("@/lib/portfolio/types").TransactionRow[]>();
   for (const t of txs) {
+    if ((t.action ?? "buy") !== "buy") continue;
     const key = `${t.ticker.toUpperCase()}|${t.portfolio_id ?? ""}|${t.currency}`;
     const arr = groups.get(key) ?? [];
     arr.push(t);

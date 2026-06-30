@@ -1,14 +1,15 @@
+import { useMemo, useState } from "react";
+import type { Dispatch, SetStateAction } from "react";
+import { useTranslation } from "react-i18next";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
-import type { Dispatch, SetStateAction } from "react";
-import { useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 
 type TransactionInputType = import("@/lib/portfolio/transactions/api").TransactionInputType;
 
 type TransactionTableRow = {
   id: string;
   ticker: string;
+  action?: TransactionInputType["action"];
   name: string | null;
   asset_type: string;
   currency: string;
@@ -83,7 +84,7 @@ export function TransactionsTable({
 
   const toggleSort = (key: SortKey) => {
     if (sortKey === key) {
-      setSortDirection((d) => (d === "asc" ? "desc" : "asc"));
+      setSortDirection((direction) => (direction === "asc" ? "desc" : "asc"));
       return;
     }
     setSortKey(key);
@@ -100,8 +101,8 @@ export function TransactionsTable({
             <input
               type="checkbox"
               checked={data.length > 0 && selected.size === data.length}
-              onChange={(e) => {
-                if (e.target.checked) setSelected(new Set(sortedRows.map((p) => p.id)));
+              onChange={(event) => {
+                if (event.target.checked) setSelected(new Set(sortedRows.map((row) => row.id)));
                 else setSelected(new Set());
               }}
               className="accent-primary"
@@ -160,30 +161,30 @@ export function TransactionsTable({
         </tr>
       </thead>
       <tbody>
-        {isLoading && (
+        {isLoading ? (
           <tr>
             <td colSpan={9} className="p-6 text-center text-muted-foreground">
               {t("common.loading")}
             </td>
           </tr>
-        )}
-        {!isLoading && data.length === 0 && (
+        ) : null}
+        {!isLoading && data.length === 0 ? (
           <tr>
             <td colSpan={9} className="p-6 text-center text-muted-foreground">
               {t("portfolio.noTransactionsYet")}
             </td>
           </tr>
-        )}
+        ) : null}
         {sortedRows.map((position) => (
           <tr key={position.id} className="border-t border-border/60 hover:bg-secondary/30">
             <td className="px-2 py-2 text-center">
               <input
                 type="checkbox"
                 checked={selected.has(position.id)}
-                onChange={(e) => {
-                  setSelected((prev) => {
-                    const next = new Set(prev);
-                    if (e.target.checked) next.add(position.id);
+                onChange={(event) => {
+                  setSelected((previous) => {
+                    const next = new Set(previous);
+                    if (event.target.checked) next.add(position.id);
                     else next.delete(position.id);
                     return next;
                   });
@@ -208,6 +209,7 @@ export function TransactionsTable({
                   setEditing({
                     id: position.id,
                     ticker: position.ticker,
+                    action: position.action ?? "buy",
                     name: position.name ?? "",
                     asset_type: position.asset_type as TransactionInputType["asset_type"],
                     currency: position.currency,

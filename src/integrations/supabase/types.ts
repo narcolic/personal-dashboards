@@ -390,6 +390,7 @@ export type Database = {
       };
       transactions: {
         Row: {
+          action: string;
           asset_type: string | null;
           created_at: string;
           currency: string | null;
@@ -406,6 +407,7 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          action?: string;
           asset_type?: string | null;
           created_at?: string;
           currency?: string | null;
@@ -422,6 +424,7 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          action?: string;
           asset_type?: string | null;
           created_at?: string;
           currency?: string | null;

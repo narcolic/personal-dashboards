@@ -13,6 +13,8 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedPortfolioIndexRouteImport } from './routes/_authenticated/portfolio/index'
+import { Route as AuthenticatedPortfolioHoldingsRouteImport } from './routes/_authenticated/portfolio/holdings'
+import { Route as AuthenticatedPortfolioHoldingsTickerRouteImport } from './routes/_authenticated/portfolio/holdings/$ticker'
 import { Route as AuthenticatedCarServiceIndexRouteImport } from './routes/_authenticated/car-service/index'
 import { Route as AuthenticatedPortfolioTransactionsRouteImport } from './routes/_authenticated/portfolio/transactions'
 import { Route as AuthenticatedPortfolioPnlRouteImport } from './routes/_authenticated/portfolio/pnl'
@@ -40,6 +42,18 @@ const AuthenticatedPortfolioIndexRoute =
   AuthenticatedPortfolioIndexRouteImport.update({
     id: '/portfolio/',
     path: '/portfolio/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPortfolioHoldingsRoute =
+  AuthenticatedPortfolioHoldingsRouteImport.update({
+    id: '/portfolio/holdings',
+    path: '/portfolio/holdings',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPortfolioHoldingsTickerRoute =
+  AuthenticatedPortfolioHoldingsTickerRouteImport.update({
+    id: '/portfolio/holdings/$ticker',
+    path: '/portfolio/holdings/$ticker',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedCarServiceIndexRoute =
@@ -95,10 +109,12 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/car-service/$visitId': typeof AuthenticatedCarServiceVisitIdRoute
+  '/portfolio/holdings/$ticker': typeof AuthenticatedPortfolioHoldingsTickerRoute
   '/car-service/add': typeof AuthenticatedCarServiceAddRoute
   '/car-service/analytics': typeof AuthenticatedCarServiceAnalyticsRoute
   '/car-service/history': typeof AuthenticatedCarServiceHistoryRoute
   '/car-service/vehicles': typeof AuthenticatedCarServiceVehiclesRoute
+  '/portfolio/holdings': typeof AuthenticatedPortfolioHoldingsRoute
   '/portfolio/pnl': typeof AuthenticatedPortfolioPnlRoute
   '/portfolio/transactions': typeof AuthenticatedPortfolioTransactionsRoute
   '/car-service/': typeof AuthenticatedCarServiceIndexRoute
@@ -108,10 +124,12 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/car-service/$visitId': typeof AuthenticatedCarServiceVisitIdRoute
+  '/portfolio/holdings/$ticker': typeof AuthenticatedPortfolioHoldingsTickerRoute
   '/car-service/add': typeof AuthenticatedCarServiceAddRoute
   '/car-service/analytics': typeof AuthenticatedCarServiceAnalyticsRoute
   '/car-service/history': typeof AuthenticatedCarServiceHistoryRoute
   '/car-service/vehicles': typeof AuthenticatedCarServiceVehiclesRoute
+  '/portfolio/holdings': typeof AuthenticatedPortfolioHoldingsRoute
   '/portfolio/pnl': typeof AuthenticatedPortfolioPnlRoute
   '/portfolio/transactions': typeof AuthenticatedPortfolioTransactionsRoute
   '/car-service': typeof AuthenticatedCarServiceIndexRoute
@@ -123,10 +141,12 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/login': typeof LoginRoute
   '/_authenticated/car-service/$visitId': typeof AuthenticatedCarServiceVisitIdRoute
+  '/_authenticated/portfolio/holdings/$ticker': typeof AuthenticatedPortfolioHoldingsTickerRoute
   '/_authenticated/car-service/add': typeof AuthenticatedCarServiceAddRoute
   '/_authenticated/car-service/analytics': typeof AuthenticatedCarServiceAnalyticsRoute
   '/_authenticated/car-service/history': typeof AuthenticatedCarServiceHistoryRoute
   '/_authenticated/car-service/vehicles': typeof AuthenticatedCarServiceVehiclesRoute
+  '/_authenticated/portfolio/holdings': typeof AuthenticatedPortfolioHoldingsRoute
   '/_authenticated/portfolio/pnl': typeof AuthenticatedPortfolioPnlRoute
   '/_authenticated/portfolio/transactions': typeof AuthenticatedPortfolioTransactionsRoute
   '/_authenticated/car-service/': typeof AuthenticatedCarServiceIndexRoute
@@ -138,10 +158,12 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/car-service/$visitId'
+    | '/portfolio/holdings/$ticker'
     | '/car-service/add'
     | '/car-service/analytics'
     | '/car-service/history'
     | '/car-service/vehicles'
+    | '/portfolio/holdings'
     | '/portfolio/pnl'
     | '/portfolio/transactions'
     | '/car-service/'
@@ -151,10 +173,12 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/car-service/$visitId'
+    | '/portfolio/holdings/$ticker'
     | '/car-service/add'
     | '/car-service/analytics'
     | '/car-service/history'
     | '/car-service/vehicles'
+    | '/portfolio/holdings'
     | '/portfolio/pnl'
     | '/portfolio/transactions'
     | '/car-service'
@@ -165,10 +189,12 @@ export interface FileRouteTypes {
     | '/_authenticated'
     | '/login'
     | '/_authenticated/car-service/$visitId'
+    | '/_authenticated/portfolio/holdings/$ticker'
     | '/_authenticated/car-service/add'
     | '/_authenticated/car-service/analytics'
     | '/_authenticated/car-service/history'
     | '/_authenticated/car-service/vehicles'
+    | '/_authenticated/portfolio/holdings'
     | '/_authenticated/portfolio/pnl'
     | '/_authenticated/portfolio/transactions'
     | '/_authenticated/car-service/'
@@ -209,6 +235,20 @@ declare module '@tanstack/react-router' {
       path: '/portfolio'
       fullPath: '/portfolio/'
       preLoaderRoute: typeof AuthenticatedPortfolioIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/portfolio/holdings/$ticker': {
+      id: '/_authenticated/portfolio/holdings/$ticker'
+      path: '/portfolio/holdings/$ticker'
+      fullPath: '/portfolio/holdings/$ticker'
+      preLoaderRoute: typeof AuthenticatedPortfolioHoldingsTickerRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/portfolio/holdings': {
+      id: '/_authenticated/portfolio/holdings'
+      path: '/portfolio/holdings'
+      fullPath: '/portfolio/holdings'
+      preLoaderRoute: typeof AuthenticatedPortfolioHoldingsRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/car-service/': {
@@ -272,10 +312,12 @@ declare module '@tanstack/react-router' {
 
 interface AuthenticatedRouteChildren {
   AuthenticatedCarServiceVisitIdRoute: typeof AuthenticatedCarServiceVisitIdRoute
+  AuthenticatedPortfolioHoldingsTickerRoute: typeof AuthenticatedPortfolioHoldingsTickerRoute
   AuthenticatedCarServiceAddRoute: typeof AuthenticatedCarServiceAddRoute
   AuthenticatedCarServiceAnalyticsRoute: typeof AuthenticatedCarServiceAnalyticsRoute
   AuthenticatedCarServiceHistoryRoute: typeof AuthenticatedCarServiceHistoryRoute
   AuthenticatedCarServiceVehiclesRoute: typeof AuthenticatedCarServiceVehiclesRoute
+  AuthenticatedPortfolioHoldingsRoute: typeof AuthenticatedPortfolioHoldingsRoute
   AuthenticatedPortfolioPnlRoute: typeof AuthenticatedPortfolioPnlRoute
   AuthenticatedPortfolioTransactionsRoute: typeof AuthenticatedPortfolioTransactionsRoute
   AuthenticatedCarServiceIndexRoute: typeof AuthenticatedCarServiceIndexRoute
@@ -284,10 +326,13 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCarServiceVisitIdRoute: AuthenticatedCarServiceVisitIdRoute,
+  AuthenticatedPortfolioHoldingsTickerRoute:
+    AuthenticatedPortfolioHoldingsTickerRoute,
   AuthenticatedCarServiceAddRoute: AuthenticatedCarServiceAddRoute,
   AuthenticatedCarServiceAnalyticsRoute: AuthenticatedCarServiceAnalyticsRoute,
   AuthenticatedCarServiceHistoryRoute: AuthenticatedCarServiceHistoryRoute,
   AuthenticatedCarServiceVehiclesRoute: AuthenticatedCarServiceVehiclesRoute,
+  AuthenticatedPortfolioHoldingsRoute: AuthenticatedPortfolioHoldingsRoute,
   AuthenticatedPortfolioPnlRoute: AuthenticatedPortfolioPnlRoute,
   AuthenticatedPortfolioTransactionsRoute:
     AuthenticatedPortfolioTransactionsRoute,

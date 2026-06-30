@@ -52,15 +52,24 @@ function AuthLayout() {
 
   const desktopLinks = isPortfolio
     ? [
-        { to: "/portfolio", label: t("header.dashboard"), short: t("header.dashboard") },
-        { to: "/portfolio/transactions", label: t("header.transactions"), short: t("header.transactions") },
+        { to: "/portfolio", label: t("header.overview"), short: t("header.overview") },
+        { to: "/portfolio/holdings", label: t("header.holdings"), short: t("header.holdings") },
+        {
+          to: "/portfolio/transactions",
+          label: t("header.transactions"),
+          short: t("header.transactions"),
+        },
         { to: "/portfolio/pnl", label: t("header.pnl"), short: t("header.pnl") },
       ]
     : isCarService
       ? [
           { to: "/car-service", label: t("header.overview"), short: t("header.overview") },
           { to: "/car-service/history", label: t("header.history"), short: t("header.history") },
-          { to: "/car-service/analytics", label: t("header.analytics"), short: t("header.analytics") },
+          {
+            to: "/car-service/analytics",
+            label: t("header.analytics"),
+            short: t("header.analytics"),
+          },
           { to: "/car-service/vehicles", label: t("header.vehicles"), short: t("header.vehicles") },
         ]
       : [];

@@ -7,6 +7,7 @@ const TransactionInput = z.object({
     .min(1)
     .max(32)
     .regex(/^[A-Za-z0-9.\-^=:_]+$/),
+  action: z.enum(["buy", "sell", "dividend", "fee"]).default("buy"),
   name: z.string().trim().max(120).optional().nullable(),
   asset_type: z.enum(["stock", "etf", "crypto", "bond", "fund", "other"]),
   market: z.string().trim().max(40).optional().nullable(),

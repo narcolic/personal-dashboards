@@ -16,20 +16,20 @@ export function PortfolioSummary({
   display,
   totals,
   formatCurrency,
+  onUnrealizedClick,
 }: {
   selectedAll: boolean;
   display: string;
   totals: Totals;
   formatCurrency: (value: number) => string;
+  onUnrealizedClick?: () => void;
 }) {
   const { t } = useTranslation();
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       <StatCard
         label={
-          selectedAll
-            ? `${t("portfolio.netWorth")} (${display})`
-            : `${t("portfolio.portfolioValue")} (${display})`
+          selectedAll ? t("portfolio.netWorth") : `${t("portfolio.portfolioValue")} (${display})`
         }
         value={formatCurrency(totals.mv)}
         accent
@@ -45,6 +45,7 @@ export function PortfolioSummary({
         value={formatCurrency(totals.unrealized)}
         sub={fmtPct(totals.unrealizedPct)}
         tone={totals.unrealized >= 0 ? "bull" : "bear"}
+        onClick={onUnrealizedClick}
       />
       <StatCard label={t("portfolio.costBasis")} value={formatCurrency(totals.cost)} />
     </div>

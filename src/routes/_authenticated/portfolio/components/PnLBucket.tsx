@@ -10,12 +10,14 @@ export function PnLBucket({
   totalsByCurrency,
   headerLineCount,
   rows,
+  onRowClick,
 }: {
   title: string;
   tone: "bull" | "bear";
   totalsByCurrency: Record<string, number>;
   headerLineCount?: number;
   rows: ReturnType<typeof enrich>;
+  onRowClick?: (row: ReturnType<typeof enrich>[number]) => void;
 }) {
   const { t } = useTranslation();
   const totalEntries = Object.entries(totalsByCurrency).sort((a, b) => a[0].localeCompare(b[0]));
@@ -49,7 +51,11 @@ export function PnLBucket({
         <TerminalTable>
           <tbody>
             {rows.map((r) => (
-              <tr key={r.id} className="border-b border-border/60">
+              <tr
+                key={r.id}
+                onClick={onRowClick ? () => onRowClick(r) : undefined}
+                className={`border-b border-border/60 ${onRowClick ? "cursor-pointer hover:bg-secondary/30" : ""}`}
+              >
                 <td className="px-3 py-2">
                   <div className="font-bold text-primary">{r.ticker}</div>
                   <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">
