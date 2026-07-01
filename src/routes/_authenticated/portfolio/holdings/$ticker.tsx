@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { StatCard } from "@/components/terminal/StatCard";
@@ -27,12 +27,12 @@ function HoldingDetailsPage() {
   const [txSortDirection, setTxSortDirection] = useState<"asc" | "desc">("desc");
   const {
     txQ,
+    quotesQ,
     transactions,
     portfolios,
     allRows,
     display,
     setDisplay,
-    displayCurrencies,
     portfolioMap,
     convert,
   } = usePortfolioHoldingsView();
@@ -60,6 +60,14 @@ function HoldingDetailsPage() {
     () => allRows.reduce((sum, row) => sum + convert(row.marketValue, row._nativeCurrency), 0),
     [allRows, convert],
   );
+
+  const holdingCurrency = holdingRows[0]?._nativeCurrency ?? "USD";
+
+  useEffect(() => {
+    if (display !== holdingCurrency) {
+      setDisplay(holdingCurrency);
+    }
+  }, [display, holdingCurrency, setDisplay]);
 
   const summary = useMemo(() => {
     const totalQuantity = holdingRows.reduce((sum, row) => sum + Number(row.shares), 0);
@@ -98,10 +106,10 @@ function HoldingDetailsPage() {
       dailyChange,
       totalGainLoss: unrealized,
       positionReturnPct: costBasis ? (unrealized / costBasis) * 100 : 0,
-      currency: first?._nativeCurrency ?? display,
+      currency: holdingCurrency,
       market: first?.market ?? null,
     };
-  }, [convert, display, holdingRows, normalizedTicker, portfolioTotalMarketValue]);
+  }, [convert, holdingCurrency, holdingRows, normalizedTicker, portfolioTotalMarketValue]);
 
   const breakdownRows = useMemo(() => {
     const groups = new Map<
@@ -199,7 +207,9 @@ function HoldingDetailsPage() {
     },
   });
 
-  if (txQ.isLoading) return <HoldingDetailsSkeleton />;
+  if (txQ.isLoading || quotesQ.isLoading || display !== holdingCurrency) {
+    return <HoldingDetailsSkeleton />;
+  }
   if (holdingRows.length === 0) return <HoldingDetailsMissing ticker={normalizedTicker} />;
 
   const addTransactionDraft = makeTransactionDraft(summary, breakdownRows, portfolios);
@@ -219,22 +229,6 @@ function HoldingDetailsPage() {
           >
             {t("portfolio.addTransactionAction")}
           </button>
-          <div className="flex border border-border bg-card">
-            {displayCurrencies.map((currency) => (
-              <button
-                key={currency}
-                type="button"
-                onClick={() => setDisplay(currency)}
-                className={`px-3 py-1 text-[10px] uppercase tracking-[0.2em] border-r border-border last:border-r-0 ${
-                  display === currency
-                    ? "bg-primary text-primary-foreground font-bold"
-                    : "hover:text-primary"
-                }`}
-              >
-                {currency}
-              </button>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -245,11 +239,11 @@ function HoldingDetailsPage() {
           <StatCard label={t("portfolio.assetType")} value={summary.assetType} />
           <StatCard
             label={t("portfolio.currentPrice")}
-            value={fmtCurrency(summary.currentPrice, display)}
+            value={fmtCurrency(summary.currentPrice, summary.currency)}
           />
           <StatCard
             label={t("portfolio.averagePrice")}
-            value={fmtCurrency(summary.averagePrice, display)}
+            value={fmtCurrency(summary.averagePrice, summary.currency)}
           />
           <StatCard
             label={t("portfolio.quantityHeld")}
@@ -260,16 +254,16 @@ function HoldingDetailsPage() {
           />
           <StatCard
             label={t("portfolio.marketValue")}
-            value={fmtCurrency(summary.marketValue, display)}
+            value={fmtCurrency(summary.marketValue, summary.currency)}
             accent
           />
           <StatCard
             label={t("portfolio.costBasis")}
-            value={fmtCurrency(summary.costBasis, display)}
+            value={fmtCurrency(summary.costBasis, summary.currency)}
           />
           <StatCard
             label={t("portfolio.unrealized")}
-            value={fmtCurrency(summary.unrealized, display)}
+            value={fmtCurrency(summary.unrealized, summary.currency)}
             sub={fmtPct(summary.unrealizedPct)}
             tone={summary.unrealized >= 0 ? "bull" : "bear"}
           />
@@ -284,12 +278,12 @@ function HoldingDetailsPage() {
         <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           <StatCard
             label={t("portfolio.dailyChange")}
-            value={fmtCurrency(summary.dailyChange, display)}
+            value={fmtCurrency(summary.dailyChange, summary.currency)}
             tone={summary.dailyChange >= 0 ? "bull" : "bear"}
           />
           <StatCard
             label={t("portfolio.totalGainLoss")}
-            value={fmtCurrency(summary.totalGainLoss, display)}
+            value={fmtCurrency(summary.totalGainLoss, summary.currency)}
             tone={summary.totalGainLoss >= 0 ? "bull" : "bear"}
           />
           <StatCard
@@ -329,17 +323,17 @@ function HoldingDetailsPage() {
                         {fmt(row.quantity, { minimumFractionDigits: 0, maximumFractionDigits: 4 })}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">
-                        {fmtCurrency(row.averagePrice, display)}
+                        {fmtCurrency(row.averagePrice, summary.currency)}
                       </td>
                       <td className="px-3 py-2 text-right tabular-nums">
-                        {fmtCurrency(row.marketValue, display)}
+                        {fmtCurrency(row.marketValue, summary.currency)}
                       </td>
                       <td
                         className={`px-3 py-2 text-right tabular-nums ${
                           row.unrealized >= 0 ? "text-bull" : "text-bear"
                         }`}
                       >
-                        {fmtCurrency(row.unrealized, display)}
+                        {fmtCurrency(row.unrealized, summary.currency)}
                       </td>
                     </tr>
                   ))}

@@ -11,7 +11,7 @@ export type RowWithNative = Enriched & { _nativeCurrency: string };
 export function usePortfolioHoldingsView() {
   const { t } = useTranslation();
   const { txQ, portfoliosQ, transactions } = usePortfolioData();
-  const { positions, enrichedRows } = useQuotes(transactions, {
+  const { positions, quotesQ, enrichedRows } = useQuotes(transactions, {
     staleTime: 60_000,
     gcTime: 30 * 60_000,
     retry: 1,
@@ -85,15 +85,22 @@ export function usePortfolioHoldingsView() {
     unassignedId,
   } = useTransactionsFilters({ allRows, transactionCurrencies });
 
-  const convert = useMemo(() => {
-    const displayRate = rates[display] ?? 1;
-    return (amount: number, from: string) => {
+  const convertTo = useMemo(() => {
+    return (amount: number, from: string, to: string) => {
       const source = (from || "USD").toUpperCase();
+      const target = (to || "USD").toUpperCase();
       const fromRate = rates[source] ?? 1;
-      if (!fromRate || !displayRate) return amount;
-      return (amount * fromRate) / displayRate;
+      const toRate = rates[target] ?? 1;
+      if (!fromRate || !toRate) return amount;
+      return (amount * fromRate) / toRate;
     };
-  }, [display, rates]);
+  }, [rates]);
+
+  const convert = useMemo(() => {
+    return (amount: number, from: string) => {
+      return convertTo(amount, from, display);
+    };
+  }, [convertTo, display]);
 
   const portfolioMap = useMemo(
     () => new Map((portfoliosQ.data ?? []).map((portfolio) => [portfolio.id, portfolio.name])),
@@ -120,6 +127,7 @@ export function usePortfolioHoldingsView() {
 
   return {
     txQ,
+    quotesQ,
     transactions,
     portfolios: portfoliosQ.data ?? [],
     allRows,
@@ -132,5 +140,6 @@ export function usePortfolioHoldingsView() {
     portfolioTabs,
     portfolioMap,
     convert,
+    convertTo,
   };
 }

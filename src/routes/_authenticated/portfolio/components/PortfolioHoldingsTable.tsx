@@ -45,6 +45,7 @@ export function PortfolioHoldingsTable({
 }) {
   const { t } = useTranslation();
   const isDashboardPreview = mode === "dashboard";
+  const isHoldingsPage = mode === "holdings";
   const showNameColumn = mode === "holdings";
   const showDayChangeColumn = isDashboardPreview;
   const [sortKey, setSortKey] = useState<SortKey>(isDashboardPreview ? "marketValue" : "ticker");
@@ -99,10 +100,14 @@ export function PortfolioHoldingsTable({
   };
 
   const sortMark = (key: SortKey) => (sortKey !== key ? "" : sortDirection === "asc" ? " ↑" : " ↓");
-  const positionsLabel =
-    totalCount && totalCount !== rows.length
-      ? `${rows.length} / ${totalCount} ${t("portfolio.positions")} | ${display}`
-      : `${rows.length} ${t("portfolio.positions")} | ${display}`;
+  const positionsLabel = isHoldingsPage
+    ? t("portfolio.showingHoldings", {
+        shown: rows.length,
+        total: totalCount ?? rows.length,
+      })
+    : totalCount && totalCount !== rows.length
+      ? `${rows.length} / ${totalCount} ${t("portfolio.positions")}`
+      : `${rows.length} ${t("portfolio.positions")}`;
 
   return (
     <TerminalCard
@@ -168,7 +173,9 @@ export function PortfolioHoldingsTable({
                 className="text-right cursor-pointer select-none"
                 onClick={() => toggleSort("marketValue")}
               >
-                {t("portfolio.marketValue")} ({display}){sortMark("marketValue")}
+                {t("portfolio.marketValue")}
+                {!isHoldingsPage ? ` (${display})` : ""}
+                {sortMark("marketValue")}
               </TerminalTh>
               {!isDashboardPreview ? (
                 <TerminalTh
@@ -183,7 +190,9 @@ export function PortfolioHoldingsTable({
                 className="text-right cursor-pointer select-none"
                 onClick={() => toggleSort("unrealized")}
               >
-                {t("portfolio.unrealized")} ({display}){sortMark("unrealized")}
+                {t("portfolio.unrealized")}
+                {!isHoldingsPage ? ` (${display})` : ""}
+                {sortMark("unrealized")}
               </TerminalTh>
               <TerminalTh
                 className="text-right cursor-pointer select-none"
@@ -199,6 +208,12 @@ export function PortfolioHoldingsTable({
               const nativeCurrency = row._nativeCurrency;
               const marketValue = convert(row.marketValue, nativeCurrency);
               const unrealized = convert(row.unrealized, nativeCurrency);
+              const marketValueLabel = isHoldingsPage
+                ? fmtCurrency(row.marketValue, nativeCurrency)
+                : formatDisplayCurrency(marketValue);
+              const unrealizedLabel = isHoldingsPage
+                ? fmtCurrency(row.unrealized, nativeCurrency)
+                : formatDisplayCurrency(unrealized);
 
               return (
                 <tr
@@ -244,10 +259,10 @@ export function PortfolioHoldingsTable({
                       {fmtPct(row.dayChangePct)}
                     </TerminalTd>
                   ) : null}
-                  <TerminalTd>{formatDisplayCurrency(marketValue)}</TerminalTd>
+                  <TerminalTd>{marketValueLabel}</TerminalTd>
                   {!isDashboardPreview ? <TerminalTd>{row.tx_count}</TerminalTd> : null}
                   <TerminalTd tone={row.unrealized >= 0 ? "bull" : "bear"}>
-                    {formatDisplayCurrency(unrealized)}
+                    {unrealizedLabel}
                   </TerminalTd>
                   <TerminalTd tone={row.unrealizedPct >= 0 ? "bull" : "bear"}>
                     {fmtPct(row.unrealizedPct)}

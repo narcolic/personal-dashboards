@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { StatCard } from "@/components/terminal/StatCard";
 import { fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
@@ -30,15 +30,16 @@ function Holdings() {
   const [currencyFilter, setCurrencyFilter] = useState("__all__");
   const {
     txQ,
+    quotesQ,
     transactions,
     rows,
     display,
     setDisplay,
-    displayCurrencies,
     selected,
     setSelected,
     portfolioTabs,
     convert,
+    convertTo,
   } = usePortfolioHoldingsView();
   const rowRegions = useMemo(
     () => new Map(rows.map((row) => [row.id, classifyHolding(row).regionCategory])),
@@ -87,12 +88,33 @@ function Holdings() {
       return matchesSearch && matchesAssetType && matchesCurrency && matchesAllocation;
     });
   }, [activeAllocationFilter, assetTypeFilter, currencyFilter, rowRegions, rows, search, t]);
+  const summaryCurrency = currencyFilter === "__all__" ? display : currencyFilter;
+
+  useEffect(() => {
+    if (currencyFilter !== "__all__" && display !== currencyFilter) {
+      setDisplay(currencyFilter);
+    }
+  }, [currencyFilter, display, setDisplay]);
+
   const holdingsSummary = useMemo(() => {
-    const totalHoldings = filteredRows.length;
-    const totalMarketValue = filteredRows.reduce(
-      (sum, row) => sum + convert(row.marketValue, row._nativeCurrency),
+    const totalMarketValuePrimary = filteredRows.reduce(
+      (sum, row) => sum + convertTo(row.marketValue, row._nativeCurrency, summaryCurrency),
       0,
     );
+    const secondaryCurrency =
+      summaryCurrency === "EUR" ? "USD" : summaryCurrency === "USD" ? "EUR" : null;
+    const totalMarketValueSecondary = secondaryCurrency
+      ? filteredRows.reduce(
+          (sum, row) => sum + convertTo(row.marketValue, row._nativeCurrency, secondaryCurrency),
+          0,
+        )
+      : null;
+    const totalMarketValueLabel = secondaryCurrency
+      ? `${fmtCurrency(totalMarketValuePrimary, summaryCurrency)} ≈ ${fmtCurrency(
+          totalMarketValueSecondary ?? 0,
+          secondaryCurrency,
+        )}`
+      : fmtCurrency(totalMarketValuePrimary, summaryCurrency);
     const largestPosition =
       filteredRows.reduce<(typeof filteredRows)[number] | null>((largest, row) => {
         if (!largest) return row;
@@ -101,20 +123,30 @@ function Holdings() {
           ? row
           : largest;
       }, null) ?? null;
+    const largestPositionLabel = largestPosition
+      ? fmtCurrency(largestPosition.marketValue, largestPosition._nativeCurrency)
+      : "-";
+    const largestPositionAllocationPct =
+      largestPosition && totalMarketValuePrimary > 0
+        ? (convertTo(largestPosition.marketValue, largestPosition._nativeCurrency, summaryCurrency) /
+            totalMarketValuePrimary) *
+          100
+        : 0;
     const averageGainPct =
-      totalHoldings > 0
-        ? filteredRows.reduce((sum, row) => sum + row.unrealizedPct, 0) / totalHoldings
+      filteredRows.length > 0
+        ? filteredRows.reduce((sum, row) => sum + row.unrealizedPct, 0) / filteredRows.length
         : 0;
 
     return {
-      totalHoldings,
-      totalMarketValue,
+      totalMarketValueLabel,
       largestPosition,
+      largestPositionLabel,
+      largestPositionAllocationPct,
       averageGainPct,
     };
-  }, [convert, filteredRows]);
+  }, [convert, convertTo, filteredRows, summaryCurrency]);
 
-  if (txQ.isLoading) return <HoldingsSkeleton />;
+  if (txQ.isLoading || quotesQ.isLoading) return <HoldingsSkeleton />;
   if (transactions.length === 0) return <HoldingsEmptyState />;
 
   const goToHoldingDetails = (ticker: string) => {
@@ -146,21 +178,6 @@ function Holdings() {
             >
               {t("portfolio.clearFilters")}
             </button>
-            <div className="flex shrink-0 border border-border">
-              {displayCurrencies.map((currency) => (
-                <button
-                  key={currency}
-                  onClick={() => setDisplay(currency)}
-                  className={`px-3 py-1 text-[10px] uppercase tracking-[0.2em] border-r border-border last:border-r-0 ${
-                    display === currency
-                      ? "bg-primary text-primary-foreground font-bold"
-                      : "hover:text-primary"
-                  }`}
-                >
-                  {currency}
-                </button>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -250,43 +267,31 @@ function Holdings() {
         </div>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-3 xl:grid-cols-4">
-        <StatCard
-          label={t("portfolio.totalHoldings")}
-          value={String(holdingsSummary.totalHoldings)}
-        />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
         <StatCard
           label={t("portfolio.largestPosition")}
           value={holdingsSummary.largestPosition?.ticker ?? "-"}
-          sub={
-            holdingsSummary.largestPosition
-              ? fmtCurrency(
-                  convert(
-                    holdingsSummary.largestPosition.marketValue,
-                    holdingsSummary.largestPosition._nativeCurrency,
-                  ),
-                  display,
-                )
-              : "-"
-          }
+          sub={`${holdingsSummary.largestPositionLabel} | ${fmtPct(holdingsSummary.largestPositionAllocationPct)}`}
         />
         <StatCard
-          label={t("portfolio.averageGainPct")}
+          label={t("portfolio.avgHoldingGainPct")}
           value={fmtPct(holdingsSummary.averageGainPct)}
           tone={holdingsSummary.averageGainPct >= 0 ? "bull" : "bear"}
         />
         <StatCard
           label={t("portfolio.totalMarketValue")}
-          value={fmtCurrency(holdingsSummary.totalMarketValue, display)}
+          value={holdingsSummary.totalMarketValueLabel || "-"}
           accent
         />
       </div>
 
       <PortfolioHoldingsTable
         rows={filteredRows}
-        display={display}
+        display={filteredRows[0]?._nativeCurrency ?? "USD"}
         convert={convert}
-        formatDisplayCurrency={(value) => fmtCurrency(value, display)}
+        formatDisplayCurrency={(value) =>
+          fmtCurrency(value, filteredRows[0]?._nativeCurrency ?? "USD")
+        }
         mode="holdings"
         totalCount={rows.length}
         onRowClick={(row) => goToHoldingDetails(row.ticker)}
