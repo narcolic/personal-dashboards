@@ -26,19 +26,21 @@ export function PortfolioSummary({
 }) {
   const { t } = useTranslation();
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
       <StatCard
         label={
           selectedAll ? t("portfolio.netWorth") : `${t("portfolio.portfolioValue")} (${display})`
         }
         value={formatCurrency(totals.mv)}
         accent
+        size="featured"
       />
       <StatCard
         label={t("portfolio.dayPnl")}
         value={formatCurrency(totals.dayChange)}
         sub={fmtPct(totals.dayPct)}
         tone={totals.dayChange >= 0 ? "bull" : "bear"}
+        size="featured"
       />
       <StatCard
         label={t("portfolio.unrealized")}
@@ -46,8 +48,13 @@ export function PortfolioSummary({
         sub={fmtPct(totals.unrealizedPct)}
         tone={totals.unrealized >= 0 ? "bull" : "bear"}
         onClick={onUnrealizedClick}
+        size="featured"
       />
-      <StatCard label={t("portfolio.costBasis")} value={formatCurrency(totals.cost)} />
+      <StatCard
+        label={t("portfolio.costBasis")}
+        value={formatCurrency(totals.cost)}
+        size="featured"
+      />
     </div>
   );
 }

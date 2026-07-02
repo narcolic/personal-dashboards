@@ -99,7 +99,12 @@ export function PortfolioSnapshotStats({
 
   if (snapshotsQ.isLoading) {
     return (
-      <TerminalCard title={title ?? t("portfolio.snapshotHistory")} onClick={onCardClick}>
+      <TerminalCard
+        title={title ?? t("portfolio.snapshotHistory")}
+        onClick={onCardClick}
+        bodyClassName="p-3"
+        className="border-border/60"
+      >
         <div className="h-24 animate-pulse bg-secondary/40" />
       </TerminalCard>
     );
@@ -107,7 +112,12 @@ export function PortfolioSnapshotStats({
 
   if (!stats.latestTotal) {
     return (
-      <TerminalCard title={title ?? t("portfolio.snapshotHistory")} onClick={onCardClick}>
+      <TerminalCard
+        title={title ?? t("portfolio.snapshotHistory")}
+        onClick={onCardClick}
+        bodyClassName="p-3"
+        className="border-border/60"
+      >
         <div className="text-xs text-muted-foreground">{t("portfolio.noSnapshotsYet")}</div>
       </TerminalCard>
     );
@@ -116,19 +126,26 @@ export function PortfolioSnapshotStats({
   const currencyFormat = (value: number) => fmtCurrency(value, selectedCurrency);
 
   return (
-    <TerminalCard title={title ?? t("portfolio.snapshotHistory")} onClick={onCardClick}>
-      <div className="space-y-4">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <TerminalCard
+      title={title ?? t("portfolio.snapshotHistory")}
+      onClick={onCardClick}
+      bodyClassName="p-3"
+      className="border-border/60"
+    >
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label={t("portfolio.peakValue")}
             value={currencyFormat(metricValue(stats.marketHigh!, selectedCurrency, "market"))}
             sub={formatDate(stats.marketHigh?.snapshot_date)}
             accent
+            size="compact"
           />
           <StatCard
             label={t("portfolio.lowValue")}
             value={currencyFormat(metricValue(stats.marketLow!, selectedCurrency, "market"))}
             sub={formatDate(stats.marketLow?.snapshot_date)}
+            size="compact"
           />
           <StatCard
             label={t("portfolio.peakUnrealized")}
@@ -141,6 +158,7 @@ export function PortfolioSnapshotStats({
                 ? "bull"
                 : "bear"
             }
+            size="compact"
           />
           <StatCard
             label={t("portfolio.lowUnrealized")}
@@ -153,13 +171,14 @@ export function PortfolioSnapshotStats({
                 ? "bull"
                 : "bear"
             }
+            size="compact"
           />
         </div>
 
         {stats.portfolios.length > 0 && (
-          <div className="overflow-x-auto border border-border">
+          <div className="overflow-x-auto border border-border/50">
             <table className="min-w-full text-[12px]">
-              <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <thead className="bg-secondary/25 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 text-left">{t("portfolio.portfolio")}</th>
                   <th className="px-3 py-2 text-right">{t("portfolio.latest")}</th>
@@ -171,7 +190,7 @@ export function PortfolioSnapshotStats({
               </thead>
               <tbody>
                 {stats.portfolios.map((row) => (
-                  <tr key={row.key} className="border-t border-border">
+                  <tr key={row.key} className="border-t border-border/50">
                     <td className="px-3 py-2 uppercase">{row.name}</td>
                     <td className="px-3 py-2 text-right">
                       {currencyFormat(metricValue(row.latest!, selectedCurrency, "market"))}

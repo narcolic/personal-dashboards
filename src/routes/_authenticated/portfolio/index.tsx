@@ -92,16 +92,16 @@ function Overview() {
   };
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row gap-3 md:items-stretch">
-        <div className="border border-border bg-card overflow-x-auto flex-1">
-          <div className="flex text-[11px] uppercase tracking-[0.2em]">
+      <div className="flex flex-col gap-2 md:flex-row md:items-center">
+        <div className="min-w-0 flex-1 overflow-x-auto border border-border bg-card/60">
+          <div className="flex text-[10px] uppercase tracking-[0.18em]">
             {portfolioTabs.map((tab) => {
               const active = selected === tab.id;
               return (
                 <button
                   key={tab.id}
                   onClick={() => setSelected(tab.id)}
-                  className={`px-4 py-2 border-r border-border whitespace-nowrap ${active ? "bg-primary text-primary-foreground font-bold" : "hover:text-primary"}`}
+                  className={`whitespace-nowrap border-r border-border px-3 py-1.5 ${active ? "bg-primary text-primary-foreground font-bold" : "text-muted-foreground hover:text-primary"}`}
                 >
                   {tab.label}
                 </button>
@@ -109,12 +109,12 @@ function Overview() {
             })}
           </div>
         </div>
-        <div className="border border-border bg-card flex">
+        <div className="flex self-start border border-border bg-card/60">
           {displayCurrencies.map((currency) => (
             <button
               key={currency}
               onClick={() => setDisplay(currency)}
-              className={`px-4 text-[11px] uppercase tracking-[0.2em] border-r border-border last:border-r-0 ${display === currency ? "bg-primary text-primary-foreground font-bold" : "hover:text-primary"}`}
+              className={`border-r border-border px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] last:border-r-0 ${display === currency ? "bg-primary text-primary-foreground font-bold" : "text-muted-foreground hover:text-primary"}`}
             >
               {currency}
             </button>
@@ -137,35 +137,41 @@ function Overview() {
       </OverviewSection>
 
       <OverviewSection title={t("portfolio.allocationSection")}>
-        <div className="space-y-4">
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 2xl:grid-cols-[1fr_1fr_1.45fr]">
+          <PortfolioChart
+            title={t("portfolio.allocationByType")}
+            data={byType}
+            total={totals.mv}
+            chart="pie"
+            display={display}
+            chartHeight={148}
+            pieInnerRadius={36}
+            pieOuterRadius={62}
+            onItemClick={(name) => goToHoldingsWithAllocation("assetType", name)}
+          />
+          <PortfolioChart
+            title={t("portfolio.allocationByCurrency")}
+            data={byCurrency}
+            total={byCurrency.reduce((sum, item) => sum + item.value, 0)}
+            chart="pie"
+            display={display}
+            chartHeight={148}
+            pieInnerRadius={36}
+            pieOuterRadius={62}
+            formatter={(value, currency) => fmtCurrency(value, currency)}
+            onItemClick={(name) => goToHoldingsWithAllocation("currency", name)}
+          />
+          <div className="sm:col-span-2 2xl:col-span-1">
             <PortfolioChart
-              title={t("portfolio.allocationByType")}
-              data={byType}
+              title={t("portfolio.allocationByRegion")}
+              data={byRegion}
               total={totals.mv}
-              chart="pie"
+              chart="bar"
               display={display}
-              onItemClick={(name) => goToHoldingsWithAllocation("assetType", name)}
-            />
-            <PortfolioChart
-              title={t("portfolio.allocationByCurrency")}
-              data={byCurrency}
-              total={byCurrency.reduce((sum, item) => sum + item.value, 0)}
-              chart="pie"
-              display={display}
-              formatter={(value, currency) => fmtCurrency(value, currency)}
-              onItemClick={(name) => goToHoldingsWithAllocation("currency", name)}
+              chartHeight={176}
+              onItemClick={(name) => goToHoldingsWithAllocation("region", name)}
             />
           </div>
-          <PortfolioChart
-            title={t("portfolio.allocationByRegion")}
-            data={byRegion}
-            total={totals.mv}
-            chart="bar"
-            display={display}
-            chartHeight={240}
-            onItemClick={(name) => goToHoldingsWithAllocation("region", name)}
-          />
         </div>
       </OverviewSection>
 
@@ -245,9 +251,9 @@ function OverviewSection({
 }) {
   return (
     <section className="space-y-3" id={id}>
-      <h2 className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-foreground">
+      <h2 className="flex items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
         <span className="text-primary">&gt;</span>
-        <span className="text-muted-foreground">{title}</span>
+        <span>{title}</span>
       </h2>
       {children}
     </section>
