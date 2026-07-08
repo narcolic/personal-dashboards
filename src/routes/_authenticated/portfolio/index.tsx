@@ -315,7 +315,7 @@ function capitalizeAction(action: string) {
 
 function Skeleton() {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="h-24 border border-border bg-card animate-pulse" />
       ))}
