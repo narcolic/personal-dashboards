@@ -9,6 +9,14 @@ import { useTranslation } from "react-i18next";
 type SnapshotCurrency = "EUR" | "USD";
 type SnapshotMetric = "market" | "unrealized";
 
+function isCompleteSnapshot(row: PortfolioSnapshotRow) {
+  const metadata = row.quote_metadata;
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return true;
+
+  const failed = (metadata as Record<string, unknown>).failed;
+  return !Array.isArray(failed) || failed.length === 0;
+}
+
 function metricValue(
   row: PortfolioSnapshotRow,
   currency: SnapshotCurrency,
@@ -62,10 +70,13 @@ export function PortfolioSnapshotStats({
 
   const stats = useMemo(() => {
     const rows = snapshotsQ.data ?? [];
-    const totalRows = rows.filter((row) => row.scope === "total");
+    // Older snapshots may have been saved after a quote API failure. They use
+    // cost as the market price, producing a misleading zero unrealized amount.
+    const validRows = rows.filter(isCompleteSnapshot);
+    const totalRows = validRows.filter((row) => row.scope === "total");
     const portfolioGroups = new Map<string, PortfolioSnapshotRow[]>();
 
-    for (const row of rows) {
+    for (const row of validRows) {
       if (row.scope !== "portfolio") continue;
       const group = portfolioGroups.get(row.scope_key) ?? [];
       group.push(row);

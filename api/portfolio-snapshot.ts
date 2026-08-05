@@ -227,16 +227,20 @@ async function fetchUsdRates(): Promise<FxRatesResult> {
     // fallback below
   }
 
-  const erApi = await fetch("https://open.er-api.com/v6/latest/USD");
-  if (erApi.ok) {
-    const data = (await erApi.json()) as { rates?: Record<string, number> };
-    if (data.rates) {
-      const rates: Record<string, number> = { USD: 1, ...data.rates };
-      return { provider: "open.er-api", rates };
+  try {
+    const erApi = await fetch("https://open.er-api.com/v6/latest/USD");
+    if (erApi.ok) {
+      const data = (await erApi.json()) as { rates?: Record<string, number> };
+      if (data.rates) {
+        const rates: Record<string, number> = { USD: 1, ...data.rates };
+        return { provider: "open.er-api", rates };
+      }
     }
+  } catch {
+    // Report the failure below instead of recording a snapshot with guessed rates.
   }
 
-  return { provider: "fallback", rates: { USD: 1, EUR: 1 } };
+  throw new Error("Unable to fetch USD exchange rates");
 }
 
 function groupByUser(rows: SnapshotEnrichedHolding[]) {
@@ -380,6 +384,19 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
     const tickers = Array.from(new Set(holdings.map((holding) => holding.ticker))).sort();
     const [{ quotes, failed }, fx] = await Promise.all([fetchQuotes(tickers), fetchUsdRates()]);
+    if (failed.length > 0) {
+      res.status(200).json({
+        ok: true,
+        skipped: true,
+        reason: "incomplete_quote_data",
+        snapshotDate,
+        symbols: tickers.length,
+        quoteFailures: failed.length,
+        failed,
+      });
+      return;
+    }
+
     const enriched = enrichSnapshotHoldings(holdings, quotes);
     const convert = createUsdBaseConverter(fx.rates);
     const quotedSymbols = new Set(
