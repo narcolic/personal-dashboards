@@ -53,6 +53,7 @@ function AuthLayout() {
   const desktopLinks = isPortfolio
     ? [
         { to: "/portfolio", label: t("header.overview"), short: t("header.overview") },
+        { to: "/portfolio/analytics", label: t("header.analytics"), short: t("header.analytics") },
         { to: "/portfolio/holdings", label: t("header.holdings"), short: t("header.holdings") },
         {
           to: "/portfolio/transactions",

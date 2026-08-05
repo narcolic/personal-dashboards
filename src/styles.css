@@ -164,8 +164,16 @@
 @layer utilities {
   .grid-bg {
     background-image:
-      linear-gradient(to right, color-mix(in oklch, var(--color-border) 55%, transparent) 1px, transparent 1px),
-      linear-gradient(to bottom, color-mix(in oklch, var(--color-border) 55%, transparent) 1px, transparent 1px);
+      linear-gradient(
+        to right,
+        color-mix(in oklch, var(--color-border) 55%, transparent) 1px,
+        transparent 1px
+      ),
+      linear-gradient(
+        to bottom,
+        color-mix(in oklch, var(--color-border) 55%, transparent) 1px,
+        transparent 1px
+      );
     background-size: 32px 32px;
   }
   .scanline::before {
@@ -187,6 +195,34 @@
   @keyframes blink {
     50% {
       opacity: 0.4;
+    }
+  }
+  .analytics-panel {
+    background-image: linear-gradient(
+      145deg,
+      color-mix(in oklch, var(--color-primary) 4%, transparent),
+      transparent 42%
+    );
+  }
+  .analytics-active-dot {
+    animation: analytics-dot-pulse 1.25s ease-out infinite;
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  @keyframes analytics-dot-pulse {
+    0%,
+    100% {
+      filter: drop-shadow(0 0 0 transparent);
+      transform: scale(1);
+    }
+    50% {
+      filter: drop-shadow(0 0 5px currentColor);
+      transform: scale(1.18);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .analytics-active-dot {
+      animation: none;
     }
   }
 }

@@ -2,20 +2,15 @@ import { useMemo } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { StatCard } from "@/components/terminal/StatCard";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
-import { usePortfolioSnapshots } from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
+import {
+  isCompletePortfolioSnapshot,
+  usePortfolioSnapshots,
+} from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
 import type { PortfolioSnapshotRow } from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
 import { useTranslation } from "react-i18next";
 
 type SnapshotCurrency = "EUR" | "USD";
 type SnapshotMetric = "market" | "unrealized";
-
-function isCompleteSnapshot(row: PortfolioSnapshotRow) {
-  const metadata = row.quote_metadata;
-  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) return true;
-
-  const failed = (metadata as Record<string, unknown>).failed;
-  return !Array.isArray(failed) || failed.length === 0;
-}
 
 function metricValue(
   row: PortfolioSnapshotRow,
@@ -72,7 +67,7 @@ export function PortfolioSnapshotStats({
     const rows = snapshotsQ.data ?? [];
     // Older snapshots may have been saved after a quote API failure. They use
     // cost as the market price, producing a misleading zero unrealized amount.
-    const validRows = rows.filter(isCompleteSnapshot);
+    const validRows = rows.filter(isCompletePortfolioSnapshot);
     const totalRows = validRows.filter((row) => row.scope === "total");
     const portfolioGroups = new Map<string, PortfolioSnapshotRow[]>();
 
