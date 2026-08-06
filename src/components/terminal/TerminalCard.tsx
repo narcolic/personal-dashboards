@@ -33,12 +33,12 @@ export function TerminalCard({
             }
           : undefined
       }
-      className={`border border-border bg-card ${interactive ? "cursor-pointer transition-colors hover:border-primary hover:bg-secondary/20" : ""} ${className}`}
+      className={`analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/80 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] ${interactive ? "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-[0_20px_50px_-34px_rgba(0,0,0,0.95)]" : ""} ${className}`}
     >
       {(title || actions) && (
-        <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-3 py-2">
+        <div className="flex min-h-11 items-center justify-between border-b border-border/60 bg-secondary/25 px-4 py-2.5">
           {title ? (
-            <h2 className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-foreground">
+            <h2 className="flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-foreground">
               <span className="text-primary">&gt;</span>
               <span className="text-muted-foreground">{title}</span>
             </h2>

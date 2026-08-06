@@ -6,6 +6,7 @@ type StatCardProps = {
   accent?: boolean;
   onClick?: () => void;
   size?: "default" | "featured" | "compact";
+  surface?: "raised" | "flat";
 };
 
 export function StatCard({
@@ -16,6 +17,7 @@ export function StatCard({
   accent,
   onClick,
   size = "default",
+  surface = "raised",
 }: StatCardProps) {
   const toneClass =
     tone === "bull" ? "text-bull" : tone === "bear" ? "text-bear" : "text-foreground";
@@ -23,23 +25,23 @@ export function StatCard({
   const sizeClasses =
     size === "featured"
       ? {
-          wrapper: "px-4 py-4 md:px-5 md:py-4",
-          label: "text-[10px] tracking-[0.28em]",
-          value: "mt-2 text-[1.8rem] md:text-[2rem]",
-          sub: "mt-1 text-[11px]",
+          wrapper: "px-4 py-4 md:px-5 md:py-5",
+          label: "text-xs tracking-[0.14em]",
+          value: "mt-3 text-[1.8rem] tracking-tight md:text-[2.1rem]",
+          sub: "mt-1.5 text-xs",
         }
       : size === "compact"
         ? {
-            wrapper: "px-3 py-2.5",
-            label: "text-[9px] tracking-[0.22em]",
-            value: "mt-1 text-xl",
-            sub: "text-[10px]",
+            wrapper: "px-3 py-3",
+            label: "text-xs tracking-[0.12em]",
+            value: "mt-1.5 text-xl tracking-tight",
+            sub: "mt-1 text-xs",
           }
         : {
-            wrapper: "px-4 py-3",
-            label: "text-[10px] tracking-[0.25em]",
-            value: "mt-1 text-2xl",
-            sub: "text-[11px]",
+            wrapper: "px-4 py-4",
+            label: "text-xs tracking-[0.12em]",
+            value: "mt-2 text-2xl tracking-tight",
+            sub: "mt-1 text-xs",
           };
 
   return (
@@ -57,12 +59,17 @@ export function StatCard({
             }
           : undefined
       }
-      className={`border border-border bg-card ${sizeClasses.wrapper} ${accent ? "border-l-2 border-l-primary" : ""} ${
+      className={`relative overflow-hidden rounded-[10px] border ${
+        surface === "flat"
+          ? "border-transparent bg-secondary/20 shadow-none"
+          : "analytics-panel border-border/70 bg-card/80 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]"
+      } ${sizeClasses.wrapper} ${accent && surface === "raised" ? "border-primary/30 ring-1 ring-inset ring-primary/10" : ""} ${
         interactive
-          ? "cursor-pointer transition-colors hover:border-primary hover:bg-secondary/30"
+          ? "cursor-pointer transition-all duration-200 hover:-translate-y-0.5 hover:border-primary/60 hover:shadow-[0_20px_50px_-34px_rgba(0,0,0,0.95)]"
           : ""
       }`}
     >
+      {accent ? <div className="absolute inset-y-4 left-0 w-0.5 rounded-r bg-primary" /> : null}
       <div className={`${sizeClasses.label} uppercase text-muted-foreground`}>{label}</div>
       <div className={`${sizeClasses.value} font-bold ${toneClass}`}>{value}</div>
       {sub && <div className={`${sizeClasses.sub} ${toneClass}`}>{sub}</div>}

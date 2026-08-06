@@ -4,10 +4,11 @@
   "sideEffects": false,
   "type": "module",
   "scripts": {
-    "dev": "vite dev",
-    "build": "vite build",
+    "generate-routes": "tsr generate",
+    "dev": "npm run generate-routes && vite dev",
+    "build": "npm run generate-routes && vite build",
     "vercel-build": "npm run build",
-    "build:dev": "vite build --mode development",
+    "build:dev": "npm run generate-routes && vite build --mode development",
     "preview": "vite preview",
     "lint": "eslint .",
     "format": "prettier --write ."
@@ -31,6 +32,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.32.0",
+    "@tanstack/router-cli": "1.167.23",
     "@types/node": "^22.16.5",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",

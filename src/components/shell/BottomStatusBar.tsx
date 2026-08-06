@@ -6,8 +6,10 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { useTranslation } from "react-i18next";
+import { useRouterState } from "@tanstack/react-router";
 import i18n from "@/i18n";
 import { type ThemeMode, useTheme } from "@/theme/theme-provider";
+import { MarketStatusIndicator } from "@/routes/_authenticated/portfolio/components/MarketStatusIndicator";
 
 const languages = [
   { code: "en", label: "EN" },
@@ -23,6 +25,10 @@ const themeOptions: { mode: ThemeMode; icon: string; label: string }[] = [
 export function BottomStatusBar() {
   const { t } = useTranslation();
   const { mode, setMode } = useTheme();
+  const isPortfolio = useRouterState({
+    select: (state) => state.location.pathname.startsWith("/portfolio"),
+  });
+  const [now, setNow] = useState(() => new Date());
   const [languageMenuOpen, setLanguageMenuOpen] = useState(false);
   const languageMenuRef = useRef<HTMLDivElement | null>(null);
   const languageButtonRef = useRef<HTMLButtonElement | null>(null);
@@ -32,6 +38,11 @@ export function BottomStatusBar() {
     () => languages.find((language) => language.code === currentLanguage)?.label ?? "EN",
     [currentLanguage],
   );
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   useEffect(() => {
     if (!languageMenuOpen) return;
@@ -74,13 +85,29 @@ export function BottomStatusBar() {
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur">
-      <div className="flex h-7 items-center justify-between px-3 text-[10px] uppercase tracking-[0.18em] md:px-4">
-        <div className="inline-flex items-center gap-2 text-green-500">
-          <span
-            className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse"
-            aria-hidden="true"
-          />
-          <span>LIVE</span>
+      <div className="flex h-8 items-center justify-between px-3 text-xs uppercase tracking-[0.1em] md:px-4">
+        <div className="inline-flex min-w-0 items-center gap-3">
+          <span className="inline-flex items-center gap-2 text-green-500">
+            <span
+              className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse"
+              aria-hidden="true"
+            />
+            <span>LIVE</span>
+          </span>
+          {isPortfolio ? (
+            <span className="hidden items-center gap-3 text-muted-foreground sm:inline-flex">
+              <span className="tabular-nums">
+                {now.toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: false,
+                  timeZoneName: "short",
+                })}
+              </span>
+              <MarketStatusIndicator exchanges={["ATHEX", "NYSE", "XETR"]} />
+            </span>
+          ) : null}
         </div>
 
         <div className="flex items-center text-muted-foreground">
@@ -120,7 +147,7 @@ export function BottomStatusBar() {
                           });
                           setLanguageMenuOpen(false);
                         }}
-                        className={`block w-full border px-2 py-1 text-left text-[10px] uppercase tracking-[0.18em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                        className={`block w-full border px-2 py-1 text-left text-xs uppercase tracking-[0.1em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                           isActive
                             ? "border-primary text-primary"
                             : "border-transparent text-foreground hover:border-border hover:bg-secondary/50"

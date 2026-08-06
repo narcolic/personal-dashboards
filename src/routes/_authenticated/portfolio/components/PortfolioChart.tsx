@@ -71,7 +71,7 @@ export function PortfolioChart({
                     {d.name}
                   </span>
                 </div>
-                <div className="text-[11px] tabular-nums text-muted-foreground md:text-right">
+                <div className="text-xs tabular-nums text-muted-foreground md:text-right">
                   {pct.toFixed(1)}% | {formatValue(d.value, d.name)}
                 </div>
                 <div className="h-2.5 overflow-hidden border border-border/50 bg-secondary/30">
@@ -134,11 +134,11 @@ export function PortfolioChart({
                 >
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2" style={{ background: COLORS[i % COLORS.length] }} />
-                    <span className="min-w-0 flex-1 text-[10px] uppercase leading-tight text-foreground/90">
+                    <span className="min-w-0 flex-1 text-xs uppercase leading-tight text-foreground/90">
                       {d.name}
                     </span>
                   </div>
-                  <div className="shrink-0 text-right text-[11px] tabular-nums">
+                  <div className="shrink-0 text-right text-xs tabular-nums">
                     <div>{formatBreakdown(d.value, d.name)}</div>
                   </div>
                 </button>

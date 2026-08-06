@@ -135,10 +135,14 @@ export function MarketStatusIndicator({ exchanges }: { exchanges: string[] }) {
   if (isError) {
     const errorText = error instanceof Error ? error.message : "Unknown error";
     return (
-      <div className="inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-amber-400 group relative">
+      <div
+        className="group relative inline-flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-amber-400"
+        role="status"
+        title={`Market data unavailable: ${errorText}`}
+      >
         <span aria-hidden="true">⚠</span>
-        <span>Problem</span>
-        <div className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-max max-w-[320px] border border-border bg-card p-2 text-[10px] uppercase tracking-[0.12em] text-foreground shadow-md group-hover:block">
+        <span>Market data unavailable</span>
+        <div className="pointer-events-none absolute bottom-full left-0 z-20 mb-1 hidden w-max max-w-[320px] border border-border bg-card p-2 text-xs uppercase tracking-[0.1em] text-foreground shadow-md group-hover:block">
           <div className="font-bold text-amber-400">Market Status API</div>
           <div className="mt-1 text-muted-foreground">{errorText}</div>
         </div>
@@ -147,7 +151,7 @@ export function MarketStatusIndicator({ exchanges }: { exchanges: string[] }) {
   }
 
   return (
-    <div className="inline-flex items-center gap-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="inline-flex items-center gap-3 text-xs uppercase tracking-[0.1em] text-muted-foreground">
       {DISPLAY_ORDER.map((code) => {
         const m = marketMap.get(code);
         const session: MarketSession = isError
@@ -172,9 +176,9 @@ export function MarketStatusIndicator({ exchanges }: { exchanges: string[] }) {
           <div key={code} className="group relative inline-flex items-center gap-2">
             <span className={dotClass(tone, pulse)} />
             <span>{code}</span>
-            <span className="text-[9px] text-foreground/80">{marker}</span>
+            <span className="text-xs text-foreground/80">{marker}</span>
 
-            <div className="pointer-events-none absolute right-0 top-full z-20 mt-1 hidden w-max max-w-[260px] border border-border bg-card p-2 text-[10px] uppercase tracking-[0.12em] text-foreground shadow-md group-hover:block">
+            <div className="pointer-events-none absolute bottom-full left-0 z-20 mb-1 hidden w-max max-w-[260px] border border-border bg-card p-2 text-xs uppercase tracking-[0.1em] text-foreground shadow-md group-hover:block">
               <div className="font-bold text-primary">
                 {code} {statusLabel}
               </div>

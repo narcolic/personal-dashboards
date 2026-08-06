@@ -37,6 +37,9 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
 
   --color-bull: var(--bull);
   --color-bear: var(--bear);
@@ -95,6 +98,7 @@
   --chart-5: oklch(0.55 0.13 235);
   --chart-6: oklch(0.5 0.12 290);
   --chart-7: oklch(0.64 0.13 70);
+  --chart-8: oklch(0.58 0.16 340);
 }
 
 .dark {
@@ -141,6 +145,7 @@
   --chart-5: oklch(0.7 0.15 220);
   --chart-6: oklch(0.74 0.16 285);
   --chart-7: oklch(0.8 0.15 80);
+  --chart-8: oklch(0.72 0.19 340);
 }
 
 @layer base {

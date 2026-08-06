@@ -33,9 +33,7 @@ function Field({
 }) {
   return (
     <label className={`block ${colSpan === 2 ? "col-span-2" : ""}`}>
-      <div className="mb-1 text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-        {label}
-      </div>
+      <div className="mb-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
       {children}
     </label>
   );
@@ -92,8 +90,8 @@ export function TransactionEditor({
 
   return (
     <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-background/80 p-4 backdrop-blur md:items-center">
-      <div className="w-full max-w-xl border border-border bg-card">
-        <div className="flex justify-between border-b border-border bg-secondary/40 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-primary">
+      <div className="analytics-panel w-full max-w-xl overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xl">
+        <div className="flex justify-between border-b border-border/60 bg-secondary/25 px-5 py-4 text-xs uppercase tracking-[0.12em] text-primary">
           <span>
             &gt; {value.id ? t("portfolio.editTransaction") : t("portfolio.newTransaction")}
           </span>
@@ -110,7 +108,7 @@ export function TransactionEditor({
               price: Number(v.price),
             });
           }}
-          className="grid grid-cols-2 gap-3 p-4"
+          className="grid grid-cols-2 gap-4 p-5 [&_input]:rounded-lg [&_input]:border-border/70 [&_input]:bg-background/70 [&_input]:px-3 [&_input]:py-2.5 [&_input]:transition-colors [&_input]:focus:ring-1 [&_input]:focus:ring-primary/30 [&_select]:rounded-lg [&_select]:border-border/70 [&_select]:bg-background/70 [&_select]:px-3 [&_select]:py-2.5 [&_select]:transition-colors [&_select]:focus:ring-1 [&_select]:focus:ring-primary/30 [&_textarea]:rounded-lg [&_textarea]:border-border/70 [&_textarea]:bg-background/70 [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:transition-colors [&_textarea]:focus:ring-1 [&_textarea]:focus:ring-primary/30"
         >
           <Field label={t("portfolio.date")}>
             <input
@@ -148,13 +146,13 @@ export function TransactionEditor({
                 className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
               />
               {tickerMenuOpen && (tickerQuery.length > 0 || tickerOptions.length > 0) ? (
-                <div className="absolute z-10 mt-1 max-h-44 w-full overflow-auto border border-border bg-card">
+                <div className="absolute z-10 mt-2 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover p-1.5 shadow-xl">
                   {tickerOptions.map((item) => (
                     <button
                       key={item.ticker}
                       type="button"
                       onMouseDown={() => applyTickerSuggestion(item)}
-                      className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                      className="block w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-primary/10 hover:text-primary"
                     >
                       {item.ticker}
                     </button>
@@ -166,7 +164,7 @@ export function TransactionEditor({
                         set("ticker", normalizeTicker(v.ticker));
                         setTickerMenuOpen(false);
                       }}
-                      className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                      className="block w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-primary/10 hover:text-primary"
                     >
                       {t("car.editor.createValue", { value: normalizeTicker(v.ticker) })}
                     </button>
@@ -263,10 +261,10 @@ export function TransactionEditor({
             />
           </Field>
 
-          <div className="col-span-2 border-t border-border/40 pt-2">
+          <div className="col-span-2 border-t border-border/50 pt-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="border border-border bg-background px-3 py-2">
-                <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+              <div className="rounded-lg border border-border/70 bg-background/60 px-4 py-3">
+                <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
                   {t("portfolio.totalPreview")}
                 </div>
                 <div className="mt-1 text-sm font-bold text-foreground tabular-nums">
@@ -282,14 +280,14 @@ export function TransactionEditor({
                 <button
                   type="submit"
                   disabled={busy}
-                  className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                  className="rounded-lg bg-primary px-4 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90 disabled:opacity-60"
                 >
                   {busy ? t("portfolio.saving") : t("common.save")}
                 </button>
                 <button
                   type="button"
                   onClick={onClose}
-                  className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                  className="rounded-lg px-3 py-2.5 text-xs uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground"
                 >
                   {t("common.cancel")}
                 </button>

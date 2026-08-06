@@ -1,8 +1,7 @@
-import { TerminalCard } from "@/components/terminal/TerminalCard";
-import { TerminalTable } from "@/components/terminal/TerminalTable";
-import { enrich } from "@/lib/portfolio/transactions/calculations";
-import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
 import { useTranslation } from "react-i18next";
+import { TerminalCard } from "@/components/terminal/TerminalCard";
+import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
+import { enrich } from "@/lib/portfolio/transactions/calculations";
 
 export function PnLBucket({
   title,
@@ -23,6 +22,7 @@ export function PnLBucket({
   const totalEntries = Object.entries(totalsByCurrency).sort((a, b) => a[0].localeCompare(b[0]));
   const targetLines = Math.max(headerLineCount ?? totalEntries.length, totalEntries.length, 1);
   const fillerCount = Math.max(0, targetLines - totalEntries.length);
+
   return (
     <TerminalCard
       title={`${title} (${rows.length})`}
@@ -30,12 +30,12 @@ export function PnLBucket({
       actions={
         <div className={`text-right tabular-nums ${tone === "bull" ? "text-bull" : "text-bear"}`}>
           {totalEntries.map(([currency, value]) => (
-            <div key={currency} className="text-[11px] font-bold">
+            <div key={currency} className="text-xs font-bold">
               {fmtCurrency(value, currency)}
             </div>
           ))}
           {Array.from({ length: fillerCount }).map((_, index) => (
-            <div key={`filler-${index}`} className="text-[11px] font-bold invisible">
+            <div key={`filler-${index}`} className="invisible text-xs font-bold">
               0
             </div>
           ))}
@@ -48,33 +48,46 @@ export function PnLBucket({
           {t("portfolio.nothingHere")}
         </div>
       ) : (
-        <TerminalTable>
-          <tbody>
-            {rows.map((r) => (
-              <tr
-                key={r.id}
-                onClick={onRowClick ? () => onRowClick(r) : undefined}
-                className={`border-b border-border/60 ${onRowClick ? "cursor-pointer hover:bg-secondary/30" : ""}`}
+        <div className="divide-y divide-border/50">
+          {rows.map((row) => (
+            <div
+              key={row.id}
+              onClick={onRowClick ? () => onRowClick(row) : undefined}
+              onKeyDown={
+                onRowClick
+                  ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        onRowClick(row);
+                      }
+                    }
+                  : undefined
+              }
+              role={onRowClick ? "button" : undefined}
+              tabIndex={onRowClick ? 0 : undefined}
+              className={`grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-4 px-4 py-3 transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring ${onRowClick ? "cursor-pointer hover:bg-secondary/25" : ""}`}
+            >
+              <div className="min-w-0">
+                <div className="font-bold text-primary">{row.ticker}</div>
+                <div className="truncate text-xs text-muted-foreground">
+                  {row.quote?.shortName || row.name}
+                </div>
+                <div className="mt-1 text-xs tabular-nums text-muted-foreground/80">
+                  {fmt(row.shares, { maximumFractionDigits: 4 })} @ {fmt(row.avg_cost)}
+                </div>
+              </div>
+              <div
+                className={`whitespace-nowrap text-right font-bold tabular-nums ${tone === "bull" ? "text-bull" : "text-bear"}`}
               >
-                <td className="px-3 py-2">
-                  <div className="font-bold text-primary">{r.ticker}</div>
-                  <div className="text-[10px] text-muted-foreground truncate max-w-[200px]">
-                    {r.quote?.shortName || r.name}
-                  </div>
-                </td>
-                <td className="px-3 py-2 text-right tabular-nums text-[11px] text-muted-foreground">
-                  {fmt(r.shares, { maximumFractionDigits: 4 })} @ {fmt(r.avg_cost)}
-                </td>
-                <td
-                  className={`px-3 py-2 text-right tabular-nums font-bold ${tone === "bull" ? "text-bull" : "text-bear"}`}
-                >
-                  <div>{fmtCurrency(r.unrealized, r.currency)}</div>
-                  <div className="text-[10px]">{fmtPct(r.unrealizedPct)}</div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </TerminalTable>
+                <div>
+                  {tone === "bull" ? "▲ +" : "▼ −"}
+                  {fmtCurrency(Math.abs(row.unrealized), row.currency)}
+                </div>
+                <div className="mt-1 text-xs">{fmtPct(Math.abs(row.unrealizedPct))}</div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </TerminalCard>
   );

@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { StatCard } from "@/components/terminal/StatCard";
@@ -25,17 +25,8 @@ function HoldingDetailsPage() {
   const normalizedTicker = ticker.trim().toUpperCase();
   const [editing, setEditing] = useState<(TransactionInputType & { id?: string }) | null>(null);
   const [txSortDirection, setTxSortDirection] = useState<"asc" | "desc">("desc");
-  const {
-    txQ,
-    quotesQ,
-    transactions,
-    portfolios,
-    allRows,
-    display,
-    setDisplay,
-    portfolioMap,
-    convert,
-  } = usePortfolioHoldingsView();
+  const { txQ, quotesQ, transactions, portfolios, allRows, portfolioMap, convertTo } =
+    usePortfolioHoldingsView();
   const { tickerCatalog } = useTickerCatalog();
 
   const holdingRows = useMemo(
@@ -56,32 +47,30 @@ function HoldingDetailsPage() {
     return rows;
   }, [holdingTransactions, txSortDirection]);
 
-  const portfolioTotalMarketValue = useMemo(
-    () => allRows.reduce((sum, row) => sum + convert(row.marketValue, row._nativeCurrency), 0),
-    [allRows, convert],
-  );
-
   const holdingCurrency = holdingRows[0]?._nativeCurrency ?? "USD";
 
-  useEffect(() => {
-    if (display !== holdingCurrency) {
-      setDisplay(holdingCurrency);
-    }
-  }, [display, holdingCurrency, setDisplay]);
+  const portfolioTotalMarketValue = useMemo(
+    () =>
+      allRows.reduce(
+        (sum, row) => sum + convertTo(row.marketValue, row._nativeCurrency, holdingCurrency),
+        0,
+      ),
+    [allRows, convertTo, holdingCurrency],
+  );
 
   const summary = useMemo(() => {
     const totalQuantity = holdingRows.reduce((sum, row) => sum + Number(row.shares), 0);
     const marketValue = holdingRows.reduce(
-      (sum, row) => sum + convert(row.marketValue, row._nativeCurrency),
+      (sum, row) => sum + convertTo(row.marketValue, row._nativeCurrency, holdingCurrency),
       0,
     );
     const costBasis = holdingRows.reduce(
-      (sum, row) => sum + convert(row.costBasis, row._nativeCurrency),
+      (sum, row) => sum + convertTo(row.costBasis, row._nativeCurrency, holdingCurrency),
       0,
     );
     const unrealized = marketValue - costBasis;
     const dailyChange = holdingRows.reduce(
-      (sum, row) => sum + convert(row.dayChange, row._nativeCurrency),
+      (sum, row) => sum + convertTo(row.dayChange, row._nativeCurrency, holdingCurrency),
       0,
     );
     const currentPrice = totalQuantity > 0 ? marketValue / totalQuantity : 0;
@@ -109,7 +98,7 @@ function HoldingDetailsPage() {
       currency: holdingCurrency,
       market: first?.market ?? null,
     };
-  }, [convert, holdingCurrency, holdingRows, normalizedTicker, portfolioTotalMarketValue]);
+  }, [convertTo, holdingCurrency, holdingRows, normalizedTicker, portfolioTotalMarketValue]);
   const breakdownRows = useMemo(() => {
     const groups = new Map<
       string,
@@ -130,8 +119,8 @@ function HoldingDetailsPage() {
         costBasis: 0,
       };
       current.quantity += Number(row.shares);
-      current.marketValue += convert(row.marketValue, row._nativeCurrency);
-      current.costBasis += convert(row.costBasis, row._nativeCurrency);
+      current.marketValue += convertTo(row.marketValue, row._nativeCurrency, holdingCurrency);
+      current.costBasis += convertTo(row.costBasis, row._nativeCurrency, holdingCurrency);
       groups.set(key, current);
     }
 
@@ -142,7 +131,7 @@ function HoldingDetailsPage() {
         unrealized: row.marketValue - row.costBasis,
       }))
       .sort((a, b) => b.marketValue - a.marketValue);
-  }, [convert, holdingRows]);
+  }, [convertTo, holdingCurrency, holdingRows]);
   const showPortfolioBreakdown = breakdownRows.length > 1;
   const holdingPortfolioNames = useMemo(() => {
     const names = breakdownRows.map((row) =>
@@ -213,7 +202,7 @@ function HoldingDetailsPage() {
     },
   });
 
-  if (txQ.isLoading || quotesQ.isLoading || display !== holdingCurrency) {
+  if (txQ.isLoading || quotesQ.isLoading) {
     return <HoldingDetailsSkeleton />;
   }
   if (holdingRows.length === 0) return <HoldingDetailsMissing ticker={normalizedTicker} />;
@@ -222,6 +211,13 @@ function HoldingDetailsPage() {
 
   return (
     <div className="space-y-6">
+      <Link
+        to="/portfolio"
+        hash="holdings"
+        className="inline-flex text-xs uppercase tracking-[0.12em] text-muted-foreground hover:text-primary"
+      >
+        ← {t("header.portfolio")} / {t("portfolio.holdings")}
+      </Link>
       <div className="space-y-3">
         <div className="p-1">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -230,7 +226,7 @@ function HoldingDetailsPage() {
                 <h1 className="text-xl uppercase tracking-[0.2em]">{`> ${summary.ticker}`}</h1>
                 <p className="mt-1 text-sm text-muted-foreground">{summary.companyName}</p>
               </div>
-              <div className="flex flex-wrap gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.1em] text-muted-foreground">
                 <span className="border border-border bg-card px-2 py-1">
                   {t("portfolio.assetType")}: {summary.assetType}
                 </span>
@@ -246,7 +242,7 @@ function HoldingDetailsPage() {
               <button
                 type="button"
                 onClick={() => setEditing(addTransactionDraft)}
-                className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90"
+                className="bg-primary px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground hover:opacity-90"
               >
                 {t("portfolio.addTransactionAction")}
               </button>
@@ -311,7 +307,7 @@ function HoldingDetailsPage() {
           <TerminalCard bodyClassName="p-0">
             <div className="overflow-x-auto">
               <TerminalTable>
-                <thead className="bg-secondary/40 text-[10px] uppercase tracking-widest text-muted-foreground">
+                <thead className="bg-secondary/40 text-xs uppercase tracking-[0.1em] text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2 text-left">{t("portfolio.portfolio")}</th>
                     <th className="px-3 py-2 text-right">{t("portfolio.quantity")}</th>
@@ -359,7 +355,7 @@ function HoldingDetailsPage() {
       <HoldingSection title={t("portfolio.transactionsSection")}>
         <TerminalCard bodyClassName="p-0">
           <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-3 py-2">
-            <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
+            <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
               {holdingTransactions.length} {t("header.transactions")}
             </div>
             <button
@@ -367,14 +363,14 @@ function HoldingDetailsPage() {
               onClick={() =>
                 setTxSortDirection((direction) => (direction === "asc" ? "desc" : "asc"))
               }
-              className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground hover:text-primary"
+              className="text-xs uppercase tracking-[0.1em] text-muted-foreground hover:text-primary"
             >
               {t("portfolio.date")} {txSortDirection === "asc" ? "↑" : "↓"}
             </button>
           </div>
           <div className="overflow-x-auto">
             <TerminalTable>
-              <thead className="bg-secondary/20 text-[10px] uppercase tracking-widest text-muted-foreground">
+              <thead className="bg-secondary/20 text-xs uppercase tracking-[0.1em] text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 text-left">{t("portfolio.date")}</th>
                   <th className="px-3 py-2 text-left">{t("portfolio.action")}</th>
@@ -452,7 +448,7 @@ function HoldingDetailsPage() {
 function HoldingSection({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-[10px] uppercase tracking-[0.3em] text-primary">{`> ${title}`}</h2>
+      <h2 className="text-xs uppercase tracking-[0.12em] text-primary">{`> ${title}`}</h2>
       {children}
     </section>
   );
@@ -482,7 +478,7 @@ function HoldingDetailsMissing({ ticker }: { ticker: string }) {
 
   return (
     <div className="border border-dashed border-border p-12 text-center">
-      <div className="text-[10px] uppercase tracking-[0.3em] text-primary">
+      <div className="text-xs uppercase tracking-[0.12em] text-primary">
         {t("portfolio.holdingNotFound")}
       </div>
       <h2 className="mt-3 text-2xl">{ticker}</h2>

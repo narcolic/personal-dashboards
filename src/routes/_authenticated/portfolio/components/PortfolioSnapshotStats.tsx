@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import type { ReactNode } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { StatCard } from "@/components/terminal/StatCard";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
@@ -54,10 +55,14 @@ export function PortfolioSnapshotStats({
   currency,
   onCardClick,
   title,
+  scopeKey = "total",
+  embedded = false,
 }: {
   currency: string;
   onCardClick?: () => void;
   title?: string;
+  scopeKey?: string;
+  embedded?: boolean;
 }) {
   const { t } = useTranslation();
   const snapshotsQ = usePortfolioSnapshots();
@@ -68,11 +73,11 @@ export function PortfolioSnapshotStats({
     // Older snapshots may have been saved after a quote API failure. They use
     // cost as the market price, producing a misleading zero unrealized amount.
     const validRows = rows.filter(isCompletePortfolioSnapshot);
-    const totalRows = validRows.filter((row) => row.scope === "total");
+    const totalRows = validRows.filter((row) => row.scope_key === scopeKey);
     const portfolioGroups = new Map<string, PortfolioSnapshotRow[]>();
 
     for (const row of validRows) {
-      if (row.scope !== "portfolio") continue;
+      if (scopeKey !== "total" || row.scope !== "portfolio") continue;
       const group = portfolioGroups.get(row.scope_key) ?? [];
       group.push(row);
       portfolioGroups.set(row.scope_key, group);
@@ -101,44 +106,41 @@ export function PortfolioSnapshotStats({
             metricValue(a.latest ?? a.marketHigh ?? a.marketLow!, selectedCurrency, "market"),
         ),
     };
-  }, [selectedCurrency, snapshotsQ.data, t]);
+  }, [scopeKey, selectedCurrency, snapshotsQ.data, t]);
 
   if (snapshotsQ.isLoading) {
     return (
-      <TerminalCard
+      <SnapshotFrame
         title={title ?? t("portfolio.snapshotHistory")}
         onClick={onCardClick}
-        bodyClassName="p-3"
-        className="border-border/60"
+        embedded={embedded}
       >
-        <div className="h-24 animate-pulse bg-secondary/40" />
-      </TerminalCard>
+        <div className="h-24 animate-pulse rounded-lg bg-secondary/40" />
+      </SnapshotFrame>
     );
   }
 
   if (!stats.latestTotal) {
     return (
-      <TerminalCard
+      <SnapshotFrame
         title={title ?? t("portfolio.snapshotHistory")}
         onClick={onCardClick}
-        bodyClassName="p-3"
-        className="border-border/60"
+        embedded={embedded}
       >
         <div className="text-xs text-muted-foreground">{t("portfolio.noSnapshotsYet")}</div>
-      </TerminalCard>
+      </SnapshotFrame>
     );
   }
 
   const currencyFormat = (value: number) => fmtCurrency(value, selectedCurrency);
 
   return (
-    <TerminalCard
+    <SnapshotFrame
       title={title ?? t("portfolio.snapshotHistory")}
       onClick={onCardClick}
-      bodyClassName="p-3"
-      className="border-border/60"
+      embedded={embedded}
     >
-      <div className="space-y-3">
+      <div className="space-y-4">
         <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label={t("portfolio.peakValue")}
@@ -146,12 +148,14 @@ export function PortfolioSnapshotStats({
             sub={formatDate(stats.marketHigh?.snapshot_date)}
             accent
             size="compact"
+            surface="flat"
           />
           <StatCard
             label={t("portfolio.lowValue")}
             value={currencyFormat(metricValue(stats.marketLow!, selectedCurrency, "market"))}
             sub={formatDate(stats.marketLow?.snapshot_date)}
             size="compact"
+            surface="flat"
           />
           <StatCard
             label={t("portfolio.peakUnrealized")}
@@ -165,6 +169,7 @@ export function PortfolioSnapshotStats({
                 : "bear"
             }
             size="compact"
+            surface="flat"
           />
           <StatCard
             label={t("portfolio.lowUnrealized")}
@@ -178,13 +183,14 @@ export function PortfolioSnapshotStats({
                 : "bear"
             }
             size="compact"
+            surface="flat"
           />
         </div>
 
         {stats.portfolios.length > 0 && (
-          <div className="overflow-x-auto border border-border/50">
+          <div className="overflow-x-auto rounded-lg bg-background/25">
             <table className="min-w-full text-[12px]">
-              <thead className="bg-secondary/25 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+              <thead className="bg-secondary/25 text-xs uppercase tracking-[0.1em] text-muted-foreground">
                 <tr>
                   <th className="px-3 py-2 text-left">{t("portfolio.portfolio")}</th>
                   <th className="px-3 py-2 text-right">{t("portfolio.latest")}</th>
@@ -196,7 +202,10 @@ export function PortfolioSnapshotStats({
               </thead>
               <tbody>
                 {stats.portfolios.map((row) => (
-                  <tr key={row.key} className="border-t border-border/50">
+                  <tr
+                    key={row.key}
+                    className="border-t border-border/40 transition-colors hover:bg-secondary/20"
+                  >
                     <td className="px-3 py-2 uppercase">{row.name}</td>
                     <td className="px-3 py-2 text-right">
                       {currencyFormat(metricValue(row.latest!, selectedCurrency, "market"))}
@@ -224,6 +233,26 @@ export function PortfolioSnapshotStats({
           </div>
         )}
       </div>
+    </SnapshotFrame>
+  );
+}
+
+function SnapshotFrame({
+  title,
+  onClick,
+  embedded,
+  children,
+}: {
+  title: string;
+  onClick?: () => void;
+  embedded: boolean;
+  children: ReactNode;
+}) {
+  if (embedded) return <div>{children}</div>;
+
+  return (
+    <TerminalCard title={title} onClick={onClick} bodyClassName="p-3" className="border-border/60">
+      {children}
     </TerminalCard>
   );
 }

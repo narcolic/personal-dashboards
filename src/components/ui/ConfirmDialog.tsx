@@ -47,10 +47,10 @@ export function ConfirmDialog({
         aria-modal="true"
         aria-labelledby="confirm-dialog-title"
         aria-describedby="confirm-dialog-description"
-        className="w-full max-w-md border border-border bg-card font-mono"
+        className="analytics-panel w-full max-w-md overflow-hidden rounded-xl border border-border/70 bg-card font-mono shadow-2xl"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-border bg-secondary/40 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-primary">
+        <div className="flex items-center justify-between border-b border-border/60 bg-secondary/25 px-5 py-4 text-xs uppercase tracking-[0.12em] text-primary">
           <span id="confirm-dialog-title">{title}</span>
           <button
             type="button"
@@ -66,7 +66,7 @@ export function ConfirmDialog({
         <div className="space-y-4 p-4">
           <div
             id="confirm-dialog-description"
-            className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground"
+            className="text-sm leading-relaxed text-muted-foreground"
           >
             {description}
           </div>
@@ -76,7 +76,7 @@ export function ConfirmDialog({
               type="button"
               onClick={onConfirm}
               disabled={isConfirming}
-              className="border border-destructive/60 px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:bg-destructive/10 disabled:opacity-60"
+              className="rounded-lg border border-destructive/60 px-4 py-2.5 text-xs uppercase tracking-[0.12em] text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-60"
             >
               {confirmLabel}
             </button>
@@ -84,7 +84,7 @@ export function ConfirmDialog({
               type="button"
               onClick={onCancel}
               disabled={isConfirming}
-              className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground disabled:opacity-50"
+              className="rounded-lg px-4 py-2.5 text-xs uppercase tracking-[0.12em] text-muted-foreground transition-colors hover:bg-secondary/40 hover:text-foreground disabled:opacity-50"
             >
               {cancelLabel ?? t("common.cancel")}
             </button>

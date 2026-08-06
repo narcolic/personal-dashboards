@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { supabase } from "@/integrations/supabase/client";
@@ -64,12 +64,20 @@ type DeleteDialogState = {
   onConfirm: () => void;
 };
 
-function TransactionsPage() {
+export function ActivityPage({
+  openAddTransaction = false,
+  onAddHandled,
+}: {
+  openAddTransaction?: boolean;
+  onAddHandled?: () => void;
+}) {
   const { t } = useTranslation();
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [editing, setEditing] = useState<(TransactionInputType & { id?: string }) | null>(null);
+  const [editing, setEditing] = useState<(TransactionInputType & { id?: string }) | null>(() =>
+    openAddTransaction ? empty() : null,
+  );
   const [showPortfolios, setShowPortfolios] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
@@ -80,6 +88,8 @@ function TransactionsPage() {
   const [currencyFilter, setCurrencyFilter] = useState(ALL_FILTER);
   const [dateFromFilter, setDateFromFilter] = useState("");
   const [dateToFilter, setDateToFilter] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [showImportHelp, setShowImportHelp] = useState(false);
 
   const { txQ, transactions, transactionCount, portfolios } = usePortfolioData({
     transactionFilters: {
@@ -140,11 +150,6 @@ function TransactionsPage() {
     [data, tickerCatalog],
   );
 
-  useEffect(() => {
-    setPage(1);
-    setSelected(new Set());
-  }, [tickerFilter, portfolioFilter, typeFilter, currencyFilter, dateFromFilter, dateToFilter]);
-
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["positions"] });
     qc.invalidateQueries({ queryKey: ["portfolios"] });
@@ -176,6 +181,7 @@ function TransactionsPage() {
       invalidate();
       setPage(1);
       setEditing(null);
+      if (openAddTransaction) onAddHandled?.();
       toast.success(t("portfolio.transactionAdded"));
     },
     onError: (e: Error) => toast.error(e.message),
@@ -350,196 +356,167 @@ function TransactionsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const activeFilterCount =
+    Number(portfolioFilter !== ALL_FILTER) +
+    Number(typeFilter !== ALL_FILTER) +
+    Number(currencyFilter !== ALL_FILTER) +
+    Number(Boolean(dateFromFilter)) +
+    Number(Boolean(dateToFilter));
+
+  const clearFilters = () => {
+    setTickerFilter("");
+    setPortfolioFilter(ALL_FILTER);
+    setTypeFilter(ALL_FILTER);
+    setCurrencyFilter(ALL_FILTER);
+    setDateFromFilter("");
+    setDateToFilter("");
+    setPage(1);
+    setSelected(new Set());
+  };
+
+  const updateFilter = (update: () => void) => {
+    update();
+    setPage(1);
+    setSelected(new Set());
+  };
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl uppercase tracking-[0.2em]">{t("portfolio.transactionsTitle")}</h1>
-          <p className="mt-1 text-xs text-muted-foreground">
-            {t("portfolio.transactionsSubtitle")}
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <div className="space-y-6">
+      <div className="flex justify-end">
+        <div className="flex shrink-0 gap-2">
+          <details className="relative">
+            <summary className="flex h-10 cursor-pointer list-none items-center rounded-lg border border-border/70 bg-card/70 px-4 text-sm font-bold tracking-[0.12em] transition-colors hover:border-primary/60 hover:bg-secondary/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
+              ••• <span className="sr-only">{t("portfolio.moreActions")}</span>
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 min-w-56 overflow-hidden rounded-[10px] border border-border/70 bg-popover p-1.5 shadow-xl">
+              <button
+                type="button"
+                onClick={() => setShowImportHelp(true)}
+                className="block w-full rounded-md px-3 py-2.5 text-left text-xs uppercase tracking-[0.1em] transition-colors hover:bg-secondary/60 hover:text-primary"
+              >
+                {t("portfolio.uploadCsv")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPortfolios(true)}
+                className="block w-full rounded-md px-3 py-2.5 text-left text-xs uppercase tracking-[0.1em] transition-colors hover:bg-secondary/60 hover:text-primary"
+              >
+                {t("portfolio.managePortfolios")} ({portfolios.length})
+              </button>
+            </div>
+          </details>
           <button
-            onClick={() => setShowPortfolios(true)}
-            className="border border-border px-3 py-2 text-[11px] uppercase tracking-[0.2em] hover:border-primary"
-          >
-            {t("portfolio.managePortfolios")} ({portfolios.length})
-          </button>
-
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="hidden"
-            onChange={(e) => {
-              const file = e.target.files?.[0];
-              if (file) importM.mutate(file);
-              e.target.value = "";
-            }}
-          />
-
-          <button
-            onClick={() => fileRef.current?.click()}
-            disabled={importM.isPending}
-            className="border border-border px-3 py-2 text-[11px] uppercase tracking-[0.2em] hover:border-primary disabled:opacity-50"
-          >
-            {importM.isPending ? t("portfolio.importing") : t("portfolio.uploadCsv")}
-          </button>
-
-          <button
+            type="button"
             onClick={() => setEditing(empty())}
-            className="bg-primary px-4 py-2 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90"
+            className="h-10 rounded-lg bg-primary px-4 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {t("portfolio.addTransactionAction")}
           </button>
         </div>
       </div>
 
-      <details className="border border-border bg-card/50 text-[11px]">
-        <summary className="cursor-pointer px-3 py-2 uppercase tracking-[0.2em] text-muted-foreground hover:text-primary">
-          {t("portfolio.csvFormatHelp")}
-        </summary>
-        <div className="space-y-1 px-3 pb-3 text-muted-foreground">
-          <p>
-            <strong className="text-foreground">{t("portfolio.requiredColumns")}</strong> ticker,
-            shares, price, portfolio.
-          </p>
-          <p>
-            <strong className="text-foreground">{t("portfolio.optionalColumns")}</strong>{" "}
-            transaction_date, asset_type, currency, notes.
-          </p>
-          <p>
-            <strong className="text-foreground">{t("portfolio.tickers")}</strong> AAPL, AIR.PA,
-            VOD.L, BTC-USD.
-          </p>
-          <pre className="mt-2 overflow-x-auto border border-border bg-background p-2">
-            {`transaction_date,ticker,asset_type,currency,shares,price,portfolio
-2024-01-15,AAPL,stock,USD,10,150.20,IBKR
-2024-06-03,AAPL,stock,USD,5,185.40,IBKR
-2024-03-10,AIR.PA,stock,EUR,5,128.40,Degiro
-2023-11-01,BTC-USD,crypto,USD,0.5,35000,Coinbase`}
-          </pre>
-        </div>
-      </details>
+      <input
+        ref={fileRef}
+        type="file"
+        accept=".csv,text/csv"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          if (file) importM.mutate(file);
+          event.target.value = "";
+        }}
+      />
 
-      <div className="border border-border bg-card/50 p-3">
-        <div className="mb-3 flex items-center justify-between gap-3">
-          <div className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">
-            {t("portfolio.filters")}
-          </div>
+      <section className="analytics-panel rounded-[10px] border border-border/70 bg-card/70 p-3 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <label className="min-w-0 flex-1">
+            <span className="sr-only">{t("portfolio.tickerSearch")}</span>
+            <input
+              value={tickerFilter}
+              onChange={(event) => updateFilter(() => setTickerFilter(event.target.value))}
+              placeholder={t("portfolio.activitySearchPlaceholder")}
+              className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-3 text-sm outline-none transition-colors hover:border-primary/60 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
+            />
+          </label>
           <button
             type="button"
-            onClick={() => {
-              setTickerFilter("");
-              setPortfolioFilter(ALL_FILTER);
-              setTypeFilter(ALL_FILTER);
-              setCurrencyFilter(ALL_FILTER);
-              setDateFromFilter("");
-              setDateToFilter("");
-            }}
-            className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground hover:text-primary"
+            onClick={() => setShowFilters((visible) => !visible)}
+            aria-expanded={showFilters}
+            className={`h-10 rounded-lg border px-4 text-xs uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+              showFilters || activeFilterCount
+                ? "border-primary/40 bg-primary/10 text-primary"
+                : "border-border/70 bg-background/50 text-muted-foreground hover:border-primary/60 hover:text-foreground"
+            }`}
           >
-            {t("portfolio.clearFilters")}
+            {t("portfolio.filters")} {activeFilterCount ? `(${activeFilterCount})` : ""}
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
-          <label className="space-y-1">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {t("portfolio.tickerSearch")}
-            </span>
-            <input
-              value={tickerFilter}
-              onChange={(e) => setTickerFilter(e.target.value)}
-              placeholder={t("portfolio.tickerSearchPlaceholder")}
-              className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
-            />
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {t("portfolio.portfolio")}
-            </span>
-            <select
+        {showFilters ? (
+          <div className="mt-3 grid grid-cols-1 gap-3 border-t border-border/60 pt-4 sm:grid-cols-2 xl:grid-cols-4">
+            <ActivityFilterSelect
+              label={t("portfolio.portfolio")}
               value={portfolioFilter}
-              onChange={(e) => setPortfolioFilter(e.target.value)}
-              className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
-            >
-              <option value={ALL_FILTER}>{t("portfolio.all")}</option>
-              {portfolios.map((portfolio) => (
-                <option key={portfolio.id} value={portfolio.id}>
-                  {portfolio.name}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {t("portfolio.type")}
-            </span>
-            <select
+              onChange={(value) => updateFilter(() => setPortfolioFilter(value))}
+              options={portfolios.map((portfolio) => ({
+                value: portfolio.id,
+                label: portfolio.name,
+              }))}
+              allLabel={t("portfolio.all")}
+            />
+            <ActivityFilterSelect
+              label={t("portfolio.type")}
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-              className="w-full border border-border bg-input px-2 py-2 text-sm uppercase focus:border-primary focus:outline-none"
-            >
-              <option value={ALL_FILTER}>{t("portfolio.all")}</option>
-              {ASSET_TYPES.map((assetType) => (
-                <option key={assetType} value={assetType}>
-                  {assetType}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <label className="space-y-1">
-            <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              {t("portfolio.currency")}
-            </span>
-            <select
+              onChange={(value) => updateFilter(() => setTypeFilter(value))}
+              options={ASSET_TYPES.map((type) => ({ value: type, label: type }))}
+              allLabel={t("portfolio.all")}
+            />
+            <ActivityFilterSelect
+              label={t("portfolio.currency")}
               value={currencyFilter}
-              onChange={(e) => setCurrencyFilter(e.target.value)}
-              className="w-full border border-border bg-input px-2 py-2 text-sm uppercase focus:border-primary focus:outline-none"
-            >
-              <option value={ALL_FILTER}>{t("portfolio.all")}</option>
-              {currencyOptions.map((currency) => (
-                <option key={currency} value={currency}>
-                  {currency}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="grid grid-cols-2 gap-2">
-            <label className="space-y-1">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                {t("portfolio.dateFrom")}
-              </span>
-              <input
-                type="date"
-                value={dateFromFilter}
-                onChange={(e) => setDateFromFilter(e.target.value)}
-                className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-            </label>
-            <label className="space-y-1">
-              <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                {t("portfolio.dateTo")}
-              </span>
-              <input
-                type="date"
-                value={dateToFilter}
-                onChange={(e) => setDateToFilter(e.target.value)}
-                className="w-full border border-border bg-input px-2 py-2 text-sm focus:border-primary focus:outline-none"
-              />
-            </label>
+              onChange={(value) => updateFilter(() => setCurrencyFilter(value))}
+              options={currencyOptions.map((currency) => ({ value: currency, label: currency }))}
+              allLabel={t("portfolio.all")}
+            />
+            <div className="grid grid-cols-2 gap-2">
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                  {t("portfolio.dateFrom")}
+                </span>
+                <input
+                  type="date"
+                  value={dateFromFilter}
+                  onChange={(event) => updateFilter(() => setDateFromFilter(event.target.value))}
+                  className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-2 text-sm outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
+                />
+              </label>
+              <label className="space-y-1">
+                <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
+                  {t("portfolio.dateTo")}
+                </span>
+                <input
+                  type="date"
+                  value={dateToFilter}
+                  onChange={(event) => updateFilter(() => setDateToFilter(event.target.value))}
+                  className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-2 text-sm outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
+                />
+              </label>
+            </div>
+            <div className="sm:col-span-2 xl:col-span-4 flex justify-end">
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="text-xs uppercase tracking-[0.12em] text-muted-foreground hover:text-primary"
+              >
+                {t("portfolio.clearFilters")}
+              </button>
+            </div>
           </div>
-        </div>
-      </div>
+        ) : null}
+      </section>
 
       {selected.size > 0 && (
-        <div className="flex items-center gap-3 border border-bear/30 bg-bear/5 px-3 py-2 text-[11px]">
+        <div className="flex flex-wrap items-center gap-3 rounded-[10px] border border-bear/30 bg-bear/5 px-4 py-3 text-xs shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
           <span className="font-bold uppercase tracking-widest text-bear">
             {t("portfolio.selectedCount", { count: selected.size })}
           </span>
@@ -555,13 +532,13 @@ function TransactionsPage() {
               });
             }}
             disabled={bulkDeleteM.isPending}
-            className="border border-bear px-3 py-1 text-[10px] uppercase tracking-widest text-bear hover:bg-bear hover:text-primary-foreground disabled:opacity-50"
+            className="rounded-md border border-bear/60 px-3 py-1.5 text-xs uppercase tracking-[0.1em] text-bear transition-colors hover:bg-bear hover:text-primary-foreground disabled:opacity-50"
           >
             {bulkDeleteM.isPending ? t("portfolio.deleting") : t("portfolio.deleteSelected")}
           </button>
           <button
             onClick={() => setSelected(new Set())}
-            className="text-[10px] uppercase tracking-widest text-muted-foreground hover:text-foreground"
+            className="text-xs uppercase tracking-[0.1em] text-muted-foreground hover:text-foreground"
           >
             {t("portfolio.cancel")}
           </button>
@@ -587,7 +564,7 @@ function TransactionsPage() {
       />
 
       {transactionCount > 0 && (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-card/50 px-3 py-2 text-[11px] uppercase tracking-[0.15em] text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-border/70 bg-card/70 px-4 py-3 text-xs uppercase tracking-[0.1em] text-muted-foreground shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
           <div>
             {t("portfolio.transactionsRange", {
               start: pageStart,
@@ -604,7 +581,7 @@ function TransactionsPage() {
                 setPage((current) => Math.max(1, current - 1));
               }}
               disabled={page <= 1}
-              className="border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-foreground hover:border-primary disabled:opacity-40"
+              className="rounded-md border border-border/70 bg-background/40 px-3 py-1.5 text-xs uppercase tracking-[0.1em] text-foreground transition-colors hover:border-primary/60 disabled:opacity-40"
             >
               {t("portfolio.previousPage")}
             </button>
@@ -615,7 +592,7 @@ function TransactionsPage() {
                 setPage((current) => Math.min(pageCount, current + 1));
               }}
               disabled={page >= pageCount}
-              className="border border-border px-2 py-1 text-[10px] uppercase tracking-[0.2em] text-foreground hover:border-primary disabled:opacity-40"
+              className="rounded-md border border-border/70 bg-background/40 px-3 py-1.5 text-xs uppercase tracking-[0.1em] text-foreground transition-colors hover:border-primary/60 disabled:opacity-40"
             >
               {t("portfolio.nextPage")}
             </button>
@@ -628,7 +605,10 @@ function TransactionsPage() {
           value={editing}
           portfolios={portfolios}
           tickerSuggestions={tickerSuggestions}
-          onClose={() => setEditing(null)}
+          onClose={() => {
+            setEditing(null);
+            if (openAddTransaction) onAddHandled?.();
+          }}
           busy={createM.isPending || updateM.isPending}
           onSave={(value) => {
             if (editing.id) updateM.mutate({ ...value, id: editing.id });
@@ -636,6 +616,17 @@ function TransactionsPage() {
           }}
         />
       )}
+
+      {showImportHelp ? (
+        <ImportCsvDialog
+          busy={importM.isPending}
+          onClose={() => setShowImportHelp(false)}
+          onChoose={() => {
+            setShowImportHelp(false);
+            fileRef.current?.click();
+          }}
+        />
+      ) : null}
 
       {showPortfolios && (
         <PortfoliosModal
@@ -681,6 +672,111 @@ function TransactionsPage() {
   );
 }
 
+function ActivityFilterSelect({
+  label,
+  value,
+  options,
+  allLabel,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: Array<{ value: string; label: string }>;
+  allLabel: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="space-y-1">
+      <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-3 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
+      >
+        <option value={ALL_FILTER}>{allLabel}</option>
+        {options.map((option) => (
+          <option key={option.value} value={option.value}>
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function ImportCsvDialog({
+  busy,
+  onClose,
+  onChoose,
+}: {
+  busy: boolean;
+  onClose: () => void;
+  onChoose: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-start justify-center overflow-y-auto bg-background/80 p-4 backdrop-blur sm:items-center"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="csv-import-title"
+    >
+      <div className="analytics-panel w-full max-w-2xl overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-border/60 bg-secondary/25 px-5 py-4">
+          <h2 id="csv-import-title" className="text-xs uppercase tracking-[0.16em] text-primary">
+            {t("portfolio.csvFormatHelp")}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("common.cancel")}
+            className="h-8 w-8 text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
+            ×
+          </button>
+        </div>
+        <div className="space-y-3 p-4 text-sm text-muted-foreground">
+          <p>
+            <strong className="text-foreground">{t("portfolio.requiredColumns")}</strong> ticker,
+            shares, price, portfolio.
+          </p>
+          <p>
+            <strong className="text-foreground">{t("portfolio.optionalColumns")}</strong>{" "}
+            transaction_date, asset_type, currency, notes.
+          </p>
+          <p>
+            <strong className="text-foreground">{t("portfolio.tickers")}</strong> AAPL, AIR.PA,
+            VOD.L, BTC-USD.
+          </p>
+          <pre className="overflow-x-auto rounded-lg border border-border/70 bg-background/70 p-4 text-xs">
+            {`transaction_date,ticker,asset_type,currency,shares,price,portfolio
+2024-01-15,AAPL,stock,USD,10,150.20,IBKR
+2024-06-03,AAPL,stock,USD,5,185.40,IBKR
+2024-03-10,AIR.PA,stock,EUR,5,128.40,Degiro`}
+          </pre>
+          <div className="flex justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-10 rounded-lg border border-border/70 px-4 text-xs uppercase tracking-[0.12em] transition-colors hover:border-primary/60"
+            >
+              {t("common.cancel")}
+            </button>
+            <button
+              type="button"
+              onClick={onChoose}
+              disabled={busy}
+              className="h-10 rounded-lg bg-primary px-4 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90 disabled:opacity-50"
+            >
+              {busy ? t("portfolio.importing") : t("portfolio.chooseCsv")}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function PortfoliosModal({
   portfolios,
   onClose,
@@ -699,8 +795,8 @@ function PortfoliosModal({
 
   return (
     <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-background/80 p-4 backdrop-blur md:items-center">
-      <div className="w-full max-w-md border border-border bg-card">
-        <div className="flex justify-between border-b border-border bg-secondary/40 px-4 py-2 text-[10px] uppercase tracking-[0.3em] text-primary">
+      <div className="analytics-panel w-full max-w-md overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xl">
+        <div className="flex justify-between border-b border-border/60 bg-secondary/25 px-5 py-4 text-xs uppercase tracking-[0.12em] text-primary">
           <span>{t("portfolio.portfoliosTitle")}</span>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
             x
@@ -728,52 +824,52 @@ function PortfoliosModal({
               onChange={(e) => setName(e.target.value)}
               required
               placeholder={t("portfolio.portfolioNamePlaceholder")}
-              className="col-span-2 border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+              className="col-span-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
             />
             <input
               value={broker}
               onChange={(e) => setBroker(e.target.value)}
               placeholder={t("portfolio.portfolioBrokerPlaceholder")}
-              className="col-span-2 border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+              className="col-span-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
             />
             <textarea
               rows={2}
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder={t("portfolio.portfolioNotesPlaceholder")}
-              className="col-span-2 border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
+              className="col-span-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
             />
             <button
               type="submit"
-              className="col-span-2 bg-primary px-3 py-1.5 text-xs font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90"
+              className="col-span-2 rounded-lg bg-primary px-3 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90"
             >
               {t("portfolio.addPortfolio")}
             </button>
           </form>
 
-          <div className="border border-border">
+          <div className="overflow-hidden rounded-lg border border-border/70 bg-background/30">
             {portfolios.length === 0 && (
-              <div className="p-3 text-center text-[11px] text-muted-foreground">
+              <div className="p-3 text-center text-xs text-muted-foreground">
                 {t("portfolio.noPortfoliosYet")}
               </div>
             )}
             {portfolios.map((p) => (
               <div
                 key={p.id}
-                className="flex items-center justify-between border-t border-border/60 px-3 py-2 text-[12px] first:border-t-0"
+                className="flex items-center justify-between border-t border-border/50 px-4 py-3 text-xs transition-colors first:border-t-0 hover:bg-secondary/25"
               >
                 <div>
                   <div className="font-bold">{p.name}</div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t("portfolio.broker")}: {p.broker || "-"}
                   </div>
-                  <div className="text-[10px] text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     {t("portfolio.notes")}: {p.notes || "-"}
                   </div>
                 </div>
                 <button
                   onClick={() => onRequestDelete(p)}
-                  className="text-[10px] text-destructive hover:underline"
+                  className="text-xs text-destructive hover:underline"
                 >
                   [x]
                 </button>
@@ -787,5 +883,7 @@ function PortfoliosModal({
 }
 
 export const Route = createFileRoute("/_authenticated/portfolio/transactions")({
-  component: TransactionsPage,
+  beforeLoad: () => {
+    throw redirect({ to: "/portfolio/activity", replace: true });
+  },
 });

@@ -18,29 +18,30 @@ export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: 
   const navItems = dashboards.filter((item) => item.path);
 
   return (
-    <div className="sticky top-0 z-10 h-10 w-full border-b border-border bg-card/50 backdrop-blur">
-      <div className="flex h-full w-full items-center justify-between px-4 text-[10px] uppercase tracking-[0.2em]">
-        <div className="flex h-full items-center">
+    <div className="sticky top-0 z-10 h-10 w-full bg-background/65 px-2 pt-1 backdrop-blur-xl">
+      <div className="flex h-8 items-center justify-between gap-3 rounded-lg bg-card/45 px-3 text-xs uppercase tracking-[0.1em] shadow-[0_10px_30px_-24px_rgba(0,0,0,0.95)]">
+        <div className="flex min-w-0 items-center gap-3">
           <Link
             to="/"
-            className="inline-flex h-full items-center gap-2 text-muted-foreground hover:text-foreground"
+            className="inline-flex h-7 shrink-0 items-center gap-2 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             <GridIcon />
-            <span>{t("shell.hub")}</span>
+            <span className="hidden sm:inline">{t("shell.hub")}</span>
           </Link>
 
-          <span className="mx-3 text-border">|</span>
-
-          <nav className="flex h-full items-stretch">
+          <nav
+            aria-label={t("shell.hub")}
+            className="flex min-w-0 items-center gap-1 overflow-x-auto"
+          >
             {navItems.map((item) => (
               <Link
                 key={item.titleKey}
                 to={item.path!}
                 activeOptions={{ exact: false }}
-                className="inline-flex h-full items-center border-b-2 border-transparent px-3 text-muted-foreground hover:text-foreground"
+                className="inline-flex h-7 shrink-0 items-center rounded-md px-3 font-medium text-muted-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 activeProps={{
                   className:
-                    "inline-flex h-full items-center border-b-2 border-primary px-3 text-primary",
+                    "inline-flex h-7 shrink-0 items-center rounded-md bg-primary/12 px-3 font-medium text-primary shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring",
                 }}
               >
                 {t(item.titleKey)}
@@ -49,9 +50,13 @@ export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: 
           </nav>
         </div>
 
-        <div className="flex h-full items-center gap-3 text-muted-foreground">
-          <span className="hidden md:inline truncate max-w-[180px]">{userEmail}</span>
-          <button onClick={onLogout} className="text-primary hover:underline">
+        <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
+          <span className="hidden max-w-[180px] truncate md:inline">{userEmail}</span>
+          <button
+            type="button"
+            onClick={onLogout}
+            className="rounded-md px-2 py-1 text-primary transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          >
             {t("common.logout")}
           </button>
         </div>

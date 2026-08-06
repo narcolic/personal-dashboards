@@ -8,210 +8,246 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-import { Route as rootRouteImport } from './routes/__root'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedPortfolioIndexRouteImport } from './routes/_authenticated/portfolio/index'
-import { Route as AuthenticatedPortfolioHoldingsRouteImport } from './routes/_authenticated/portfolio/holdings'
-import { Route as AuthenticatedPortfolioHoldingsTickerRouteImport } from './routes/_authenticated/portfolio/holdings/$ticker'
-import { Route as AuthenticatedCarServiceIndexRouteImport } from './routes/_authenticated/car-service/index'
-import { Route as AuthenticatedPortfolioTransactionsRouteImport } from './routes/_authenticated/portfolio/transactions'
-import { Route as AuthenticatedPortfolioPnlRouteImport } from './routes/_authenticated/portfolio/pnl'
-import { Route as AuthenticatedPortfolioAnalyticsRouteImport } from './routes/_authenticated/portfolio/analytics'
-import { Route as AuthenticatedCarServiceVehiclesRouteImport } from './routes/_authenticated/car-service/vehicles'
-import { Route as AuthenticatedCarServiceHistoryRouteImport } from './routes/_authenticated/car-service/history'
-import { Route as AuthenticatedCarServiceAnalyticsRouteImport } from './routes/_authenticated/car-service/analytics'
-import { Route as AuthenticatedCarServiceAddRouteImport } from './routes/_authenticated/car-service/add'
-import { Route as AuthenticatedCarServiceVisitIdRouteImport } from './routes/_authenticated/car-service/$visitId'
+import { Route as rootRouteImport } from "./routes/__root"
+import { Route as IndexRouteImport } from "./routes/index"
+import { Route as AuthenticatedRouteImport } from "./routes/_authenticated"
+import { Route as LoginRouteImport } from "./routes/login"
+import { Route as AuthenticatedPortfolioRouteImport } from "./routes/_authenticated/portfolio"
+import { Route as AuthenticatedCarServiceIndexRouteImport } from "./routes/_authenticated/car-service/index"
+import { Route as AuthenticatedCarServiceVisitIdRouteImport } from "./routes/_authenticated/car-service/$visitId"
+import { Route as AuthenticatedCarServiceAddRouteImport } from "./routes/_authenticated/car-service/add"
+import { Route as AuthenticatedCarServiceAnalyticsRouteImport } from "./routes/_authenticated/car-service/analytics"
+import { Route as AuthenticatedCarServiceHistoryRouteImport } from "./routes/_authenticated/car-service/history"
+import { Route as AuthenticatedCarServiceVehiclesRouteImport } from "./routes/_authenticated/car-service/vehicles"
+import { Route as AuthenticatedPortfolioIndexRouteImport } from "./routes/_authenticated/portfolio/index"
+import { Route as AuthenticatedPortfolioActivityRouteImport } from "./routes/_authenticated/portfolio/activity"
+import { Route as AuthenticatedPortfolioAnalyticsRouteImport } from "./routes/_authenticated/portfolio/analytics"
+import { Route as AuthenticatedPortfolioInsightsRouteImport } from "./routes/_authenticated/portfolio/insights"
+import { Route as AuthenticatedPortfolioPnlRouteImport } from "./routes/_authenticated/portfolio/pnl"
+import { Route as AuthenticatedPortfolioTransactionsRouteImport } from "./routes/_authenticated/portfolio/transactions"
+import { Route as AuthenticatedPortfolioHoldingsIndexRouteImport } from "./routes/_authenticated/portfolio/holdings/index"
+import { Route as AuthenticatedPortfolioHoldingsTickerRouteImport } from "./routes/_authenticated/portfolio/holdings/$ticker"
 
-const LoginRoute = LoginRouteImport.update({
-  id: '/login',
-  path: '/login',
+const IndexRoute = IndexRouteImport.update({
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
+  id: "/_authenticated",
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const LoginRoute = LoginRouteImport.update({
+  id: "/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedPortfolioIndexRoute =
-  AuthenticatedPortfolioIndexRouteImport.update({
-    id: '/portfolio/',
-    path: '/portfolio/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedPortfolioHoldingsRoute =
-  AuthenticatedPortfolioHoldingsRouteImport.update({
-    id: '/portfolio/holdings',
-    path: '/portfolio/holdings',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedPortfolioHoldingsTickerRoute =
-  AuthenticatedPortfolioHoldingsTickerRouteImport.update({
-    id: '/portfolio/holdings/$ticker',
-    path: '/portfolio/holdings/$ticker',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
+const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
+  id: "/portfolio",
+  path: "/portfolio",
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCarServiceIndexRoute =
   AuthenticatedCarServiceIndexRouteImport.update({
-    id: '/car-service/',
-    path: '/car-service/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedPortfolioTransactionsRoute =
-  AuthenticatedPortfolioTransactionsRouteImport.update({
-    id: '/portfolio/transactions',
-    path: '/portfolio/transactions',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedPortfolioPnlRoute =
-  AuthenticatedPortfolioPnlRouteImport.update({
-    id: '/portfolio/pnl',
-    path: '/portfolio/pnl',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedPortfolioAnalyticsRoute =
-  AuthenticatedPortfolioAnalyticsRouteImport.update({
-    id: '/portfolio/analytics',
-    path: '/portfolio/analytics',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedCarServiceVehiclesRoute =
-  AuthenticatedCarServiceVehiclesRouteImport.update({
-    id: '/car-service/vehicles',
-    path: '/car-service/vehicles',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedCarServiceHistoryRoute =
-  AuthenticatedCarServiceHistoryRouteImport.update({
-    id: '/car-service/history',
-    path: '/car-service/history',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedCarServiceAnalyticsRoute =
-  AuthenticatedCarServiceAnalyticsRouteImport.update({
-    id: '/car-service/analytics',
-    path: '/car-service/analytics',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedCarServiceAddRoute =
-  AuthenticatedCarServiceAddRouteImport.update({
-    id: '/car-service/add',
-    path: '/car-service/add',
+    id: "/car-service/",
+    path: "/car-service/",
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedCarServiceVisitIdRoute =
   AuthenticatedCarServiceVisitIdRouteImport.update({
-    id: '/car-service/$visitId',
-    path: '/car-service/$visitId',
+    id: "/car-service/$visitId",
+    path: "/car-service/$visitId",
     getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCarServiceAddRoute =
+  AuthenticatedCarServiceAddRouteImport.update({
+    id: "/car-service/add",
+    path: "/car-service/add",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCarServiceAnalyticsRoute =
+  AuthenticatedCarServiceAnalyticsRouteImport.update({
+    id: "/car-service/analytics",
+    path: "/car-service/analytics",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCarServiceHistoryRoute =
+  AuthenticatedCarServiceHistoryRouteImport.update({
+    id: "/car-service/history",
+    path: "/car-service/history",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCarServiceVehiclesRoute =
+  AuthenticatedCarServiceVehiclesRouteImport.update({
+    id: "/car-service/vehicles",
+    path: "/car-service/vehicles",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedPortfolioIndexRoute =
+  AuthenticatedPortfolioIndexRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioActivityRoute =
+  AuthenticatedPortfolioActivityRouteImport.update({
+    id: "/activity",
+    path: "/activity",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioAnalyticsRoute =
+  AuthenticatedPortfolioAnalyticsRouteImport.update({
+    id: "/analytics",
+    path: "/analytics",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioInsightsRoute =
+  AuthenticatedPortfolioInsightsRouteImport.update({
+    id: "/insights",
+    path: "/insights",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioPnlRoute =
+  AuthenticatedPortfolioPnlRouteImport.update({
+    id: "/pnl",
+    path: "/pnl",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioTransactionsRoute =
+  AuthenticatedPortfolioTransactionsRouteImport.update({
+    id: "/transactions",
+    path: "/transactions",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioHoldingsIndexRoute =
+  AuthenticatedPortfolioHoldingsIndexRouteImport.update({
+    id: "/holdings/",
+    path: "/holdings/",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioHoldingsTickerRoute =
+  AuthenticatedPortfolioHoldingsTickerRouteImport.update({
+    id: "/holdings/$ticker",
+    path: "/holdings/$ticker",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/car-service/$visitId': typeof AuthenticatedCarServiceVisitIdRoute
-  '/portfolio/holdings/$ticker': typeof AuthenticatedPortfolioHoldingsTickerRoute
-  '/car-service/add': typeof AuthenticatedCarServiceAddRoute
-  '/car-service/analytics': typeof AuthenticatedCarServiceAnalyticsRoute
-  '/car-service/history': typeof AuthenticatedCarServiceHistoryRoute
-  '/car-service/vehicles': typeof AuthenticatedCarServiceVehiclesRoute
-  '/portfolio/holdings': typeof AuthenticatedPortfolioHoldingsRoute
-  '/portfolio/pnl': typeof AuthenticatedPortfolioPnlRoute
-  '/portfolio/analytics': typeof AuthenticatedPortfolioAnalyticsRoute
-  '/portfolio/transactions': typeof AuthenticatedPortfolioTransactionsRoute
-  '/car-service/': typeof AuthenticatedCarServiceIndexRoute
-  '/portfolio/': typeof AuthenticatedPortfolioIndexRoute
+  "/": typeof IndexRoute
+  "/login": typeof LoginRoute
+  "/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
+  "/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
+  "/car-service/add": typeof AuthenticatedCarServiceAddRoute
+  "/car-service/analytics": typeof AuthenticatedCarServiceAnalyticsRoute
+  "/car-service/history": typeof AuthenticatedCarServiceHistoryRoute
+  "/car-service/vehicles": typeof AuthenticatedCarServiceVehiclesRoute
+  "/portfolio/activity": typeof AuthenticatedPortfolioActivityRoute
+  "/portfolio/analytics": typeof AuthenticatedPortfolioAnalyticsRoute
+  "/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
+  "/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
+  "/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/car-service/": typeof AuthenticatedCarServiceIndexRoute
+  "/portfolio/": typeof AuthenticatedPortfolioIndexRoute
+  "/portfolio/holdings/$ticker": typeof AuthenticatedPortfolioHoldingsTickerRoute
+  "/portfolio/holdings/": typeof AuthenticatedPortfolioHoldingsIndexRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/login': typeof LoginRoute
-  '/car-service/$visitId': typeof AuthenticatedCarServiceVisitIdRoute
-  '/portfolio/holdings/$ticker': typeof AuthenticatedPortfolioHoldingsTickerRoute
-  '/car-service/add': typeof AuthenticatedCarServiceAddRoute
-  '/car-service/analytics': typeof AuthenticatedCarServiceAnalyticsRoute
-  '/car-service/history': typeof AuthenticatedCarServiceHistoryRoute
-  '/car-service/vehicles': typeof AuthenticatedCarServiceVehiclesRoute
-  '/portfolio/holdings': typeof AuthenticatedPortfolioHoldingsRoute
-  '/portfolio/pnl': typeof AuthenticatedPortfolioPnlRoute
-  '/portfolio/analytics': typeof AuthenticatedPortfolioAnalyticsRoute
-  '/portfolio/transactions': typeof AuthenticatedPortfolioTransactionsRoute
-  '/car-service': typeof AuthenticatedCarServiceIndexRoute
-  '/portfolio': typeof AuthenticatedPortfolioIndexRoute
+  "/": typeof IndexRoute
+  "/login": typeof LoginRoute
+  "/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
+  "/car-service/add": typeof AuthenticatedCarServiceAddRoute
+  "/car-service/analytics": typeof AuthenticatedCarServiceAnalyticsRoute
+  "/car-service/history": typeof AuthenticatedCarServiceHistoryRoute
+  "/car-service/vehicles": typeof AuthenticatedCarServiceVehiclesRoute
+  "/portfolio/activity": typeof AuthenticatedPortfolioActivityRoute
+  "/portfolio/analytics": typeof AuthenticatedPortfolioAnalyticsRoute
+  "/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
+  "/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
+  "/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/car-service": typeof AuthenticatedCarServiceIndexRoute
+  "/portfolio": typeof AuthenticatedPortfolioIndexRoute
+  "/portfolio/holdings/$ticker": typeof AuthenticatedPortfolioHoldingsTickerRoute
+  "/portfolio/holdings": typeof AuthenticatedPortfolioHoldingsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/login': typeof LoginRoute
-  '/_authenticated/car-service/$visitId': typeof AuthenticatedCarServiceVisitIdRoute
-  '/_authenticated/portfolio/holdings/$ticker': typeof AuthenticatedPortfolioHoldingsTickerRoute
-  '/_authenticated/car-service/add': typeof AuthenticatedCarServiceAddRoute
-  '/_authenticated/car-service/analytics': typeof AuthenticatedCarServiceAnalyticsRoute
-  '/_authenticated/car-service/history': typeof AuthenticatedCarServiceHistoryRoute
-  '/_authenticated/car-service/vehicles': typeof AuthenticatedCarServiceVehiclesRoute
-  '/_authenticated/portfolio/holdings': typeof AuthenticatedPortfolioHoldingsRoute
-  '/_authenticated/portfolio/pnl': typeof AuthenticatedPortfolioPnlRoute
-  '/_authenticated/portfolio/analytics': typeof AuthenticatedPortfolioAnalyticsRoute
-  '/_authenticated/portfolio/transactions': typeof AuthenticatedPortfolioTransactionsRoute
-  '/_authenticated/car-service/': typeof AuthenticatedCarServiceIndexRoute
-  '/_authenticated/portfolio/': typeof AuthenticatedPortfolioIndexRoute
+  "/": typeof IndexRoute
+  "/_authenticated": typeof AuthenticatedRouteWithChildren
+  "/login": typeof LoginRoute
+  "/_authenticated/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
+  "/_authenticated/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
+  "/_authenticated/car-service/add": typeof AuthenticatedCarServiceAddRoute
+  "/_authenticated/car-service/analytics": typeof AuthenticatedCarServiceAnalyticsRoute
+  "/_authenticated/car-service/history": typeof AuthenticatedCarServiceHistoryRoute
+  "/_authenticated/car-service/vehicles": typeof AuthenticatedCarServiceVehiclesRoute
+  "/_authenticated/portfolio/activity": typeof AuthenticatedPortfolioActivityRoute
+  "/_authenticated/portfolio/analytics": typeof AuthenticatedPortfolioAnalyticsRoute
+  "/_authenticated/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
+  "/_authenticated/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
+  "/_authenticated/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/_authenticated/car-service/": typeof AuthenticatedCarServiceIndexRoute
+  "/_authenticated/portfolio/": typeof AuthenticatedPortfolioIndexRoute
+  "/_authenticated/portfolio/holdings/$ticker": typeof AuthenticatedPortfolioHoldingsTickerRoute
+  "/_authenticated/portfolio/holdings/": typeof AuthenticatedPortfolioHoldingsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
-    | '/'
-    | '/login'
-    | '/car-service/$visitId'
-    | '/portfolio/holdings/$ticker'
-    | '/car-service/add'
-    | '/car-service/analytics'
-    | '/car-service/history'
-    | '/car-service/vehicles'
-    | '/portfolio/holdings'
-    | '/portfolio/pnl'
-    | '/portfolio/analytics'
-    | '/portfolio/transactions'
-    | '/car-service/'
-    | '/portfolio/'
+    | "/"
+    | "/login"
+    | "/portfolio"
+    | "/car-service/$visitId"
+    | "/car-service/add"
+    | "/car-service/analytics"
+    | "/car-service/history"
+    | "/car-service/vehicles"
+    | "/portfolio/activity"
+    | "/portfolio/analytics"
+    | "/portfolio/insights"
+    | "/portfolio/pnl"
+    | "/portfolio/transactions"
+    | "/car-service/"
+    | "/portfolio/"
+    | "/portfolio/holdings/$ticker"
+    | "/portfolio/holdings/"
   fileRoutesByTo: FileRoutesByTo
   to:
-    | '/'
-    | '/login'
-    | '/car-service/$visitId'
-    | '/portfolio/holdings/$ticker'
-    | '/car-service/add'
-    | '/car-service/analytics'
-    | '/car-service/history'
-    | '/car-service/vehicles'
-    | '/portfolio/holdings'
-    | '/portfolio/pnl'
-    | '/portfolio/analytics'
-    | '/portfolio/transactions'
-    | '/car-service'
-    | '/portfolio'
+    | "/"
+    | "/login"
+    | "/car-service/$visitId"
+    | "/car-service/add"
+    | "/car-service/analytics"
+    | "/car-service/history"
+    | "/car-service/vehicles"
+    | "/portfolio/activity"
+    | "/portfolio/analytics"
+    | "/portfolio/insights"
+    | "/portfolio/pnl"
+    | "/portfolio/transactions"
+    | "/car-service"
+    | "/portfolio"
+    | "/portfolio/holdings/$ticker"
+    | "/portfolio/holdings"
   id:
-    | '__root__'
-    | '/'
-    | '/_authenticated'
-    | '/login'
-    | '/_authenticated/car-service/$visitId'
-    | '/_authenticated/portfolio/holdings/$ticker'
-    | '/_authenticated/car-service/add'
-    | '/_authenticated/car-service/analytics'
-    | '/_authenticated/car-service/history'
-    | '/_authenticated/car-service/vehicles'
-    | '/_authenticated/portfolio/holdings'
-    | '/_authenticated/portfolio/pnl'
-    | '/_authenticated/portfolio/analytics'
-    | '/_authenticated/portfolio/transactions'
-    | '/_authenticated/car-service/'
-    | '/_authenticated/portfolio/'
+    | "__root__"
+    | "/"
+    | "/_authenticated"
+    | "/login"
+    | "/_authenticated/portfolio"
+    | "/_authenticated/car-service/$visitId"
+    | "/_authenticated/car-service/add"
+    | "/_authenticated/car-service/analytics"
+    | "/_authenticated/car-service/history"
+    | "/_authenticated/car-service/vehicles"
+    | "/_authenticated/portfolio/activity"
+    | "/_authenticated/portfolio/analytics"
+    | "/_authenticated/portfolio/insights"
+    | "/_authenticated/portfolio/pnl"
+    | "/_authenticated/portfolio/transactions"
+    | "/_authenticated/car-service/"
+    | "/_authenticated/portfolio/"
+    | "/_authenticated/portfolio/holdings/$ticker"
+    | "/_authenticated/portfolio/holdings/"
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -220,146 +256,186 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
 }
 
-declare module '@tanstack/react-router' {
+declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
+    "/": {
+      id: "/"
+      path: "/"
+      fullPath: "/"
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/portfolio/': {
-      id: '/_authenticated/portfolio/'
-      path: '/portfolio'
-      fullPath: '/portfolio/'
-      preLoaderRoute: typeof AuthenticatedPortfolioIndexRouteImport
+    "/_authenticated": {
+      id: "/_authenticated"
+      path: ""
+      fullPath: "/"
+      preLoaderRoute: typeof AuthenticatedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/login": {
+      id: "/login"
+      path: "/login"
+      fullPath: "/login"
+      preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    "/_authenticated/portfolio": {
+      id: "/_authenticated/portfolio"
+      path: "/portfolio"
+      fullPath: "/portfolio"
+      preLoaderRoute: typeof AuthenticatedPortfolioRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/portfolio/holdings/$ticker': {
-      id: '/_authenticated/portfolio/holdings/$ticker'
-      path: '/portfolio/holdings/$ticker'
-      fullPath: '/portfolio/holdings/$ticker'
-      preLoaderRoute: typeof AuthenticatedPortfolioHoldingsTickerRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/portfolio/holdings': {
-      id: '/_authenticated/portfolio/holdings'
-      path: '/portfolio/holdings'
-      fullPath: '/portfolio/holdings'
-      preLoaderRoute: typeof AuthenticatedPortfolioHoldingsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/car-service/': {
-      id: '/_authenticated/car-service/'
-      path: '/car-service'
-      fullPath: '/car-service/'
+    "/_authenticated/car-service/": {
+      id: "/_authenticated/car-service/"
+      path: "/car-service"
+      fullPath: "/car-service/"
       preLoaderRoute: typeof AuthenticatedCarServiceIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/portfolio/transactions': {
-      id: '/_authenticated/portfolio/transactions'
-      path: '/portfolio/transactions'
-      fullPath: '/portfolio/transactions'
-      preLoaderRoute: typeof AuthenticatedPortfolioTransactionsRouteImport
+    "/_authenticated/car-service/$visitId": {
+      id: "/_authenticated/car-service/$visitId"
+      path: "/car-service/$visitId"
+      fullPath: "/car-service/$visitId"
+      preLoaderRoute: typeof AuthenticatedCarServiceVisitIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/portfolio/pnl': {
-      id: '/_authenticated/portfolio/pnl'
-      path: '/portfolio/pnl'
-      fullPath: '/portfolio/pnl'
-      preLoaderRoute: typeof AuthenticatedPortfolioPnlRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/portfolio/analytics': {
-      id: '/_authenticated/portfolio/analytics'
-      path: '/portfolio/analytics'
-      fullPath: '/portfolio/analytics'
-      preLoaderRoute: typeof AuthenticatedPortfolioAnalyticsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/car-service/vehicles': {
-      id: '/_authenticated/car-service/vehicles'
-      path: '/car-service/vehicles'
-      fullPath: '/car-service/vehicles'
-      preLoaderRoute: typeof AuthenticatedCarServiceVehiclesRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/car-service/history': {
-      id: '/_authenticated/car-service/history'
-      path: '/car-service/history'
-      fullPath: '/car-service/history'
-      preLoaderRoute: typeof AuthenticatedCarServiceHistoryRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/car-service/analytics': {
-      id: '/_authenticated/car-service/analytics'
-      path: '/car-service/analytics'
-      fullPath: '/car-service/analytics'
-      preLoaderRoute: typeof AuthenticatedCarServiceAnalyticsRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/car-service/add': {
-      id: '/_authenticated/car-service/add'
-      path: '/car-service/add'
-      fullPath: '/car-service/add'
+    "/_authenticated/car-service/add": {
+      id: "/_authenticated/car-service/add"
+      path: "/car-service/add"
+      fullPath: "/car-service/add"
       preLoaderRoute: typeof AuthenticatedCarServiceAddRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/car-service/$visitId': {
-      id: '/_authenticated/car-service/$visitId'
-      path: '/car-service/$visitId'
-      fullPath: '/car-service/$visitId'
-      preLoaderRoute: typeof AuthenticatedCarServiceVisitIdRouteImport
+    "/_authenticated/car-service/analytics": {
+      id: "/_authenticated/car-service/analytics"
+      path: "/car-service/analytics"
+      fullPath: "/car-service/analytics"
+      preLoaderRoute: typeof AuthenticatedCarServiceAnalyticsRouteImport
       parentRoute: typeof AuthenticatedRoute
+    }
+    "/_authenticated/car-service/history": {
+      id: "/_authenticated/car-service/history"
+      path: "/car-service/history"
+      fullPath: "/car-service/history"
+      preLoaderRoute: typeof AuthenticatedCarServiceHistoryRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    "/_authenticated/car-service/vehicles": {
+      id: "/_authenticated/car-service/vehicles"
+      path: "/car-service/vehicles"
+      fullPath: "/car-service/vehicles"
+      preLoaderRoute: typeof AuthenticatedCarServiceVehiclesRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    "/_authenticated/portfolio/": {
+      id: "/_authenticated/portfolio/"
+      path: "/"
+      fullPath: "/portfolio/"
+      preLoaderRoute: typeof AuthenticatedPortfolioIndexRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/activity": {
+      id: "/_authenticated/portfolio/activity"
+      path: "/activity"
+      fullPath: "/portfolio/activity"
+      preLoaderRoute: typeof AuthenticatedPortfolioActivityRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/analytics": {
+      id: "/_authenticated/portfolio/analytics"
+      path: "/analytics"
+      fullPath: "/portfolio/analytics"
+      preLoaderRoute: typeof AuthenticatedPortfolioAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/insights": {
+      id: "/_authenticated/portfolio/insights"
+      path: "/insights"
+      fullPath: "/portfolio/insights"
+      preLoaderRoute: typeof AuthenticatedPortfolioInsightsRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/pnl": {
+      id: "/_authenticated/portfolio/pnl"
+      path: "/pnl"
+      fullPath: "/portfolio/pnl"
+      preLoaderRoute: typeof AuthenticatedPortfolioPnlRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/transactions": {
+      id: "/_authenticated/portfolio/transactions"
+      path: "/transactions"
+      fullPath: "/portfolio/transactions"
+      preLoaderRoute: typeof AuthenticatedPortfolioTransactionsRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/holdings/": {
+      id: "/_authenticated/portfolio/holdings/"
+      path: "/holdings"
+      fullPath: "/portfolio/holdings/"
+      preLoaderRoute: typeof AuthenticatedPortfolioHoldingsIndexRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/holdings/$ticker": {
+      id: "/_authenticated/portfolio/holdings/$ticker"
+      path: "/holdings/$ticker"
+      fullPath: "/portfolio/holdings/$ticker"
+      preLoaderRoute: typeof AuthenticatedPortfolioHoldingsTickerRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
     }
   }
 }
 
-interface AuthenticatedRouteChildren {
-  AuthenticatedCarServiceVisitIdRoute: typeof AuthenticatedCarServiceVisitIdRoute
+interface AuthenticatedPortfolioRouteChildren {
+  AuthenticatedPortfolioActivityRoute: typeof AuthenticatedPortfolioActivityRoute
+  AuthenticatedPortfolioAnalyticsRoute: typeof AuthenticatedPortfolioAnalyticsRoute
+  AuthenticatedPortfolioInsightsRoute: typeof AuthenticatedPortfolioInsightsRoute
+  AuthenticatedPortfolioPnlRoute: typeof AuthenticatedPortfolioPnlRoute
+  AuthenticatedPortfolioTransactionsRoute: typeof AuthenticatedPortfolioTransactionsRoute
+  AuthenticatedPortfolioIndexRoute: typeof AuthenticatedPortfolioIndexRoute
   AuthenticatedPortfolioHoldingsTickerRoute: typeof AuthenticatedPortfolioHoldingsTickerRoute
+  AuthenticatedPortfolioHoldingsIndexRoute: typeof AuthenticatedPortfolioHoldingsIndexRoute
+}
+
+const AuthenticatedPortfolioRouteChildren: AuthenticatedPortfolioRouteChildren =
+  {
+    AuthenticatedPortfolioActivityRoute: AuthenticatedPortfolioActivityRoute,
+    AuthenticatedPortfolioAnalyticsRoute: AuthenticatedPortfolioAnalyticsRoute,
+    AuthenticatedPortfolioInsightsRoute: AuthenticatedPortfolioInsightsRoute,
+    AuthenticatedPortfolioPnlRoute: AuthenticatedPortfolioPnlRoute,
+    AuthenticatedPortfolioTransactionsRoute:
+      AuthenticatedPortfolioTransactionsRoute,
+    AuthenticatedPortfolioIndexRoute: AuthenticatedPortfolioIndexRoute,
+    AuthenticatedPortfolioHoldingsTickerRoute:
+      AuthenticatedPortfolioHoldingsTickerRoute,
+    AuthenticatedPortfolioHoldingsIndexRoute:
+      AuthenticatedPortfolioHoldingsIndexRoute,
+  }
+
+const AuthenticatedPortfolioRouteWithChildren =
+  AuthenticatedPortfolioRoute._addFileChildren(
+    AuthenticatedPortfolioRouteChildren,
+  )
+
+interface AuthenticatedRouteChildren {
+  AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRouteWithChildren
+  AuthenticatedCarServiceVisitIdRoute: typeof AuthenticatedCarServiceVisitIdRoute
   AuthenticatedCarServiceAddRoute: typeof AuthenticatedCarServiceAddRoute
   AuthenticatedCarServiceAnalyticsRoute: typeof AuthenticatedCarServiceAnalyticsRoute
   AuthenticatedCarServiceHistoryRoute: typeof AuthenticatedCarServiceHistoryRoute
   AuthenticatedCarServiceVehiclesRoute: typeof AuthenticatedCarServiceVehiclesRoute
-  AuthenticatedPortfolioHoldingsRoute: typeof AuthenticatedPortfolioHoldingsRoute
-  AuthenticatedPortfolioPnlRoute: typeof AuthenticatedPortfolioPnlRoute
-  AuthenticatedPortfolioAnalyticsRoute: typeof AuthenticatedPortfolioAnalyticsRoute
-  AuthenticatedPortfolioTransactionsRoute: typeof AuthenticatedPortfolioTransactionsRoute
   AuthenticatedCarServiceIndexRoute: typeof AuthenticatedCarServiceIndexRoute
-  AuthenticatedPortfolioIndexRoute: typeof AuthenticatedPortfolioIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedPortfolioRoute: AuthenticatedPortfolioRouteWithChildren,
   AuthenticatedCarServiceVisitIdRoute: AuthenticatedCarServiceVisitIdRoute,
-  AuthenticatedPortfolioHoldingsTickerRoute:
-    AuthenticatedPortfolioHoldingsTickerRoute,
   AuthenticatedCarServiceAddRoute: AuthenticatedCarServiceAddRoute,
   AuthenticatedCarServiceAnalyticsRoute: AuthenticatedCarServiceAnalyticsRoute,
   AuthenticatedCarServiceHistoryRoute: AuthenticatedCarServiceHistoryRoute,
   AuthenticatedCarServiceVehiclesRoute: AuthenticatedCarServiceVehiclesRoute,
-  AuthenticatedPortfolioHoldingsRoute: AuthenticatedPortfolioHoldingsRoute,
-  AuthenticatedPortfolioPnlRoute: AuthenticatedPortfolioPnlRoute,
-  AuthenticatedPortfolioAnalyticsRoute: AuthenticatedPortfolioAnalyticsRoute,
-  AuthenticatedPortfolioTransactionsRoute:
-    AuthenticatedPortfolioTransactionsRoute,
   AuthenticatedCarServiceIndexRoute: AuthenticatedCarServiceIndexRoute,
-  AuthenticatedPortfolioIndexRoute: AuthenticatedPortfolioIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

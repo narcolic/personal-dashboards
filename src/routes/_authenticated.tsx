@@ -8,8 +8,6 @@ import {
 } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import { useEffect, useState } from "react";
-import { MarketStatusIndicator } from "@/routes/_authenticated/portfolio/components/MarketStatusIndicator";
 import { TopBar } from "@/components/shell/TopBar";
 import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
 import { useTranslation } from "react-i18next";
@@ -29,13 +27,6 @@ function AuthLayout() {
   const { user } = useAuth();
   const router = useRouter();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const [now, setNow] = useState(new Date());
-
-  useEffect(() => {
-    const i = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(i);
-  }, []);
-
   const logout = async () => {
     await supabase.auth.signOut();
     router.navigate({ to: "/login" });
@@ -44,79 +35,87 @@ function AuthLayout() {
   const isPortfolio = pathname.startsWith("/portfolio");
   const isCarService = pathname.startsWith("/car-service");
 
-  const title = isPortfolio
-    ? t("header.portfolioTerminal")
-    : isCarService
-      ? t("header.carService")
-      : t("header.hub");
-
   const desktopLinks = isPortfolio
     ? [
-        { to: "/portfolio", label: t("header.overview"), short: t("header.overview") },
-        { to: "/portfolio/analytics", label: t("header.analytics"), short: t("header.analytics") },
-        { to: "/portfolio/holdings", label: t("header.holdings"), short: t("header.holdings") },
         {
-          to: "/portfolio/transactions",
-          label: t("header.transactions"),
-          short: t("header.transactions"),
+          to: "/portfolio",
+          label: t("header.portfolio"),
+          short: t("header.portfolio"),
+          active: pathname === "/portfolio" || pathname.startsWith("/portfolio/holdings/"),
         },
-        { to: "/portfolio/pnl", label: t("header.pnl"), short: t("header.pnl") },
+        {
+          to: "/portfolio/insights",
+          label: t("header.insights"),
+          short: t("header.insights"),
+          active: pathname.startsWith("/portfolio/insights"),
+        },
+        {
+          to: "/portfolio/activity",
+          label: t("header.activity"),
+          short: t("header.activity"),
+          active: pathname.startsWith("/portfolio/activity"),
+        },
       ]
     : isCarService
       ? [
-          { to: "/car-service", label: t("header.overview"), short: t("header.overview") },
-          { to: "/car-service/history", label: t("header.history"), short: t("header.history") },
+          {
+            to: "/car-service",
+            label: t("header.overview"),
+            short: t("header.overview"),
+            active: pathname === "/car-service",
+          },
+          {
+            to: "/car-service/history",
+            label: t("header.history"),
+            short: t("header.history"),
+            active: pathname.startsWith("/car-service/history"),
+          },
           {
             to: "/car-service/analytics",
             label: t("header.analytics"),
             short: t("header.analytics"),
+            active: pathname.startsWith("/car-service/analytics"),
           },
-          { to: "/car-service/vehicles", label: t("header.vehicles"), short: t("header.vehicles") },
+          {
+            to: "/car-service/vehicles",
+            label: t("header.vehicles"),
+            short: t("header.vehicles"),
+            active: pathname.startsWith("/car-service/vehicles"),
+          },
         ]
       : [];
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar userEmail={user?.email} onLogout={logout} />
-      <header className="border-b border-border bg-card sticky top-10 z-[9]">
-        <div className="flex items-center justify-between px-4 py-2 text-[11px] uppercase tracking-[0.2em]">
-          <div className="flex items-center gap-4">
-            <div className="font-bold text-primary">{title}</div>
-            {desktopLinks.length > 0 ? (
-              <nav className="hidden md:flex items-center gap-1 text-[10px] text-muted-foreground">
-                {desktopLinks.map((link) => (
-                  <RowNavLink key={link.to} to={link.to}>
-                    {link.label}
-                  </RowNavLink>
-                ))}
-              </nav>
-            ) : null}
-          </div>
-          {isPortfolio ? (
-            <div className="flex items-center gap-4 text-[10px] text-muted-foreground">
-              <span className="hidden sm:inline">
-                {now.toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: false,
-                  timeZoneName: "short",
-                })}
-              </span>
-              <span className="hidden sm:inline">
-                <MarketStatusIndicator exchanges={["ATHEX", "NYSE", "XETR"]} />
-              </span>
-            </div>
+      <header className="sticky top-10 z-[9] bg-background/55 px-2 py-2 backdrop-blur-xl">
+        <div className="mx-auto hidden max-w-[1400px] px-2 md:block md:px-4">
+          {desktopLinks.length > 0 ? (
+            <nav
+              aria-label={isPortfolio ? t("header.portfolio") : t("header.carService")}
+              className="inline-flex items-center gap-1 rounded-xl bg-card/45 p-1 text-xs uppercase tracking-[0.1em] text-muted-foreground shadow-[0_12px_32px_-28px_rgba(0,0,0,0.9)]"
+            >
+              {desktopLinks.map((link) => (
+                <RowNavLink key={link.to} to={link.to} active={link.active}>
+                  {link.label}
+                </RowNavLink>
+              ))}
+            </nav>
           ) : null}
         </div>
         {desktopLinks.length > 0 ? (
-          <nav className="md:hidden flex border-t border-border text-[10px] uppercase tracking-[0.2em]">
-            {desktopLinks.map((link) => (
-              <RowNavLink key={link.to} to={link.to}>
-                {link.short}
-              </RowNavLink>
-            ))}
-          </nav>
+          <div className="mx-auto px-2 md:hidden">
+            <nav
+              aria-label={isPortfolio ? t("header.portfolio") : t("header.carService")}
+              className="flex min-w-0 overflow-x-auto rounded-xl bg-card/45 p-1 text-xs uppercase tracking-[0.1em] text-muted-foreground shadow-[0_12px_32px_-28px_rgba(0,0,0,0.9)]"
+            >
+              {desktopLinks.map((link) => (
+                <RowNavLink key={link.to} to={link.to} active={link.active}>
+                  {link.short}
+                </RowNavLink>
+              ))}
+            </nav>
+          </div>
         ) : null}
       </header>
       <main className="mx-auto max-w-[1400px] p-4 pb-12 md:p-6 md:pb-14">
@@ -127,13 +126,22 @@ function AuthLayout() {
   );
 }
 
-function RowNavLink({ to, children }: { to: string; children: React.ReactNode }) {
+function RowNavLink({
+  to,
+  active,
+  children,
+}: {
+  to: string;
+  active: boolean;
+  children: React.ReactNode;
+}) {
   return (
     <Link
       to={to}
-      activeOptions={{ exact: true }}
-      className="px-3 py-1 hover:text-foreground"
-      activeProps={{ className: "px-3 py-1 text-primary border-b-2 border-primary" }}
+      aria-current={active ? "page" : undefined}
+      className={`inline-flex h-9 shrink-0 items-center rounded-md px-4 font-medium transition-colors hover:bg-secondary/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+        active ? "bg-primary/12 text-primary shadow-sm" : "text-muted-foreground"
+      }`}
     >
       {children}
     </Link>

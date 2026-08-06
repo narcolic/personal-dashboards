@@ -57,19 +57,19 @@ export function PortfolioAnalyticsChart({
     <section className="analytics-panel group overflow-hidden rounded-[10px] border border-border/70 bg-card shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] transition-colors duration-300 hover:border-border">
       <header className="flex min-h-[90px] items-start justify-between gap-3 px-4 pb-1 pt-4 md:px-5">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+          <div className="flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-muted-foreground">
             <span className="text-primary">&gt;</span>
             <span>{title}</span>
           </div>
           <div className="mt-2 text-2xl font-bold tracking-tight tabular-nums md:text-[28px]">
             {displayPoint ? formatMetric(displayPoint[metric]) : "—"}
           </div>
-          <div className="mt-1 text-[11px] text-muted-foreground">
+          <div className="mt-1 text-xs text-muted-foreground">
             {displayPoint ? formatAnalyticsDate(displayPoint.date, true) : "—"}
           </div>
         </div>
         <div
-          className={`mt-1 rounded-full border px-2.5 py-1 text-[9px] uppercase tracking-[0.16em] ${
+          className={`mt-1 rounded-full border px-2.5 py-1 text-xs uppercase tracking-[0.1em] ${
             tone === "negative"
               ? "border-bear/30 bg-bear/10 text-bear"
               : "border-bull/30 bg-bull/10 text-bull"
@@ -82,11 +82,11 @@ export function PortfolioAnalyticsChart({
       <div className="relative h-[260px] w-full px-1 pb-2 md:h-[300px] md:px-2">
         {extremes ? (
           <div className="pointer-events-none absolute inset-y-0 right-3 z-10 flex flex-col justify-between pb-11 pt-5 md:right-4">
-            <span className="rounded bg-secondary/55 px-2 py-1 text-[9px] font-semibold tabular-nums text-muted-foreground/85 shadow-sm backdrop-blur-sm">
+            <span className="rounded bg-secondary/55 px-2 py-1 text-xs font-semibold tabular-nums text-muted-foreground/85 shadow-sm backdrop-blur-sm">
               {formatMetric(extremes.high)}
             </span>
             {extremes.low !== extremes.high ? (
-              <span className="rounded bg-secondary/55 px-2 py-1 text-[9px] font-semibold tabular-nums text-muted-foreground/85 shadow-sm backdrop-blur-sm">
+              <span className="rounded bg-secondary/55 px-2 py-1 text-xs font-semibold tabular-nums text-muted-foreground/85 shadow-sm backdrop-blur-sm">
                 {formatMetric(extremes.low)}
               </span>
             ) : null}

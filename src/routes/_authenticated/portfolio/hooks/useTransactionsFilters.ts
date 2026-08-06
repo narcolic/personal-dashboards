@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import type { Enriched } from "@/lib/portfolio/types";
+import { usePortfolioWorkspace } from "@/routes/_authenticated/portfolio/components/PortfolioWorkspaceState";
 
 const ALL = "__all__";
 const UNASSIGNED = "__unassigned__";
@@ -65,8 +66,12 @@ export function useTransactionsFilters({
   allRows: RowWithNative[];
   transactionCurrencies: string[];
 }) {
-  const [selected, setSelected] = useState<string>(ALL);
-  const [display, setDisplay] = useState<string>("EUR");
+  const {
+    selectedPortfolioId: selected,
+    setSelectedPortfolioId: setSelected,
+    displayCurrency: display,
+    setDisplayCurrency: setDisplay,
+  } = usePortfolioWorkspace();
 
   const rows = useMemo(() => {
     if (selected === ALL) return mergeRowsForAllPortfolios(allRows);
@@ -75,7 +80,7 @@ export function useTransactionsFilters({
   }, [allRows, selected]);
 
   const displayCurrencies = useMemo(() => {
-    const s = new Set<string>();
+    const s = new Set<string>(["EUR", "USD"]);
     for (const r of rows) {
       const c = (r.currency || "").toUpperCase();
       if (c) s.add(c);
