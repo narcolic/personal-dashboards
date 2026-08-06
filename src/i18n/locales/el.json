@@ -97,6 +97,8 @@
     "losers": "ΧΑΜΕΝΕΣ",
     "netWorth": "ΚΑΘΑΡΗ ΑΞΙΑ",
     "portfolioValue": "ΑΞΙΑ ΧΑΡΤΟΦΥΛΑΚΙΟΥ",
+    "totalValue": "ΣΥΝΟΛΙΚΗ ΑΞΙΑ",
+    "scope": "ΠΕΔΙΟ",
     "dayPnl": "ΗΜΕΡΗΣΙΑ ΚΕΡΔΗ/ΖΗΜΙΕΣ",
     "unrealized": "ΚΕΡΔΗ",
     "totalUnrealizedPnl": "ΣΥΝΟΛΙΚΑ ΜΗ ΠΡΑΓΜΑΤΟΠΟΙΗΜΕΝΑ ΚΕΡΔΗ/ΖΗΜΙΕΣ",

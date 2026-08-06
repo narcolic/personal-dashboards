@@ -39,8 +39,8 @@ function AuthLayout() {
     ? [
         {
           to: "/portfolio",
-          label: t("header.portfolio"),
-          short: t("header.portfolio"),
+          label: t("header.overview"),
+          short: t("header.overview"),
           active: pathname === "/portfolio" || pathname.startsWith("/portfolio/holdings/"),
         },
         {

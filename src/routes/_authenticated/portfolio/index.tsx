@@ -148,7 +148,7 @@ function PortfolioPage() {
         <div className="analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/80 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
           <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(220px,1fr)_minmax(220px,1fr)]">
             <PortfolioPulseMetric
-              label={t("portfolio.portfolioValue")}
+              label={t("portfolio.totalValue")}
               value={fmtCurrency(totals.marketValue, display)}
               lead
             />

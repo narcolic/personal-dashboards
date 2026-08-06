@@ -98,6 +98,8 @@
     "losers": "LOSERS",
     "netWorth": "NET WORTH",
     "portfolioValue": "PORTFOLIO VALUE",
+    "totalValue": "TOTAL VALUE",
+    "scope": "SCOPE",
     "dayPnl": "DAY P&L",
     "unrealized": "UNREALIZED",
     "totalUnrealizedPnl": "TOTAL UNREALIZED P&L",

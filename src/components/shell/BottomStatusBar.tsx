@@ -84,12 +84,12 @@ export function BottomStatusBar() {
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card/95 backdrop-blur">
-      <div className="flex h-8 items-center justify-between px-3 text-xs uppercase tracking-[0.1em] md:px-4">
+    <div className="fixed inset-x-0 bottom-0 z-20 px-2 pb-1">
+      <div className="flex h-9 items-center justify-between rounded-lg bg-card/70 px-3 text-xs uppercase tracking-[0.1em] shadow-[0_-12px_30px_-26px_rgba(0,0,0,0.95)] backdrop-blur-xl md:px-4">
         <div className="inline-flex min-w-0 items-center gap-3">
-          <span className="inline-flex items-center gap-2 text-green-500">
+          <span className="inline-flex items-center gap-2 rounded-full bg-bull/10 px-2 py-1 text-bull">
             <span
-              className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse"
+              className="inline-block h-1.5 w-1.5 rounded-full bg-bull animate-pulse"
               aria-hidden="true"
             />
             <span>LIVE</span>
@@ -111,13 +111,13 @@ export function BottomStatusBar() {
         </div>
 
         <div className="flex items-center text-muted-foreground">
-          <div className="inline-flex items-center bg-secondary/20">
+          <div className="inline-flex items-center rounded-lg bg-secondary/30 p-1 shadow-inner">
             <div className="relative" ref={languageMenuRef}>
               <button
                 type="button"
                 ref={languageButtonRef}
                 onClick={() => setLanguageMenuOpen((open) => !open)}
-                className="inline-flex h-6 items-center gap-1 px-2 text-foreground hover:bg-secondary/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="inline-flex h-6 items-center gap-1 rounded-md px-2 text-foreground transition-colors hover:bg-card/70 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 aria-haspopup="menu"
                 aria-expanded={languageMenuOpen}
                 aria-label={`${t("common.language")}: ${currentLanguageLabel}`}
@@ -129,7 +129,7 @@ export function BottomStatusBar() {
 
               {languageMenuOpen ? (
                 <div
-                  className="absolute bottom-full right-0 mb-1 min-w-[88px] border border-border bg-card p-1"
+                  className="absolute bottom-full right-0 mb-2 min-w-[88px] rounded-lg bg-card/95 p-1 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl"
                   role="menu"
                   aria-label={t("common.language")}
                 >
@@ -147,10 +147,10 @@ export function BottomStatusBar() {
                           });
                           setLanguageMenuOpen(false);
                         }}
-                        className={`block w-full border px-2 py-1 text-left text-xs uppercase tracking-[0.1em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                        className={`block w-full rounded-md px-2 py-1.5 text-left text-xs uppercase tracking-[0.1em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                           isActive
-                            ? "border-primary text-primary"
-                            : "border-transparent text-foreground hover:border-border hover:bg-secondary/50"
+                            ? "bg-primary/12 text-primary"
+                            : "text-foreground hover:bg-secondary/50"
                         }`}
                       >
                         {language.label}
@@ -161,7 +161,7 @@ export function BottomStatusBar() {
               ) : null}
             </div>
 
-            <span aria-hidden="true" className="h-4 w-px bg-border/80" />
+            <span aria-hidden="true" className="h-4 w-px bg-border/45" />
 
             <div
               className="inline-flex h-6 items-center"
@@ -180,10 +180,10 @@ export function BottomStatusBar() {
                     aria-label={option.label}
                     title={option.label}
                     onClick={() => setMode(option.mode)}
-                    className={`h-6 w-7 text-[12px] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                    className={`h-6 w-7 rounded-md text-[12px] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                       isActive
-                        ? "bg-primary/15 text-primary"
-                        : "text-muted-foreground hover:bg-secondary/55 hover:text-foreground"
+                        ? "bg-primary/12 text-primary"
+                        : "text-muted-foreground hover:bg-card/70 hover:text-foreground"
                     }`}
                   >
                     <span aria-hidden="true">{option.icon}</span>
