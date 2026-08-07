@@ -88,7 +88,7 @@ function AuthLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar userEmail={user?.email} onLogout={logout} />
-      <header className="sticky top-10 z-[9] bg-background/55 px-2 py-2 backdrop-blur-xl">
+      <header className="sticky top-10 z-[9] bg-background/55 px-4 py-2 backdrop-blur-xl md:px-2">
         <div className="mx-auto hidden max-w-[1400px] px-2 md:block md:px-4">
           {desktopLinks.length > 0 ? (
             <nav
@@ -104,13 +104,14 @@ function AuthLayout() {
           ) : null}
         </div>
         {desktopLinks.length > 0 ? (
-          <div className="mx-auto px-2 md:hidden">
+          <div className="mx-auto md:hidden">
             <nav
               aria-label={isPortfolio ? t("header.portfolio") : t("header.carService")}
-              className="flex min-w-0 overflow-x-auto rounded-xl bg-card/45 p-1 text-xs uppercase tracking-[0.1em] text-muted-foreground shadow-[0_12px_32px_-28px_rgba(0,0,0,0.9)]"
+              className="grid w-full rounded-xl bg-card/45 p-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground shadow-[0_12px_32px_-28px_rgba(0,0,0,0.9)]"
+              style={{ gridTemplateColumns: `repeat(${desktopLinks.length}, minmax(0, 1fr))` }}
             >
               {desktopLinks.map((link) => (
-                <RowNavLink key={link.to} to={link.to} active={link.active}>
+                <RowNavLink key={link.to} to={link.to} active={link.active} fill>
                   {link.short}
                 </RowNavLink>
               ))}
@@ -129,19 +130,21 @@ function AuthLayout() {
 function RowNavLink({
   to,
   active,
+  fill = false,
   children,
 }: {
   to: string;
   active: boolean;
+  fill?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <Link
       to={to}
       aria-current={active ? "page" : undefined}
-      className={`inline-flex h-9 shrink-0 items-center rounded-md px-4 font-medium transition-colors hover:bg-secondary/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-        active ? "bg-primary/12 text-primary shadow-sm" : "text-muted-foreground"
-      }`}
+      className={`inline-flex h-9 min-w-0 items-center rounded-md font-medium transition-colors hover:bg-secondary/45 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+        fill ? "w-full justify-center px-1" : "shrink-0 px-4"
+      } ${active ? "bg-primary/12 text-primary shadow-sm" : "text-muted-foreground"}`}
     >
       {children}
     </Link>

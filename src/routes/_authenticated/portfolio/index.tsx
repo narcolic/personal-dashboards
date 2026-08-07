@@ -146,7 +146,7 @@ function PortfolioPage() {
       <section aria-labelledby="portfolio-summary-heading" className="space-y-3">
         <SectionHeading id="portfolio-summary-heading">{t("portfolio.atAGlance")}</SectionHeading>
         <div className="analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/80 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
-          <div className="grid grid-cols-1 md:grid-cols-[minmax(0,1.35fr)_minmax(220px,1fr)_minmax(220px,1fr)]">
+          <div className="grid grid-cols-2 md:grid-cols-[minmax(0,1.35fr)_minmax(220px,1fr)_minmax(220px,1fr)]">
             <PortfolioPulseMetric
               label={t("portfolio.totalValue")}
               value={fmtCurrency(totals.marketValue, display)}
@@ -163,6 +163,7 @@ function PortfolioPage() {
               value={formatSignedCurrency(totals.unrealized, display)}
               detail={`${formatDirection(totals.unrealized)} ${fmtPct(totals.unrealizedPct)}`}
               tone={totals.unrealized >= 0 ? "bull" : "bear"}
+              right
             />
           </div>
         </div>
@@ -374,35 +375,48 @@ function PortfolioPulseMetric({
   detail,
   tone,
   lead = false,
+  right = false,
 }: {
   label: string;
   value: string;
   detail?: string;
   tone?: "bull" | "bear";
   lead?: boolean;
+  right?: boolean;
 }) {
   const toneClass =
     tone === "bull" ? "text-bull" : tone === "bear" ? "text-bear" : "text-foreground";
 
   return (
     <div
-      className={`relative px-5 py-5 md:px-6 ${
-        lead ? "bg-primary/[0.035]" : "border-t border-border/50 md:border-l md:border-t-0"
+      className={`relative text-center md:px-6 md:py-5 md:text-left ${
+        lead
+          ? "col-span-2 bg-primary/[0.035] px-5 py-6 md:col-span-1"
+          : `border-t border-border/50 px-3 py-4 md:border-l md:border-t-0 ${right ? "border-l" : ""}`
       }`}
     >
       {lead ? (
-        <div aria-hidden="true" className="absolute inset-y-5 left-0 w-0.5 rounded-r bg-primary" />
+        <div
+          aria-hidden="true"
+          className="absolute left-1/2 top-0 h-0.5 w-12 -translate-x-1/2 rounded-b bg-primary md:inset-y-5 md:left-0 md:h-auto md:w-0.5 md:translate-x-0 md:rounded-r"
+        />
       ) : null}
-      <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{label}</div>
+      <div className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground md:text-xs md:tracking-[0.14em]">
+        {label}
+      </div>
       <div
-        className={`mt-3 font-bold tracking-tight tabular-nums ${
-          lead ? "text-3xl md:text-[2.1rem]" : "text-2xl"
+        className={`font-bold tracking-tight tabular-nums ${
+          lead ? "mt-3 text-3xl md:text-[2.1rem]" : "mt-2 text-xl md:mt-3 md:text-2xl"
         } ${toneClass}`}
       >
         {value}
       </div>
       {detail ? (
-        <div className={`mt-2 text-xs font-semibold tabular-nums ${toneClass}`}>{detail}</div>
+        <div
+          className={`mt-1.5 text-[10px] font-semibold tabular-nums md:mt-2 md:text-xs ${toneClass}`}
+        >
+          {detail}
+        </div>
       ) : null}
     </div>
   );

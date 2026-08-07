@@ -110,7 +110,7 @@ export function TransactionsTable({
 
   return (
     <>
-      <div className="space-y-3 md:hidden">
+      <div className="space-y-2 md:hidden">
         {isLoading ? <MobileMessage>{t("common.loading")}</MobileMessage> : null}
         {!isLoading && sortedRows.length === 0 ? (
           <MobileMessage>{t("portfolio.noTransactionsYet")}</MobileMessage>
@@ -118,10 +118,10 @@ export function TransactionsTable({
         {sortedRows.map((position) => (
           <article
             key={position.id}
-            className="analytics-panel rounded-[10px] border border-border/70 bg-card/80 p-4 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]"
+            className="analytics-panel rounded-[10px] border border-border/70 bg-card/80 p-3 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]"
           >
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex min-w-0 items-start gap-3">
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex min-w-0 items-start gap-2.5">
                 <input
                   type="checkbox"
                   aria-label={`${t("portfolio.selectTransaction")} ${position.ticker}`}
@@ -135,7 +135,7 @@ export function TransactionsTable({
                 />
                 <div className="min-w-0">
                   <div className="font-bold text-primary">{position.ticker}</div>
-                  <div className="mt-0.5 text-xs text-muted-foreground">
+                  <div className="mt-0.5 text-[10px] leading-tight text-muted-foreground">
                     {position.transaction_date} · {portfolioName(position.portfolio_id)}
                   </div>
                 </div>
@@ -145,7 +145,7 @@ export function TransactionsTable({
                 onDelete={() => onDelete(position.id, position.ticker, position.transaction_date)}
               />
             </div>
-            <div className="mt-4 grid grid-cols-3 gap-3 border-t border-border/50 pt-3 text-xs">
+            <div className="mt-2 grid grid-cols-3 gap-2 border-t border-border/50 pt-2 text-[11px]">
               <MobileValue label={t("portfolio.action")} value={position.action ?? "buy"} />
               <MobileValue
                 label={t("portfolio.shares")}
@@ -334,8 +334,8 @@ function MobileValue({
 }) {
   return (
     <div className={align === "right" ? "text-right" : "text-left"}>
-      <div className="text-xs uppercase text-muted-foreground">{label}</div>
-      <div className="mt-1 font-medium tabular-nums uppercase">{value}</div>
+      <div className="text-[9px] uppercase tracking-[0.04em] text-muted-foreground">{label}</div>
+      <div className="mt-0.5 font-medium leading-tight tabular-nums uppercase">{value}</div>
     </div>
   );
 }
