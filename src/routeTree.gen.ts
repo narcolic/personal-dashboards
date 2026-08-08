@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from "./routes/__root"
 import { Route as IndexRouteImport } from "./routes/index"
 import { Route as AuthenticatedRouteImport } from "./routes/_authenticated"
 import { Route as LoginRouteImport } from "./routes/login"
+import { Route as AuthenticatedCarServiceRouteImport } from "./routes/_authenticated/car-service"
 import { Route as AuthenticatedPortfolioRouteImport } from "./routes/_authenticated/portfolio"
 import { Route as AuthenticatedCarServiceIndexRouteImport } from "./routes/_authenticated/car-service/index"
 import { Route as AuthenticatedCarServiceVisitIdRouteImport } from "./routes/_authenticated/car-service/$visitId"
@@ -42,6 +43,11 @@ const LoginRoute = LoginRouteImport.update({
   path: "/login",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedCarServiceRoute = AuthenticatedCarServiceRouteImport.update({
+  id: "/car-service",
+  path: "/car-service",
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
   id: "/portfolio",
   path: "/portfolio",
@@ -49,39 +55,39 @@ const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
 } as any)
 const AuthenticatedCarServiceIndexRoute =
   AuthenticatedCarServiceIndexRouteImport.update({
-    id: "/car-service/",
-    path: "/car-service/",
-    getParentRoute: () => AuthenticatedRoute,
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
 const AuthenticatedCarServiceVisitIdRoute =
   AuthenticatedCarServiceVisitIdRouteImport.update({
-    id: "/car-service/$visitId",
-    path: "/car-service/$visitId",
-    getParentRoute: () => AuthenticatedRoute,
+    id: "/$visitId",
+    path: "/$visitId",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
 const AuthenticatedCarServiceAddRoute =
   AuthenticatedCarServiceAddRouteImport.update({
-    id: "/car-service/add",
-    path: "/car-service/add",
-    getParentRoute: () => AuthenticatedRoute,
+    id: "/add",
+    path: "/add",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
 const AuthenticatedCarServiceAnalyticsRoute =
   AuthenticatedCarServiceAnalyticsRouteImport.update({
-    id: "/car-service/analytics",
-    path: "/car-service/analytics",
-    getParentRoute: () => AuthenticatedRoute,
+    id: "/analytics",
+    path: "/analytics",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
 const AuthenticatedCarServiceHistoryRoute =
   AuthenticatedCarServiceHistoryRouteImport.update({
-    id: "/car-service/history",
-    path: "/car-service/history",
-    getParentRoute: () => AuthenticatedRoute,
+    id: "/history",
+    path: "/history",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
 const AuthenticatedCarServiceVehiclesRoute =
   AuthenticatedCarServiceVehiclesRouteImport.update({
-    id: "/car-service/vehicles",
-    path: "/car-service/vehicles",
-    getParentRoute: () => AuthenticatedRoute,
+    id: "/vehicles",
+    path: "/vehicles",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
 const AuthenticatedPortfolioIndexRoute =
   AuthenticatedPortfolioIndexRouteImport.update({
@@ -135,6 +141,7 @@ const AuthenticatedPortfolioHoldingsTickerRoute =
 export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
   "/login": typeof LoginRoute
+  "/car-service": typeof AuthenticatedCarServiceRouteWithChildren
   "/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
   "/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
   "/car-service/add": typeof AuthenticatedCarServiceAddRoute
@@ -174,6 +181,7 @@ export interface FileRoutesById {
   "/": typeof IndexRoute
   "/_authenticated": typeof AuthenticatedRouteWithChildren
   "/login": typeof LoginRoute
+  "/_authenticated/car-service": typeof AuthenticatedCarServiceRouteWithChildren
   "/_authenticated/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
   "/_authenticated/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
   "/_authenticated/car-service/add": typeof AuthenticatedCarServiceAddRoute
@@ -195,6 +203,7 @@ export interface FileRouteTypes {
   fullPaths:
     | "/"
     | "/login"
+    | "/car-service"
     | "/portfolio"
     | "/car-service/$visitId"
     | "/car-service/add"
@@ -233,6 +242,7 @@ export interface FileRouteTypes {
     | "/"
     | "/_authenticated"
     | "/login"
+    | "/_authenticated/car-service"
     | "/_authenticated/portfolio"
     | "/_authenticated/car-service/$visitId"
     | "/_authenticated/car-service/add"
@@ -279,6 +289,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/_authenticated/car-service": {
+      id: "/_authenticated/car-service"
+      path: "/car-service"
+      fullPath: "/car-service"
+      preLoaderRoute: typeof AuthenticatedCarServiceRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     "/_authenticated/portfolio": {
       id: "/_authenticated/portfolio"
       path: "/portfolio"
@@ -288,45 +305,45 @@ declare module "@tanstack/react-router" {
     }
     "/_authenticated/car-service/": {
       id: "/_authenticated/car-service/"
-      path: "/car-service"
+      path: "/"
       fullPath: "/car-service/"
       preLoaderRoute: typeof AuthenticatedCarServiceIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
     "/_authenticated/car-service/$visitId": {
       id: "/_authenticated/car-service/$visitId"
-      path: "/car-service/$visitId"
+      path: "/$visitId"
       fullPath: "/car-service/$visitId"
       preLoaderRoute: typeof AuthenticatedCarServiceVisitIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
     "/_authenticated/car-service/add": {
       id: "/_authenticated/car-service/add"
-      path: "/car-service/add"
+      path: "/add"
       fullPath: "/car-service/add"
       preLoaderRoute: typeof AuthenticatedCarServiceAddRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
     "/_authenticated/car-service/analytics": {
       id: "/_authenticated/car-service/analytics"
-      path: "/car-service/analytics"
+      path: "/analytics"
       fullPath: "/car-service/analytics"
       preLoaderRoute: typeof AuthenticatedCarServiceAnalyticsRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
     "/_authenticated/car-service/history": {
       id: "/_authenticated/car-service/history"
-      path: "/car-service/history"
+      path: "/history"
       fullPath: "/car-service/history"
       preLoaderRoute: typeof AuthenticatedCarServiceHistoryRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
     "/_authenticated/car-service/vehicles": {
       id: "/_authenticated/car-service/vehicles"
-      path: "/car-service/vehicles"
+      path: "/vehicles"
       fullPath: "/car-service/vehicles"
       preLoaderRoute: typeof AuthenticatedCarServiceVehiclesRouteImport
-      parentRoute: typeof AuthenticatedRoute
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
     "/_authenticated/portfolio/": {
       id: "/_authenticated/portfolio/"
@@ -387,6 +404,31 @@ declare module "@tanstack/react-router" {
   }
 }
 
+interface AuthenticatedCarServiceRouteChildren {
+  AuthenticatedCarServiceVisitIdRoute: typeof AuthenticatedCarServiceVisitIdRoute
+  AuthenticatedCarServiceAddRoute: typeof AuthenticatedCarServiceAddRoute
+  AuthenticatedCarServiceAnalyticsRoute: typeof AuthenticatedCarServiceAnalyticsRoute
+  AuthenticatedCarServiceHistoryRoute: typeof AuthenticatedCarServiceHistoryRoute
+  AuthenticatedCarServiceVehiclesRoute: typeof AuthenticatedCarServiceVehiclesRoute
+  AuthenticatedCarServiceIndexRoute: typeof AuthenticatedCarServiceIndexRoute
+}
+
+const AuthenticatedCarServiceRouteChildren: AuthenticatedCarServiceRouteChildren =
+  {
+    AuthenticatedCarServiceVisitIdRoute: AuthenticatedCarServiceVisitIdRoute,
+    AuthenticatedCarServiceAddRoute: AuthenticatedCarServiceAddRoute,
+    AuthenticatedCarServiceAnalyticsRoute:
+      AuthenticatedCarServiceAnalyticsRoute,
+    AuthenticatedCarServiceHistoryRoute: AuthenticatedCarServiceHistoryRoute,
+    AuthenticatedCarServiceVehiclesRoute: AuthenticatedCarServiceVehiclesRoute,
+    AuthenticatedCarServiceIndexRoute: AuthenticatedCarServiceIndexRoute,
+  }
+
+const AuthenticatedCarServiceRouteWithChildren =
+  AuthenticatedCarServiceRoute._addFileChildren(
+    AuthenticatedCarServiceRouteChildren,
+  )
+
 interface AuthenticatedPortfolioRouteChildren {
   AuthenticatedPortfolioActivityRoute: typeof AuthenticatedPortfolioActivityRoute
   AuthenticatedPortfolioAnalyticsRoute: typeof AuthenticatedPortfolioAnalyticsRoute
@@ -419,23 +461,13 @@ const AuthenticatedPortfolioRouteWithChildren =
   )
 
 interface AuthenticatedRouteChildren {
+  AuthenticatedCarServiceRoute: typeof AuthenticatedCarServiceRouteWithChildren
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRouteWithChildren
-  AuthenticatedCarServiceVisitIdRoute: typeof AuthenticatedCarServiceVisitIdRoute
-  AuthenticatedCarServiceAddRoute: typeof AuthenticatedCarServiceAddRoute
-  AuthenticatedCarServiceAnalyticsRoute: typeof AuthenticatedCarServiceAnalyticsRoute
-  AuthenticatedCarServiceHistoryRoute: typeof AuthenticatedCarServiceHistoryRoute
-  AuthenticatedCarServiceVehiclesRoute: typeof AuthenticatedCarServiceVehiclesRoute
-  AuthenticatedCarServiceIndexRoute: typeof AuthenticatedCarServiceIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
+  AuthenticatedCarServiceRoute: AuthenticatedCarServiceRouteWithChildren,
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRouteWithChildren,
-  AuthenticatedCarServiceVisitIdRoute: AuthenticatedCarServiceVisitIdRoute,
-  AuthenticatedCarServiceAddRoute: AuthenticatedCarServiceAddRoute,
-  AuthenticatedCarServiceAnalyticsRoute: AuthenticatedCarServiceAnalyticsRoute,
-  AuthenticatedCarServiceHistoryRoute: AuthenticatedCarServiceHistoryRoute,
-  AuthenticatedCarServiceVehiclesRoute: AuthenticatedCarServiceVehiclesRoute,
-  AuthenticatedCarServiceIndexRoute: AuthenticatedCarServiceIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -6,11 +6,11 @@ export function AnnualSpendChart({ data }: { data: { year: string; total: number
   const { t } = useTranslation();
 
   return (
-    <section className="border border-border bg-card p-4">
-      <div className="mb-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+    <section className="analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/70 p-3 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] md:p-4">
+      <div className="mb-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
         {t("car.analyticsLabels.annualSpend")}
       </div>
-      <div className="h-56">
+      <div className="h-48 md:h-56">
         <ResponsiveContainer>
           <BarChart data={data}>
             <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" />

@@ -236,14 +236,17 @@ export function ServiceHistoryEditor({
   };
 
   return (
-    <form onSubmit={save} className="border border-border bg-card font-mono">
+    <form
+      onSubmit={save}
+      className="analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/70 font-mono shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]"
+    >
       <section className="p-4 md:p-6">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label={t("car.editor.vehicle")} error={errors.vehicleId}>
             <select
               value={resolvedVehicleId}
               onChange={(e) => setFormField("vehicleId", e.target.value)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
             >
               <option value="">{t("car.editor.selectVehicle")}</option>
               {vehicles.map((vehicle) => (
@@ -259,7 +262,7 @@ export function ServiceHistoryEditor({
               type="date"
               value={form.serviceDate}
               onChange={(e) => setFormField("serviceDate", e.target.value)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
 
@@ -269,7 +272,7 @@ export function ServiceHistoryEditor({
               min="0"
               value={form.odometerKm}
               onChange={(e) => setFormField("odometerKm", e.target.value)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
 
@@ -278,7 +281,7 @@ export function ServiceHistoryEditor({
               type="text"
               value={form.workshop}
               onChange={(e) => setFormField("workshop", e.target.value)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
 
@@ -289,7 +292,7 @@ export function ServiceHistoryEditor({
               min="0"
               value={form.vatRatePct}
               onChange={(e) => setFormField("vatRatePct", e.target.value)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
 
@@ -298,7 +301,7 @@ export function ServiceHistoryEditor({
               rows={2}
               value={form.notes}
               onChange={(e) => setFormField("notes", e.target.value)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
+              className="w-full rounded-md border border-border/70 bg-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
 
@@ -317,7 +320,7 @@ export function ServiceHistoryEditor({
       <div className="border-b border-border" />
 
       <section className="p-4 md:p-6 space-y-3">
-        <div className="grid grid-cols-14 gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="hidden grid-cols-14 gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:grid">
           <div className="col-span-3">{t("car.editor.jobTask")}</div>
           <div className="col-span-2">{t("car.editor.category")}</div>
           <div className="col-span-2 text-right">{t("car.editor.priceExVat")}</div>
@@ -341,9 +344,13 @@ export function ServiceHistoryEditor({
           const categoryExactMatch = categoryOptions.some((option) => option === categoryQuery);
 
           return (
-            <div key={`line-${index}`} className="space-y-1">
-              <div className="grid grid-cols-14 gap-2 text-[11px]">
-                <div className="col-span-3 relative">
+            <div
+              key={`line-${index}`}
+              className="space-y-1 rounded-lg border border-border/70 bg-background/30 p-3 md:rounded-none md:border-0 md:bg-transparent md:p-0"
+            >
+              <div className="grid grid-cols-2 gap-3 text-[11px] md:grid-cols-14 md:gap-2">
+                <div className="relative col-span-2 md:col-span-3">
+                  <MobileFieldLabel>{t("car.editor.jobTask")}</MobileFieldLabel>
                   <input
                     value={line.jobName}
                     onFocus={() => setJobMenuOpenIndex(index)}
@@ -351,7 +358,7 @@ export function ServiceHistoryEditor({
                       setTimeout(() => setJobMenuOpenIndex((v) => (v === index ? null : v)), 120)
                     }
                     onChange={(e) => setLineField(index, "jobName", e.target.value)}
-                    className="w-full border border-border bg-input px-2 py-1.5 text-foreground focus:border-primary focus:outline-none"
+                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
                   />
                   {jobMenuOpenIndex === index && (query.length > 0 || options.length > 0) ? (
                     <div className="absolute z-10 mt-1 max-h-44 w-full overflow-auto border border-border bg-card">
@@ -384,7 +391,8 @@ export function ServiceHistoryEditor({
                   ) : null}
                 </div>
 
-                <div className="col-span-2 relative">
+                <div className="relative col-span-2 md:col-span-2">
+                  <MobileFieldLabel>{t("car.editor.category")}</MobileFieldLabel>
                   <input
                     value={line.category}
                     onFocus={() => setCategoryMenuOpenIndex(index)}
@@ -395,7 +403,7 @@ export function ServiceHistoryEditor({
                       )
                     }
                     onChange={(e) => setLineField(index, "category", e.target.value.toUpperCase())}
-                    className="w-full border border-border bg-input px-2 py-1.5 text-foreground focus:border-primary focus:outline-none"
+                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
                   />
                   {categoryMenuOpenIndex === index &&
                   (categoryQuery.length > 0 || categoryOptions.length > 0) ? (
@@ -431,44 +439,50 @@ export function ServiceHistoryEditor({
                   ) : null}
                 </div>
 
-                <div className="col-span-2">
+                <div className="col-span-1 md:col-span-2">
+                  <MobileFieldLabel>{t("car.editor.priceExVat")}</MobileFieldLabel>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={line.unitPriceExVat}
                     onChange={(e) => setLineField(index, "unitPriceExVat", e.target.value)}
-                    className="w-full border border-border bg-input px-2 py-1.5 text-right text-foreground focus:border-primary focus:outline-none"
+                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-right text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
                   />
                 </div>
-                <div className="col-span-1">
+                <div className="col-span-1 md:col-span-1">
+                  <MobileFieldLabel>{t("car.editor.qty")}</MobileFieldLabel>
                   <input
                     type="number"
                     step="0.01"
                     min="0"
                     value={line.quantity}
                     onChange={(e) => setLineField(index, "quantity", e.target.value)}
-                    className="w-full border border-border bg-input px-2 py-1.5 text-right text-foreground focus:border-primary focus:outline-none"
+                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-right text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
                   />
                 </div>
-                <div className="col-span-2 px-2 py-1.5 text-right text-muted-foreground">
-                  {formatCurrency(computedLines[index]?.total ?? 0)}
+                <div className="col-span-1 rounded-md bg-secondary/25 px-3 py-2 text-left text-muted-foreground md:col-span-2 md:bg-transparent md:px-2 md:py-1.5 md:text-right">
+                  <MobileFieldLabel>{t("car.editor.lineTotal")}</MobileFieldLabel>
+                  <span className="font-semibold tabular-nums text-foreground">
+                    {formatCurrency(computedLines[index]?.total ?? 0)}
+                  </span>
                 </div>
-                <div className="col-span-2">
+                <div className="col-span-2 md:col-span-2">
+                  <MobileFieldLabel>{t("car.editor.notes")}</MobileFieldLabel>
                   <input
                     value={line.notes}
                     onChange={(e) => setLineField(index, "notes", e.target.value)}
-                    className="w-full border border-border bg-input px-2 py-1.5 text-foreground focus:border-primary focus:outline-none"
+                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
                   />
                 </div>
-                <div className="col-span-2 text-right">
+                <div className="col-span-1 flex items-end justify-end md:col-span-2 md:block md:text-right">
                   <button
                     type="button"
                     onClick={() => removeLine(index)}
-                    className="px-2 py-1.5 text-destructive hover:underline"
+                    className="inline-flex h-9 items-center rounded-md px-3 text-[10px] uppercase text-destructive hover:bg-destructive/10 md:h-auto md:px-2 md:py-1.5"
                     aria-label={t("car.editor.removeJobAria", { index: index + 1 })}
                   >
-                    x
+                    {t("car.editor.remove")}
                   </button>
                 </div>
               </div>
@@ -482,16 +496,16 @@ export function ServiceHistoryEditor({
         <button
           type="button"
           onClick={addLine}
-          className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
+          className="inline-flex h-9 items-center rounded-md border border-primary/35 px-3 text-[10px] uppercase tracking-[0.14em] text-primary hover:bg-primary/10"
         >
           {t("car.editor.addJob")}
         </button>
         {errors.jobs ? <div className="text-[11px] text-destructive">{errors.jobs}</div> : null}
       </section>
 
-      <div className="border-t border-border p-4 md:p-6">
+      <div className="sticky bottom-10 z-[8] border-t border-border/70 bg-card/95 p-3 backdrop-blur-xl md:static md:bg-transparent md:p-6 md:backdrop-blur-none">
         <div className="space-y-4">
-          <div className="w-full max-w-xs space-y-2 text-[11px] uppercase tracking-[0.2em] md:ml-auto">
+          <div className="w-full space-y-1.5 text-[10px] uppercase tracking-[0.12em] sm:max-w-xs md:ml-auto md:text-[11px] md:tracking-[0.2em]">
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">{t("car.editor.subtotalExVat")}</span>
               <span>{formatCurrency(subtotal)}</span>
@@ -518,7 +532,7 @@ export function ServiceHistoryEditor({
                 <button
                   type="submit"
                   disabled={isSaving}
-                  className="bg-primary px-4 py-2 text-[11px] font-bold uppercase tracking-[0.2em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
+                  className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
                 >
                   {isSaving ? t("car.editor.saving") : submitLabel}
                 </button>
@@ -527,7 +541,7 @@ export function ServiceHistoryEditor({
                   <button
                     type="button"
                     onClick={onCancel}
-                    className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:text-foreground"
+                    className="inline-flex h-10 items-center rounded-md border border-border/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
                   >
                     {t("common.cancel")}
                   </button>
@@ -582,5 +596,13 @@ function Field({
       {children}
       {error ? <div className="mt-1 text-[11px] text-destructive">{error}</div> : null}
     </label>
+  );
+}
+
+function MobileFieldLabel({ children }: { children: ReactNode }) {
+  return (
+    <span className="mb-1 block text-[9px] uppercase tracking-[0.1em] text-muted-foreground md:hidden">
+      {children}
+    </span>
   );
 }

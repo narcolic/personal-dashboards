@@ -173,15 +173,14 @@ function CarServiceEditVisit() {
   };
 
   return (
-    <div className="space-y-4 font-mono">
-      <div className="border border-border bg-card px-4 py-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">
-          {t("car.editVisit.title")}
-        </div>
-      </div>
+    <div className="space-y-3 font-mono">
+      <h1 className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="text-primary">&gt;</span>
+        <span>{t("car.editVisitTitle")}</span>
+      </h1>
 
       {isLoading ? (
-        <div className="border border-border bg-card px-4 py-3 text-[11px] uppercase tracking-[0.2em] text-muted-foreground">
+        <div className="rounded-[10px] border border-border/70 bg-card/70 px-4 py-6 text-center text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
           {t("common.loading")}
         </div>
       ) : visit ? (
@@ -199,7 +198,7 @@ function CarServiceEditVisit() {
           onCancel={handleCancel}
         />
       ) : (
-        <div className="border border-border bg-card px-4 py-3 text-[11px] uppercase tracking-[0.2em] text-destructive">
+        <div className="rounded-[10px] border border-destructive/30 bg-destructive/5 px-4 py-4 text-[11px] uppercase tracking-[0.16em] text-destructive">
           {error ?? t("car.editVisit.notFound")}
         </div>
       )}

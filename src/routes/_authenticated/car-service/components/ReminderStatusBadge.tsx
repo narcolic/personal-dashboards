@@ -2,10 +2,10 @@
 import { useTranslation } from "react-i18next";
 
 const statusClassMap: Record<ReminderStatus, string> = {
-  OVERDUE: "text-destructive border-destructive",
-  "DUE SOON": "text-primary border-primary",
-  OK: "text-bull border-bull",
-  "NO DATA": "text-muted-foreground border-border",
+  OVERDUE: "text-destructive border-destructive/35 bg-destructive/10",
+  "DUE SOON": "text-primary border-primary/35 bg-primary/10",
+  OK: "text-bull border-bull/35 bg-bull/10",
+  "NO DATA": "text-muted-foreground border-border/70 bg-secondary/20",
 };
 
 export function ReminderStatusBadge({ status }: { status: ReminderStatus }) {
@@ -19,7 +19,7 @@ export function ReminderStatusBadge({ status }: { status: ReminderStatus }) {
 
   return (
     <span
-      className={`inline-flex items-center border px-2 py-0.5 text-[10px] uppercase tracking-[0.2em] ${statusClassMap[status]}`}
+      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${statusClassMap[status]}`}
     >
       {labelMap[status]}
     </span>

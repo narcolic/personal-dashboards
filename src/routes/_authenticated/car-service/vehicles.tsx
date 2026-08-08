@@ -20,6 +20,7 @@ import { ReminderStatusBadge } from "@/routes/_authenticated/car-service/compone
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import type { ServiceReminderWithStatus, Vehicle } from "@/routes/_authenticated/car-service/types";
 import { useTranslation } from "react-i18next";
+import { computeAnnualServiceStatus } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 
 export const Route = createFileRoute("/_authenticated/car-service/vehicles")({
   component: VehiclesScreen,
@@ -131,24 +132,26 @@ function VehiclesScreen() {
 
   return (
     <div className="space-y-4 font-mono">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-xl uppercase tracking-[0.2em]">&gt; {t("header.vehicles")}</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={onAddVehicle}
-            className="border border-border px-3 py-2 text-[11px] uppercase tracking-[0.2em] hover:border-primary"
-          >
-            {t("car.addVehicle")}
-          </button>
-        </div>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <button
+          type="button"
+          onClick={onAddVehicle}
+          className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90"
+        >
+          {t("car.addVehicle")}
+        </button>
       </div>
 
-      <div className="border border-border bg-card p-4">
-        {error ? <div className="mb-3 text-[11px] text-destructive">{error}</div> : null}
+      <div>
+        {error ? (
+          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-[11px] text-destructive">
+            {error}
+          </div>
+        ) : null}
         {inlineError ? (
-          <div className="mb-3 text-[11px] text-destructive">{inlineError}</div>
+          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-[11px] text-destructive">
+            {inlineError}
+          </div>
         ) : null}
 
         <div className="space-y-2">
@@ -174,26 +177,26 @@ function VehiclesScreen() {
           ))}
 
           {expandedVehicleId === "new" && newVehicleForm ? (
-            <div className="border border-border p-3">
-              <div className="mb-2 text-[11px] uppercase tracking-[0.2em] text-primary">
+            <div className="analytics-panel rounded-[10px] border border-primary/35 bg-card/70 p-4 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
+              <div className="mb-3 text-[11px] uppercase tracking-[0.16em] text-primary">
                 {t("car.addVehicle")}
               </div>
               <VehicleDetailsForm state={newVehicleForm} onChange={setNewVehicleForm} />
-              <div className="mt-3 flex gap-3">
+              <div className="mt-4 flex justify-end gap-2">
                 <button
                   onClick={() => void saveNewVehicle()}
-                  className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
+                  className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-primary-foreground"
                 >
-                  [{t("common.save").toUpperCase()}]
+                  {t("common.save")}
                 </button>
                 <button
                   onClick={() => {
                     setExpandedVehicleId(null);
                     setNewVehicleForm(null);
                   }}
-                  className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline"
+                  className="inline-flex h-9 items-center rounded-md border border-border/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
                 >
-                  [{t("common.cancel").toUpperCase()}]
+                  {t("common.cancel")}
                 </button>
               </div>
             </div>
@@ -266,6 +269,25 @@ function VehicleAccordionItem({
   );
 
   const rowTitle = `${(vehicle.make ?? "-").toUpperCase()} ${(vehicle.model ?? "-").toUpperCase()} · ${vehicle.year ?? "-"} · ${(vehicle.plate ?? "-").toUpperCase()}`;
+  const primaryReminder = [...serviceReminders].sort((left, right) => {
+    const priority = { OVERDUE: 0, "DUE SOON": 1, OK: 2, "NO DATA": 3 } as const;
+    return priority[left.status] - priority[right.status];
+  })[0];
+  const currentKm = vehicleVisits.reduce(
+    (highest, visit) => Math.max(highest, Number(visit.odometer_km)),
+    0,
+  );
+  const annualServiceStatus = computeAnnualServiceStatus(
+    vehicleVisits,
+    currentKm,
+    meta.annualServiceIntervalKm,
+    meta.annualServiceIntervalMonths,
+  ).status;
+  const statusPriority = { OVERDUE: 0, "DUE SOON": 1, OK: 2, "NO DATA": 3 } as const;
+  const primaryStatus =
+    primaryReminder && statusPriority[primaryReminder.status] < statusPriority[annualServiceStatus]
+      ? primaryReminder.status
+      : annualServiceStatus;
 
   const saveDetails = async () => {
     const make = details.make.trim();
@@ -363,44 +385,78 @@ function VehicleAccordionItem({
     }
   };
 
+  const editReminder = (reminder: ServiceReminderWithStatus) => {
+    setEditingIntervalId(reminder.id);
+    setIntervalForm({
+      job_name: reminder.job_name,
+      interval_km: reminder.interval_km ? String(reminder.interval_km) : "",
+      interval_months: reminder.interval_months ? String(reminder.interval_months) : "",
+      warning_km: reminder.warning_km ? String(reminder.warning_km) : "500",
+      warning_days: reminder.warning_days ? String(reminder.warning_days) : "30",
+      notes: reminder.notes ?? "",
+    });
+  };
+
+  const requestDeleteReminder = (reminder: ServiceReminderWithStatus) => {
+    setDeleteDialog({
+      title: t("common.delete"),
+      description: t("car.deleteIntervalConfirm", { job: reminder.job_name }),
+      confirmLabel: t("common.delete"),
+      isConfirming: false,
+      onConfirm: async () => {
+        await deleteServiceReminder(supabase, reminder.id);
+        await refetch();
+      },
+    });
+  };
+
   return (
-    <div className="border border-border">
-      <div
-        className="flex cursor-pointer items-center justify-between px-3 py-2"
-        onClick={onExpand}
-      >
-        <button className="mr-2 text-muted-foreground">{isExpanded ? "\u25BC" : "\u25B6"}</button>
-        <div className="flex-1 text-[11px] uppercase tracking-[0.1em]">{rowTitle}</div>
-        <div className="mr-3 text-[11px] text-muted-foreground">
-          {t("car.visitsCount", { count: visitCount })}
-        </div>
-        <div className="flex gap-2 text-[11px]">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              setDeleteDialog({
-                title: t("common.delete"),
-                description: t("car.deleteVehicleConfirm", { vehicle: rowTitle }),
-                confirmLabel: t("common.delete"),
-                isConfirming: false,
-                onConfirm: removeVehicle,
-              });
-            }}
-            disabled={busy}
-            className="uppercase text-destructive hover:underline disabled:opacity-50"
-          >
-            [{t("car.vehiclesLabels.delete")}]
-          </button>
-        </div>
+    <div
+      className={`analytics-panel overflow-hidden rounded-[10px] border bg-card/70 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] ${isExpanded ? "border-primary/40" : "border-border/70"}`}
+    >
+      <div className="flex items-center gap-2 p-2">
+        <button
+          type="button"
+          onClick={onExpand}
+          aria-expanded={isExpanded}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <span className="text-[10px] text-muted-foreground">{isExpanded ? "▼" : "▶"}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+              {rowTitle}
+            </span>
+            <span className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
+              <span>{t("car.visitsCount", { count: visitCount })}</span>
+              <ReminderStatusBadge status={primaryStatus} />
+            </span>
+          </span>
+        </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setDeleteDialog({
+              title: t("common.delete"),
+              description: t("car.deleteVehicleConfirm", { vehicle: rowTitle }),
+              confirmLabel: t("common.delete"),
+              isConfirming: false,
+              onConfirm: removeVehicle,
+            });
+          }}
+          disabled={busy}
+          className="inline-flex h-8 items-center rounded-md px-2 text-[10px] uppercase text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+        >
+          {t("car.vehiclesLabels.delete")}
+        </button>
       </div>
 
       {isExpanded ? (
-        <div className="ml-2 border-l-2 border-primary pl-4 pb-3">
+        <div className="border-t border-primary/20 bg-background/25 p-3 md:p-4">
           {error ? <div className="mb-2 text-[11px] text-destructive">{error}</div> : null}
 
           <SectionHeader title={t("car.details")} />
           {isEditingDetails ? (
-            <div className="mt-2 border border-border bg-card p-3">
+            <div className="mt-2 rounded-lg border border-border/70 bg-card/70 p-3">
               <VehicleDetailsForm state={details} onChange={setDetails} />
               <div className="mt-3 flex gap-3">
                 <button
@@ -418,7 +474,7 @@ function VehicleAccordionItem({
               </div>
             </div>
           ) : (
-            <div className="text-[11px] text-foreground">
+            <div className="grid gap-1 rounded-lg bg-secondary/15 p-3 text-[11px] text-foreground sm:grid-cols-3">
               <div>
                 {t("car.colour")}: {meta.colour || "-"}
               </div>
@@ -431,15 +487,31 @@ function VehicleAccordionItem({
               </div>
               <button
                 onClick={() => setIsEditingDetails(true)}
-                className="mt-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
+                className="mt-2 text-left text-[10px] uppercase tracking-[0.14em] text-primary hover:underline sm:col-span-3"
               >
-                [{t("car.editDetails")}]
+                {t("car.editDetails")}
               </button>
             </div>
           )}
 
           <SectionHeader title={t("car.serviceIntervals")} />
-          <div className="overflow-x-auto border border-border">
+          <div className="space-y-2 md:hidden">
+            {serviceReminders.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border/70 p-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                {t("car.noIntervalsConfigured")}
+              </div>
+            ) : (
+              serviceReminders.map((reminder) => (
+                <ServiceIntervalCard
+                  key={reminder.id}
+                  reminder={reminder}
+                  onEdit={() => editReminder(reminder)}
+                  onDelete={() => requestDeleteReminder(reminder)}
+                />
+              ))
+            )}
+          </div>
+          <div className="hidden overflow-x-auto rounded-lg border border-border/70 md:block">
             <table className="w-full text-[11px]">
               <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                 <tr>
@@ -466,35 +538,8 @@ function VehicleAccordionItem({
                     <ServiceIntervalRow
                       key={reminder.id}
                       reminder={reminder}
-                      onEdit={() => {
-                        setEditingIntervalId(reminder.id);
-                        setIntervalForm({
-                          job_name: reminder.job_name,
-                          interval_km: reminder.interval_km ? String(reminder.interval_km) : "",
-                          interval_months: reminder.interval_months
-                            ? String(reminder.interval_months)
-                            : "",
-                          warning_km: reminder.warning_km ? String(reminder.warning_km) : "500",
-                          warning_days: reminder.warning_days
-                            ? String(reminder.warning_days)
-                            : "30",
-                          notes: reminder.notes ?? "",
-                        });
-                      }}
-                      onDelete={async () => {
-                        setDeleteDialog({
-                          title: t("common.delete"),
-                          description: t("car.deleteIntervalConfirm", {
-                            job: reminder.job_name,
-                          }),
-                          confirmLabel: t("common.delete"),
-                          isConfirming: false,
-                          onConfirm: async () => {
-                            await deleteServiceReminder(supabase, reminder.id);
-                            await refetch();
-                          },
-                        });
-                      }}
+                      onEdit={() => editReminder(reminder)}
+                      onDelete={async () => requestDeleteReminder(reminder)}
                     />
                   ))
                 )}
@@ -502,7 +547,7 @@ function VehicleAccordionItem({
             </table>
           </div>
           {intervalForm ? (
-            <div className="mt-2 border border-border bg-card p-3">
+            <div className="mt-3 rounded-lg border border-primary/25 bg-card/70 p-3">
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
                 <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
                   {t("car.vehiclesLabels.jobName")}
@@ -656,9 +701,65 @@ function ServiceIntervalRow({
   );
 }
 
+function ServiceIntervalCard({
+  reminder,
+  onEdit,
+  onDelete,
+}: {
+  reminder: ServiceReminderWithStatus;
+  onEdit: () => void;
+  onDelete: () => void;
+}) {
+  const { t } = useTranslation();
+  return (
+    <div className="rounded-lg border border-border/70 bg-card/60 p-3">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <ReminderStatusBadge status={reminder.status} />
+          <div className="mt-2 truncate text-sm font-semibold text-foreground">
+            {reminder.job_name}
+          </div>
+        </div>
+        <div className="flex gap-1">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="rounded-md px-2 py-1 text-[10px] uppercase text-primary hover:bg-primary/10"
+          >
+            {t("car.vehiclesLabels.edit")}
+          </button>
+          <button
+            type="button"
+            onClick={onDelete}
+            className="rounded-md px-2 py-1 text-[10px] uppercase text-destructive hover:bg-destructive/10"
+          >
+            {t("car.vehiclesLabels.delete")}
+          </button>
+        </div>
+      </div>
+      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/50 pt-2 text-[10px]">
+        <div>
+          <div className="uppercase text-muted-foreground">{t("car.intervalRule")}</div>
+          <div className="mt-1 text-foreground">
+            {reminder.interval_km ? `${reminder.interval_km}km` : "-"}{" "}
+            {reminder.interval_months ? `/ ${reminder.interval_months}mo` : ""}
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="uppercase text-muted-foreground">{t("car.remaining")}</div>
+          <div className="mt-1 text-foreground">
+            {reminder.kmRemaining != null ? `${reminder.kmRemaining}km` : "--"}{" "}
+            {reminder.daysRemaining != null ? `· ${reminder.daysRemaining}d` : ""}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SectionHeader({ title }: { title: string }) {
   return (
-    <div className="mt-4 mb-3 border-b border-border pb-1 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+    <div className="mt-5 mb-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
       {title}
     </div>
   );

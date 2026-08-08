@@ -11,8 +11,8 @@ export function JobFrequencyTable({ rows }: { rows: Row[] }) {
   const { t } = useTranslation();
 
   return (
-    <section className="border border-border bg-card">
-      <div className="border-b border-border px-4 py-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+    <section className="analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/70 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
+      <div className="bg-secondary/20 px-4 py-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
         {t("car.analyticsLabels.topJobsByFrequency")}
       </div>
       <div className="overflow-x-auto">

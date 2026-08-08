@@ -3,6 +3,7 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { ServiceHistoryEditor } from "@/routes/_authenticated/car-service/components/ServiceHistoryEditor";
+import { useCarServiceWorkspace } from "@/routes/_authenticated/car-service/components/CarServiceWorkspaceState";
 import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import { createServiceVisit } from "@/routes/_authenticated/car-service/hooks/useCarServiceMutations";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
@@ -19,6 +20,7 @@ function CarServiceAddVisit() {
   const { user } = useAuth();
   const { jobSuggestions, categorySuggestions } = useCarService();
   const { vehicles } = useVehicles();
+  const { selectedVehicleId } = useCarServiceWorkspace();
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,13 +69,20 @@ function CarServiceAddVisit() {
   };
 
   return (
-    <div className="space-y-4 font-mono">
-      <div className="border border-border bg-card px-4 py-2">
-        <div className="text-[11px] uppercase tracking-[0.2em] text-primary">{t("car.addVisit")}</div>
-      </div>
+    <div className="space-y-3 font-mono">
+      <h1 className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
+        <span className="text-primary">&gt;</span>
+        <span>{t("car.addVisitTitle")}</span>
+      </h1>
       <ServiceHistoryEditor
         vehicles={vehicles}
-        defaultVehicleId={vehicles.length === 1 ? vehicles[0].id : undefined}
+        defaultVehicleId={
+          selectedVehicleId !== "all"
+            ? selectedVehicleId
+            : vehicles.length === 1
+              ? vehicles[0].id
+              : undefined
+        }
         jobSuggestions={jobSuggestions}
         categorySuggestions={categorySuggestions}
         submitLabel={t("common.save")}
