@@ -14,6 +14,7 @@ import {
 import { type PortfolioInputType } from "@/lib/portfolio/portfolios/api";
 import { type TransactionInputType } from "@/lib/portfolio/transactions/api";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import { TransactionsTable } from "@/routes/_authenticated/portfolio/components/TransactionsTable";
 import { TransactionEditor } from "@/routes/_authenticated/portfolio/components/TransactionEditor";
 import {
@@ -686,21 +687,15 @@ function ActivityFilterSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-1">
+    <div className="space-y-1">
       <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
-      <select
+      <TerminalSelect
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-3 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
-      >
-        <option value={ALL_FILTER}>{allLabel}</option>
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </label>
+        onChange={onChange}
+        ariaLabel={label}
+        options={[{ value: ALL_FILTER, label: allLabel }, ...options]}
+      />
+    </div>
   );
 }
 

@@ -283,6 +283,7 @@
     "jobOrCategoryFilter": "Εργασία ή κατηγορία",
     "historyFilterPlaceholder": "Φίλτρο ανά εργασία ή κατηγορία",
     "allCategories": "Όλες οι κατηγορίες",
+    "allJobs": "Όλες οι εργασίες",
     "clearFilters": "Καθαρισμός",
     "showingVisits": "Εμφάνιση {{shown}} από {{total}} επισκέψεις",
     "noMatchingVisits": "Καμία επίσκεψη δεν ταιριάζει στα φίλτρα εργασιών",

@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import { PortfolioWorkspaceProvider } from "@/routes/_authenticated/portfolio/components/PortfolioWorkspaceContext";
 import { usePortfolioWorkspace } from "@/routes/_authenticated/portfolio/components/PortfolioWorkspaceState";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
@@ -93,19 +94,20 @@ function PortfolioContextBar() {
             })}
           </div>
         ) : (
-          <select
+          <TerminalSelect
             value={selectedPortfolioId}
-            onChange={(event) => setSelectedPortfolioId(event.target.value)}
-            aria-label={t("portfolio.portfolio")}
-            className="h-8 min-w-0 flex-1 rounded-md border border-border/70 bg-background/70 px-3 text-sm outline-none transition-colors hover:border-primary/60 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30 sm:max-w-xs"
-          >
-            <option value={allPortfoliosId}>{t("portfolio.all")}</option>
-            {portfolios.map((portfolio) => (
-              <option key={portfolio.id} value={portfolio.id}>
-                {portfolio.name}
-              </option>
-            ))}
-          </select>
+            onChange={setSelectedPortfolioId}
+            ariaLabel={t("portfolio.portfolio")}
+            options={[
+              { value: allPortfoliosId, label: t("portfolio.all") },
+              ...portfolios.map((portfolio) => ({
+                value: portfolio.id,
+                label: portfolio.name,
+              })),
+            ]}
+            size="sm"
+            className="min-w-0 flex-1 sm:max-w-xs"
+          />
         )}
       </div>
 

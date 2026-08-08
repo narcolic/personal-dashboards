@@ -284,6 +284,7 @@
     "jobOrCategoryFilter": "Job or category",
     "historyFilterPlaceholder": "Filter by job or category",
     "allCategories": "All categories",
+    "allJobs": "All jobs",
     "clearFilters": "Clear",
     "showingVisits": "Showing {{shown}} of {{total}} visits",
     "noMatchingVisits": "No visits match these job filters",

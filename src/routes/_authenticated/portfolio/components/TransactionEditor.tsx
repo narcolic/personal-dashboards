@@ -3,6 +3,7 @@ import type { TransactionInputType } from "@/lib/portfolio/transactions/api";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
 import { normalizeTicker, type TickerSuggestion } from "@/lib/portfolio/tickerCatalog";
 import { useTranslation } from "react-i18next";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const TRANSACTION_ACTIONS = ["buy", "sell", "dividend", "fee"] as const;
@@ -26,14 +27,23 @@ function Field({
   label,
   children,
   colSpan = 1,
+  required = false,
 }: {
   label: string;
   children: ReactNode;
   colSpan?: 1 | 2;
+  required?: boolean;
 }) {
   return (
     <label className={`block ${colSpan === 2 ? "col-span-2" : ""}`}>
-      <div className="mb-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</div>
+      <div className="mb-1 flex items-center gap-1 text-xs uppercase tracking-[0.12em] text-muted-foreground">
+        <span>{label}</span>
+        {required ? (
+          <span aria-hidden="true" className="text-sm font-bold leading-none text-destructive">
+            *
+          </span>
+        ) : null}
+      </div>
       {children}
     </label>
   );
@@ -110,7 +120,7 @@ export function TransactionEditor({
           }}
           className="grid grid-cols-2 gap-4 p-5 [&_input]:rounded-lg [&_input]:border-border/70 [&_input]:bg-background/70 [&_input]:px-3 [&_input]:py-2.5 [&_input]:transition-colors [&_input]:focus:ring-1 [&_input]:focus:ring-primary/30 [&_select]:rounded-lg [&_select]:border-border/70 [&_select]:bg-background/70 [&_select]:px-3 [&_select]:py-2.5 [&_select]:transition-colors [&_select]:focus:ring-1 [&_select]:focus:ring-primary/30 [&_textarea]:rounded-lg [&_textarea]:border-border/70 [&_textarea]:bg-background/70 [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:transition-colors [&_textarea]:focus:ring-1 [&_textarea]:focus:ring-primary/30"
         >
-          <Field label={t("portfolio.date")}>
+          <Field label={t("portfolio.date")} required>
             <input
               type="date"
               required
@@ -120,21 +130,20 @@ export function TransactionEditor({
             />
           </Field>
 
-          <Field label={t("portfolio.action")}>
-            <select
+          <Field label={t("portfolio.action")} required>
+            <TerminalSelect
               value={v.action}
-              onChange={(e) => set("action", e.target.value as TransactionInputType["action"])}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
-            >
-              {TRANSACTION_ACTIONS.map((action) => (
-                <option key={action} value={action}>
-                  {transactionActionLabel(action, t)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => set("action", value as TransactionInputType["action"])}
+              ariaLabel={t("portfolio.action")}
+              required
+              options={TRANSACTION_ACTIONS.map((action) => ({
+                value: action,
+                label: transactionActionLabel(action, t),
+              }))}
+            />
           </Field>
 
-          <Field label={t("portfolio.ticker")}>
+          <Field label={t("portfolio.ticker")} required>
             <div className="relative">
               <input
                 required
@@ -146,13 +155,13 @@ export function TransactionEditor({
                 className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
               />
               {tickerMenuOpen && (tickerQuery.length > 0 || tickerOptions.length > 0) ? (
-                <div className="absolute z-10 mt-2 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover p-1.5 shadow-xl">
+                <div className="terminal-scrollbar absolute z-10 mt-2 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover p-1.5 shadow-xl">
                   {tickerOptions.map((item) => (
                     <button
                       key={item.ticker}
                       type="button"
                       onMouseDown={() => applyTickerSuggestion(item)}
-                      className="block w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-primary/10 hover:text-primary"
+                      className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors hover:bg-secondary/55 hover:text-foreground"
                     >
                       {item.ticker}
                     </button>
@@ -164,7 +173,7 @@ export function TransactionEditor({
                         set("ticker", normalizeTicker(v.ticker));
                         setTickerMenuOpen(false);
                       }}
-                      className="block w-full rounded-md px-3 py-2 text-left transition-colors hover:bg-primary/10 hover:text-primary"
+                      className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary/10"
                     >
                       {t("car.editor.createValue", { value: normalizeTicker(v.ticker) })}
                     </button>
@@ -174,32 +183,30 @@ export function TransactionEditor({
             </div>
           </Field>
 
-          <Field label={t("portfolio.assetType")}>
-            <select
+          <Field label={t("portfolio.assetType")} required>
+            <TerminalSelect
               value={v.asset_type}
-              onChange={(e) =>
-                set("asset_type", e.target.value as TransactionInputType["asset_type"])
-              }
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
-            >
-              {ASSET_TYPES.map((type) => (
-                <option key={type} value={type}>
-                  {assetTypeLabel(type)}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => set("asset_type", value as TransactionInputType["asset_type"])}
+              ariaLabel={t("portfolio.assetType")}
+              required
+              options={ASSET_TYPES.map((type) => ({
+                value: type,
+                label: assetTypeLabel(type),
+              }))}
+            />
           </Field>
 
-          <Field label={t("portfolio.currency")}>
-            <select
+          <Field label={t("portfolio.currency")} required>
+            <TerminalSelect
               value={v.currency}
-              onChange={(e) => set("currency", e.target.value)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
-            >
-              {CURRENCIES.map((ccy) => (
-                <option key={ccy}>{ccy}</option>
-              ))}
-            </select>
+              onChange={(value) => set("currency", value)}
+              ariaLabel={t("portfolio.currency")}
+              required
+              options={CURRENCIES.map((currency) => ({
+                value: currency,
+                label: currency,
+              }))}
+            />
           </Field>
 
           <Field label={t("portfolio.name")} colSpan={2}>
@@ -211,24 +218,19 @@ export function TransactionEditor({
           </Field>
 
           <Field label={t("portfolio.portfolio")} colSpan={2}>
-            <select
-              required
+            <TerminalSelect
               value={v.portfolio_id ?? ""}
-              onChange={(e) => set("portfolio_id", e.target.value || null)}
-              className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
-            >
-              <option value="" disabled>
-                {t("portfolio.selectPortfolio")}
-              </option>
-              {portfolios.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => set("portfolio_id", value || null)}
+              ariaLabel={t("portfolio.portfolio")}
+              placeholder={t("portfolio.selectPortfolio")}
+              options={portfolios.map((portfolio) => ({
+                value: portfolio.id,
+                label: portfolio.name,
+              }))}
+            />
           </Field>
 
-          <Field label={t("portfolio.shares")}>
+          <Field label={t("portfolio.shares")} required>
             <input
               type="number"
               step="any"
@@ -240,7 +242,7 @@ export function TransactionEditor({
             />
           </Field>
 
-          <Field label={t("portfolio.pricePerShare")}>
+          <Field label={t("portfolio.pricePerShare")} required>
             <input
               type="number"
               step="any"

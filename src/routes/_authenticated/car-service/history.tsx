@@ -1,5 +1,5 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ServiceHistoryTable } from "@/routes/_authenticated/car-service/components/ServiceHistoryTable";
 import { useCarServiceWorkspace } from "@/routes/_authenticated/car-service/components/CarServiceWorkspaceState";
 import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
@@ -31,8 +31,10 @@ function CarServiceHistory() {
     searchParams.get("vehicleId")?.trim() || persistedContext?.vehicleId?.trim() || "all";
   const [userExpandedVisitIds, setUserExpandedVisitIds] = useState<Set<string>>(new Set());
   const [restoredExpandedVisitId, setRestoredExpandedVisitId] = useState(initialExpandedVisitId);
-  const [jobFilter, setJobFilter] = useState("");
+  const [jobFilter, setJobFilter] = useState("__all__");
   const [categoryFilter, setCategoryFilter] = useState("__all__");
+  const [openFilter, setOpenFilter] = useState<"job" | "category" | null>(null);
+  const filtersRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     if (initialVehicleId !== "all") setSelectedVehicleId(initialVehicleId);
@@ -49,6 +51,24 @@ function CarServiceHistory() {
       replace: true,
     });
   }, [initialVehicleId, navigate, searchParams, setSelectedVehicleId]);
+
+  useEffect(() => {
+    if (!openFilter) return;
+
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (!filtersRef.current?.contains(event.target as Node)) setOpenFilter(null);
+    };
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpenFilter(null);
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [openFilter]);
 
   const { visits: allVisits, isLoading, error } = useCarService("all");
   const effectiveSelectedVehicleId = useMemo(() => {
@@ -85,21 +105,19 @@ function CarServiceHistory() {
     [scopedVisits],
   );
   const visits = useMemo(() => {
-    const query = jobFilter.trim().toLocaleLowerCase();
-    if (!query && categoryFilter === "__all__") return scopedVisits;
+    if (jobFilter === "__all__" && categoryFilter === "__all__") return scopedVisits;
 
     return scopedVisits.filter((visit) =>
       visit.jobs.some((job) => {
-        const jobName = job.job_name_snapshot.trim().toLocaleLowerCase();
+        const jobName = job.job_name_snapshot.trim();
         const category = (job.category_snapshot ?? "").trim();
-        const matchesQuery =
-          !query || jobName.includes(query) || category.toLocaleLowerCase().includes(query);
+        const matchesJob = jobFilter === "__all__" || jobName === jobFilter;
         const matchesCategory = categoryFilter === "__all__" || category === categoryFilter;
-        return matchesQuery && matchesCategory;
+        return matchesJob && matchesCategory;
       }),
     );
   }, [categoryFilter, jobFilter, scopedVisits]);
-  const filtersActive = jobFilter.trim().length > 0 || categoryFilter !== "__all__";
+  const filtersActive = jobFilter !== "__all__" || categoryFilter !== "__all__";
   const expandedVisitIds = useMemo(() => {
     const next = new Set(userExpandedVisitIds);
     if (restoredExpandedVisitId && visits.some((visit) => visit.id === restoredExpandedVisitId)) {
@@ -154,48 +172,41 @@ function CarServiceHistory() {
       </div>
 
       <section
+        ref={filtersRef}
         className="analytics-panel rounded-[10px] border border-border/70 bg-card/70 p-3 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]"
         aria-label={t("car.historyFilters")}
       >
-        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(180px,0.45fr)_auto]">
-          <label className="min-w-0">
-            <span className="sr-only">{t("car.jobOrCategoryFilter")}</span>
-            <input
-              value={jobFilter}
-              onChange={(event) => setJobFilter(event.target.value)}
-              placeholder={t("car.historyFilterPlaceholder")}
-              list="car-service-history-job-options"
-              className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-3 text-sm outline-none transition-colors hover:border-primary/60 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
-            />
-            <datalist id="car-service-history-job-options">
-              {jobOptions.map((job) => (
-                <option key={job} value={job} />
-              ))}
-            </datalist>
-          </label>
-          <label>
-            <span className="sr-only">{t("car.category")}</span>
-            <select
-              value={categoryFilter}
-              onChange={(event) => setCategoryFilter(event.target.value)}
-              className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-3 text-sm outline-none transition-colors hover:border-primary/60 focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
-            >
-              <option value="__all__">{t("car.allCategories")}</option>
-              {categoryOptions.map((category) => (
-                <option key={category} value={category}>
-                  {category}
-                </option>
-              ))}
-            </select>
-          </label>
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <HistoryFilterDropdown
+            label={t("car.job")}
+            value={jobFilter}
+            allLabel={t("car.allJobs")}
+            options={jobOptions}
+            open={openFilter === "job"}
+            onToggle={() => setOpenFilter((current) => (current === "job" ? null : "job"))}
+            onChange={setJobFilter}
+            onClose={() => setOpenFilter(null)}
+          />
+          <HistoryFilterDropdown
+            label={t("car.category")}
+            value={categoryFilter}
+            allLabel={t("car.allCategories")}
+            options={categoryOptions}
+            open={openFilter === "category"}
+            onToggle={() =>
+              setOpenFilter((current) => (current === "category" ? null : "category"))
+            }
+            onChange={setCategoryFilter}
+            onClose={() => setOpenFilter(null)}
+          />
           <button
             type="button"
             onClick={() => {
-              setJobFilter("");
+              setJobFilter("__all__");
               setCategoryFilter("__all__");
             }}
             disabled={!filtersActive}
-            className="h-10 rounded-lg border border-border/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:cursor-default disabled:opacity-35"
+            className="h-11 rounded-lg border border-border/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground disabled:cursor-default disabled:opacity-35"
           >
             {t("car.clearFilters")}
           </button>
@@ -220,6 +231,91 @@ function CarServiceHistory() {
         onToggleExpanded={toggleExpanded}
         emptyMessage={filtersActive ? t("car.noMatchingVisits") : undefined}
       />
+    </div>
+  );
+}
+
+function HistoryFilterDropdown({
+  label,
+  value,
+  allLabel,
+  options,
+  open,
+  onToggle,
+  onChange,
+  onClose,
+}: {
+  label: string;
+  value: string;
+  allLabel: string;
+  options: string[];
+  open: boolean;
+  onToggle: () => void;
+  onChange: (value: string) => void;
+  onClose: () => void;
+}) {
+  const selectedLabel = value === "__all__" ? allLabel : value;
+  const choices = ["__all__", ...options];
+
+  return (
+    <div className="relative min-w-0">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex h-11 w-full min-w-0 items-center justify-between gap-3 rounded-lg border bg-background/70 px-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+          open
+            ? "border-primary/60 ring-1 ring-primary/20"
+            : "border-border/70 hover:border-primary/50"
+        }`}
+      >
+        <span className="min-w-0">
+          <span className="block text-[8px] uppercase tracking-[0.14em] text-muted-foreground">
+            {label}
+          </span>
+          <span className="mt-0.5 block truncate text-[11px] uppercase tracking-[0.08em] text-foreground">
+            {selectedLabel}
+          </span>
+        </span>
+        <span
+          aria-hidden="true"
+          className={`shrink-0 text-[10px] text-primary transition-transform ${open ? "rotate-180" : ""}`}
+        >
+          ▼
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          role="listbox"
+          aria-label={label}
+          className="terminal-scrollbar absolute inset-x-0 top-full z-30 mt-1 max-h-64 overflow-y-auto rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl"
+        >
+          {choices.map((choice) => {
+            const choiceLabel = choice === "__all__" ? allLabel : choice;
+            const selected = choice === value;
+            return (
+              <button
+                key={choice}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                onClick={() => {
+                  onChange(choice);
+                  onClose();
+                }}
+                className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                  selected ? "bg-primary/12 text-primary" : "text-foreground hover:bg-secondary/55"
+                }`}
+              >
+                <span className="truncate">{choiceLabel}</span>
+                {selected ? <span aria-hidden="true">●</span> : null}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
     </div>
   );
 }

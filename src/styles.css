@@ -202,6 +202,27 @@
   .ticker-blink {
     animation: blink 1.2s steps(2, end) infinite;
   }
+  .terminal-scrollbar {
+    scrollbar-color: color-mix(in oklch, var(--color-primary) 58%, var(--color-border))
+      var(--color-popover);
+    scrollbar-gutter: stable;
+    scrollbar-width: thin;
+  }
+  .terminal-scrollbar::-webkit-scrollbar {
+    width: 8px;
+  }
+  .terminal-scrollbar::-webkit-scrollbar-track {
+    background: var(--color-popover);
+    border-radius: 999px;
+  }
+  .terminal-scrollbar::-webkit-scrollbar-thumb {
+    background: color-mix(in oklch, var(--color-primary) 58%, var(--color-border));
+    border: 2px solid var(--color-popover);
+    border-radius: 999px;
+  }
+  .terminal-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: var(--color-primary);
+  }
   @keyframes blink {
     50% {
       opacity: 0.4;

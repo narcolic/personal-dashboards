@@ -8,6 +8,7 @@ import type {
 import { formatCurrency } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
 
 const BASE_CATEGORY_SUGGESTIONS = [
   "AC",
@@ -243,18 +244,19 @@ export function ServiceHistoryEditor({
       <section className="p-4 md:p-6">
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label={t("car.editor.vehicle")} error={errors.vehicleId}>
-            <select
+            <TerminalSelect
               value={resolvedVehicleId}
-              onChange={(e) => setFormField("vehicleId", e.target.value)}
-              className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
-            >
-              <option value="">{t("car.editor.selectVehicle")}</option>
-              {vehicles.map((vehicle) => (
-                <option key={vehicle.id} value={vehicle.id}>
-                  {`${vehicle.make ?? ""} ${vehicle.model ?? ""} ${vehicle.year ?? ""}`.trim()}
-                </option>
-              ))}
-            </select>
+              onChange={(value) => setFormField("vehicleId", value)}
+              ariaLabel={t("car.editor.vehicle")}
+              options={[
+                { value: "", label: t("car.editor.selectVehicle") },
+                ...vehicles.map((vehicle) => ({
+                  value: vehicle.id,
+                  label:
+                    `${vehicle.make ?? ""} ${vehicle.model ?? ""} ${vehicle.year ?? ""}`.trim(),
+                })),
+              ]}
+            />
           </Field>
 
           <Field label={t("car.editor.date")} error={errors.serviceDate}>
@@ -361,7 +363,7 @@ export function ServiceHistoryEditor({
                     className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
                   />
                   {jobMenuOpenIndex === index && (query.length > 0 || options.length > 0) ? (
-                    <div className="absolute z-10 mt-1 max-h-44 w-full overflow-auto border border-border bg-card">
+                    <div className="terminal-scrollbar absolute z-10 mt-1 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl">
                       {options.map((option) => (
                         <button
                           key={option}
@@ -370,7 +372,7 @@ export function ServiceHistoryEditor({
                             setLineField(index, "jobName", option);
                             setJobMenuOpenIndex(null);
                           }}
-                          className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors hover:bg-secondary/55 hover:text-foreground"
                         >
                           {option}
                         </button>
@@ -382,7 +384,7 @@ export function ServiceHistoryEditor({
                             setLineField(index, "jobName", line.jobName.trim());
                             setJobMenuOpenIndex(null);
                           }}
-                          className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary/10"
                         >
                           {t("car.editor.createValue", { value: line.jobName.trim() })}
                         </button>
@@ -407,7 +409,7 @@ export function ServiceHistoryEditor({
                   />
                   {categoryMenuOpenIndex === index &&
                   (categoryQuery.length > 0 || categoryOptions.length > 0) ? (
-                    <div className="absolute z-10 mt-1 max-h-44 w-full overflow-auto border border-border bg-card">
+                    <div className="terminal-scrollbar absolute z-10 mt-1 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl">
                       {categoryOptions.map((option) => (
                         <button
                           key={option}
@@ -416,7 +418,7 @@ export function ServiceHistoryEditor({
                             setLineField(index, "category", option);
                             setCategoryMenuOpenIndex(null);
                           }}
-                          className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors hover:bg-secondary/55 hover:text-foreground"
                         >
                           {option}
                         </button>
@@ -428,7 +430,7 @@ export function ServiceHistoryEditor({
                             setLineField(index, "category", line.category.trim().toUpperCase());
                             setCategoryMenuOpenIndex(null);
                           }}
-                          className="block w-full px-2 py-1.5 text-left hover:bg-primary/10 hover:text-primary"
+                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary/10"
                         >
                           {t("car.editor.createValue", {
                             value: line.category.trim().toUpperCase(),

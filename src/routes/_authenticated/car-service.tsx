@@ -1,6 +1,7 @@
 import { createFileRoute, Outlet, useRouterState } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import { CarServiceWorkspaceProvider } from "@/routes/_authenticated/car-service/components/CarServiceWorkspace";
 import {
@@ -91,18 +92,14 @@ function CarServiceContextBar() {
           })}
         </div>
       ) : (
-        <select
+        <TerminalSelect
           value={selectedVehicleId}
-          onChange={(event) => setSelectedVehicleId(event.target.value)}
-          aria-label={t("car.vehicleScope")}
-          className="h-9 min-w-0 w-full rounded-md border border-border/70 bg-background/70 px-3 text-sm outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30 sm:max-w-xs"
-        >
-          {choices.map((choice) => (
-            <option key={choice.id} value={choice.id}>
-              {choice.label}
-            </option>
-          ))}
-        </select>
+          onChange={setSelectedVehicleId}
+          ariaLabel={t("car.vehicleScope")}
+          options={choices.map((choice) => ({ value: choice.id, label: choice.label }))}
+          size="sm"
+          className="w-full sm:max-w-xs"
+        />
       )}
     </div>
   );

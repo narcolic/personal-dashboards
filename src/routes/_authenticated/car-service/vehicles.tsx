@@ -18,6 +18,7 @@ import {
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
 import { ReminderStatusBadge } from "@/routes/_authenticated/car-service/components/ReminderStatusBadge";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import type { ServiceReminderWithStatus, Vehicle } from "@/routes/_authenticated/car-service/types";
 import { useTranslation } from "react-i18next";
 import { computeAnnualServiceStatus } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
@@ -549,25 +550,22 @@ function VehicleAccordionItem({
           {intervalForm ? (
             <div className="mt-3 rounded-lg border border-primary/25 bg-card/70 p-3">
               <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <label className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {t("car.vehiclesLabels.jobName")}
-                  <select
+                <div className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+                  <span>{t("car.vehiclesLabels.jobName")}</span>
+                  <TerminalSelect
                     value={intervalForm.job_name}
-                    onChange={(e) =>
-                      setIntervalForm((prev) =>
-                        prev ? { ...prev, job_name: e.target.value } : prev,
-                      )
+                    onChange={(value) =>
+                      setIntervalForm((prev) => (prev ? { ...prev, job_name: value } : prev))
                     }
-                    className="mt-1 w-full border border-border bg-input px-2 py-1.5 text-sm text-foreground focus:border-primary focus:outline-none"
-                  >
-                    <option value="">{t("car.vehiclesLabels.selectJob")}</option>
-                    {jobNames.map((name) => (
-                      <option key={name} value={name}>
-                        {name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    ariaLabel={t("car.vehiclesLabels.jobName")}
+                    options={[
+                      { value: "", label: t("car.vehiclesLabels.selectJob") },
+                      ...jobNames.map((name) => ({ value: name, label: name })),
+                    ]}
+                    className="mt-1 normal-case tracking-normal"
+                    size="sm"
+                  />
+                </div>
                 <SmallField
                   label={t("car.vehiclesLabels.intervalKm")}
                   value={intervalForm.interval_km}

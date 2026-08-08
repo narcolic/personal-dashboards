@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
 import { classifyHolding } from "@/lib/portfolio/transactions/mappers";
 import { PortfolioChart } from "@/routes/_authenticated/portfolio/components/PortfolioChart";
@@ -436,21 +437,18 @@ function FilterSelect({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="space-y-1">
+    <div className="space-y-1">
       <span className="text-xs uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
-      <select
+      <TerminalSelect
         value={value}
-        onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-lg border border-border/70 bg-background/70 px-3 text-sm outline-none transition-colors focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30"
-      >
-        <option value="__all__">{allLabel}</option>
-        {options.map((option) => (
-          <option key={option} value={option}>
-            {option}
-          </option>
-        ))}
-      </select>
-    </label>
+        onChange={onChange}
+        ariaLabel={label}
+        options={[
+          { value: "__all__", label: allLabel },
+          ...options.map((option) => ({ value: option, label: option })),
+        ]}
+      />
+    </div>
   );
 }
 

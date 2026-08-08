@@ -84,7 +84,7 @@ export function BottomStatusBar() {
   };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-20 px-2 pb-1">
+    <div className="fixed inset-x-0 bottom-0 z-20 px-2">
       <div className="flex h-9 items-center justify-between rounded-lg bg-card/70 px-3 text-xs uppercase tracking-[0.1em] shadow-[0_-12px_30px_-26px_rgba(0,0,0,0.95)] backdrop-blur-xl md:px-4">
         <div className="inline-flex min-w-0 items-center gap-3">
           <span className="inline-flex items-center gap-2 rounded-full bg-bull/10 px-2 py-1 text-bull">
@@ -129,7 +129,7 @@ export function BottomStatusBar() {
 
               {languageMenuOpen ? (
                 <div
-                  className="absolute bottom-full right-0 mb-2 min-w-[88px] rounded-lg bg-card/95 p-1 shadow-[0_14px_30px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl"
+                  className="absolute bottom-full right-0 mb-2 min-w-[104px] rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl"
                   role="menu"
                   aria-label={t("common.language")}
                 >
@@ -147,13 +147,19 @@ export function BottomStatusBar() {
                           });
                           setLanguageMenuOpen(false);
                         }}
-                        className={`block w-full rounded-md px-2 py-1.5 text-left text-xs uppercase tracking-[0.1em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                        className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
                           isActive
                             ? "bg-primary/12 text-primary"
-                            : "text-foreground hover:bg-secondary/50"
+                            : "text-foreground hover:bg-secondary/55"
                         }`}
                       >
-                        {language.label}
+                        <span>{language.label}</span>
+                        {isActive ? (
+                          <span
+                            aria-hidden="true"
+                            className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary"
+                          />
+                        ) : null}
                       </button>
                     );
                   })}
