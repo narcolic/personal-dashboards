@@ -1,13 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { TransactionRow } from "@/lib/portfolio/types";
+import { listPortfolios, type PortfolioRecord } from "@/lib/portfolio/portfolios/api";
+import { listTransactions } from "@/lib/portfolio/transactions/api";
 
-export type PortfolioRecord = {
-  id: string;
-  name: string;
-  broker: string | null;
-  notes: string | null;
-};
+export type { PortfolioRecord } from "@/lib/portfolio/portfolios/api";
 
 type TransactionPagination = {
   page: number;
@@ -44,58 +39,26 @@ export function usePortfolioData({
       transactionFilters?.dateFrom ?? "",
       transactionFilters?.dateTo ?? "",
     ],
-    queryFn: async () => {
-      let query = supabase.from("transactions").select("*", {
-        count: transactionPagination ? "exact" : undefined,
-      });
-
-      if (transactionFilters?.ticker?.trim()) {
-        query = query.ilike("ticker", `%${transactionFilters.ticker.trim()}%`);
-      }
-      if (transactionFilters?.portfolioId === "__unassigned__") {
-        query = query.is("portfolio_id", null);
-      } else if (transactionFilters?.portfolioId) {
-        query = query.eq("portfolio_id", transactionFilters.portfolioId);
-      }
-      if (transactionFilters?.assetType) {
-        query = query.eq("asset_type", transactionFilters.assetType);
-      }
-      if (transactionFilters?.currency) {
-        query = query.eq("currency", transactionFilters.currency);
-      }
-      if (transactionFilters?.dateFrom) {
-        query = query.gte("transaction_date", transactionFilters.dateFrom);
-      }
-      if (transactionFilters?.dateTo) {
-        query = query.lte("transaction_date", transactionFilters.dateTo);
-      }
-
-      if (transactionPagination) {
-        const from = (transactionPagination.page - 1) * transactionPagination.pageSize;
-        const to = from + transactionPagination.pageSize - 1;
-        query = query.range(from, to);
-      }
-
-      const { data, error, count } = await query.order("transaction_date", { ascending: false });
-      if (error) throw new Error(error.message);
-      return {
-        rows: (data ?? []) as TransactionRow[],
-        count: count ?? data?.length ?? 0,
-      };
-    },
+    queryFn: ({ signal }) =>
+      listTransactions(
+        {
+          page: transactionPagination?.page,
+          pageSize: transactionPagination?.pageSize,
+          ticker: transactionFilters?.ticker,
+          portfolioId: transactionFilters?.portfolioId,
+          assetType: transactionFilters?.assetType,
+          currency: transactionFilters?.currency,
+          dateFrom: transactionFilters?.dateFrom,
+          dateTo: transactionFilters?.dateTo,
+        },
+        signal,
+      ),
     placeholderData: (previousData) => previousData,
   });
 
   const portfoliosQ = useQuery({
     queryKey: ["portfolios"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("portfolios")
-        .select("*")
-        .order("name", { ascending: true });
-      if (error) throw new Error(error.message);
-      return (data ?? []) as PortfolioRecord[];
-    },
+    queryFn: ({ signal }) => listPortfolios(signal),
     enabled: includePortfolios,
   });
 

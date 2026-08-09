@@ -18,3 +18,5 @@ It lets you manage transactions, monitor holdings and P&L, and view live market 
 - `src/lib/portfolio/` - portfolio domain logic (types, api, mappers, calculations)
 - `api/` - server-side API routes (including market status proxy)
 - `supabase/` - Supabase related assets/config
+- `backend/` - shared .NET 10 API foundation for the gradual Portfolio and Car
+  Service migration; see [`backend/README.md`](backend/README.md)

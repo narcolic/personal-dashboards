@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { ApiError, apiFetch } from "@/lib/api/client";
 import { ServiceHistoryEditor } from "@/routes/_authenticated/car-service/components/ServiceHistoryEditor";
 import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
@@ -10,7 +11,6 @@ import {
   updateServiceVisit,
 } from "@/routes/_authenticated/car-service/hooks/useCarServiceMutations";
 import type {
-  ServiceJob,
   ServiceJobInput,
   ServiceVisitWithJobs,
 } from "@/routes/_authenticated/car-service/types";
@@ -53,42 +53,23 @@ function CarServiceEditVisit() {
       setIsLoading(true);
       setError(null);
 
-      const { data: visitData, error: visitError } = await supabase
-        .from("service_visits")
-        .select("*")
-        .eq("id", visitId)
-        .maybeSingle();
-
-      if (!mounted) return;
-
-      if (visitError) {
-        setError(visitError.message);
-        setIsLoading(false);
-        return;
+      try {
+        const data = await apiFetch<ServiceVisitWithJobs>(
+          `/api/car-service/visits/${encodeURIComponent(visitId)}`,
+        );
+        if (mounted) setVisit(data);
+      } catch (e) {
+        if (!mounted) return;
+        setError(
+          e instanceof ApiError && e.status === 404
+            ? t("car.editVisit.notFound")
+            : e instanceof Error
+              ? e.message
+              : "Failed to load visit.",
+        );
+      } finally {
+        if (mounted) setIsLoading(false);
       }
-
-      if (!visitData) {
-        setError(t("car.editVisit.notFound"));
-        setIsLoading(false);
-        return;
-      }
-
-      const { data: jobsData, error: jobsError } = await supabase
-        .from("service_jobs")
-        .select("*")
-        .eq("service_visit_id", visitId)
-        .order("created_at", { ascending: true });
-
-      if (!mounted) return;
-
-      if (jobsError) {
-        setError(jobsError.message);
-        setIsLoading(false);
-        return;
-      }
-
-      setVisit({ ...visitData, jobs: (jobsData ?? []) as ServiceJob[] });
-      setIsLoading(false);
     }
 
     void loadVisit();

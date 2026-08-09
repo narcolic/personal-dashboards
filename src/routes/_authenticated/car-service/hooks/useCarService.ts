@@ -1,11 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
-import type {
-  ServiceJob,
-  ServiceVisit,
-  ServiceVisitWithJobs,
-} from "@/routes/_authenticated/car-service/types";
+import { apiFetch } from "@/lib/api/client";
+import type { ServiceVisitWithJobs } from "@/routes/_authenticated/car-service/types";
 
 export function useCarService(vehicleId: string = "all") {
   const { user } = useAuth();
@@ -29,76 +25,30 @@ export function useCarService(vehicleId: string = "all") {
     setIsLoading(true);
     setError(null);
 
-    let visitsQuery = supabase
-      .from("service_visits")
-      .select("*")
-      .eq("user_id", userId)
-      .order("service_date", { ascending: false });
+    try {
+      const query = vehicleId === "all" ? "" : `?vehicleId=${encodeURIComponent(vehicleId)}`;
+      const visits = await apiFetch<ServiceVisitWithJobs[]>(`/api/car-service/visits${query}`);
+      const jobs = visits.flatMap((visit) => visit.jobs);
+      const names = Array.from(
+        new Set(jobs.map((job) => job.job_name_snapshot.trim()).filter(Boolean)),
+      ).sort((a, b) => a.localeCompare(b));
+      const categories = Array.from(
+        new Set(
+          jobs.map((job) => (job.category_snapshot ?? "").trim().toUpperCase()).filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b));
 
-    if (vehicleId !== "all") {
-      visitsQuery = visitsQuery.eq("vehicle_id", vehicleId);
-    }
-
-    const { data: visitsData, error: visitsError } = await visitsQuery;
-
-    if (visitsError) {
+      setVisits(visits);
+      setJobSuggestions(names);
+      setCategorySuggestions(categories);
+    } catch (fetchError) {
       setVisits([]);
       setJobSuggestions([]);
       setCategorySuggestions([]);
-      setError(visitsError.message);
+      setError(fetchError instanceof Error ? fetchError.message : "Failed to load service visits.");
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    const baseVisits = (visitsData ?? []) as ServiceVisit[];
-
-    if (baseVisits.length === 0) {
-      setVisits([]);
-      setJobSuggestions([]);
-      setCategorySuggestions([]);
-      setIsLoading(false);
-      return;
-    }
-
-    const visitIds = baseVisits.map((visit) => visit.id);
-
-    const { data: jobsData, error: jobsError } = await supabase
-      .from("service_jobs")
-      .select("*")
-      .in("service_visit_id", visitIds)
-      .order("created_at", { ascending: true });
-
-    if (jobsError) {
-      setVisits([]);
-      setJobSuggestions([]);
-      setCategorySuggestions([]);
-      setError(jobsError.message);
-      setIsLoading(false);
-      return;
-    }
-
-    const jobs = (jobsData ?? []) as ServiceJob[];
-    const jobsByVisit = new Map<string, ServiceJob[]>();
-
-    for (const job of jobs) {
-      const group = jobsByVisit.get(job.service_visit_id) ?? [];
-      group.push(job);
-      jobsByVisit.set(job.service_visit_id, group);
-    }
-
-    const names = Array.from(
-      new Set(jobs.map((job) => job.job_name_snapshot.trim()).filter(Boolean)),
-    ).sort((a, b) => a.localeCompare(b));
-    const categories = Array.from(
-      new Set(
-        jobs.map((job) => (job.category_snapshot ?? "").trim().toUpperCase()).filter(Boolean),
-      ),
-    ).sort((a, b) => a.localeCompare(b));
-
-    setVisits(baseVisits.map((visit) => ({ ...visit, jobs: jobsByVisit.get(visit.id) ?? [] })));
-    setJobSuggestions(names);
-    setCategorySuggestions(categories);
-    setIsLoading(false);
   }, [userId, vehicleId]);
 
   useEffect(() => {

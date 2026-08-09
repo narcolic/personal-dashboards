@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { apiFetch } from "@/lib/api/client";
 import type { Vehicle } from "@/routes/_authenticated/car-service/types";
 
 export function useVehicles() {
@@ -21,21 +21,15 @@ export function useVehicles() {
     setIsLoading(true);
     setError(null);
 
-    const { data, error: fetchError } = await supabase
-      .from("vehicles")
-      .select("*")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: true });
-
-    if (fetchError) {
+    try {
+      const data = await apiFetch<Vehicle[]>("/api/car-service/vehicles");
+      setVehicles(data);
+    } catch (fetchError) {
       setVehicles([]);
-      setError(fetchError.message);
+      setError(fetchError instanceof Error ? fetchError.message : "Failed to load vehicles.");
+    } finally {
       setIsLoading(false);
-      return;
     }
-
-    setVehicles(data ?? []);
-    setIsLoading(false);
   }, [userId]);
 
   useEffect(() => {

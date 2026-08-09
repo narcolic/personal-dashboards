@@ -63,7 +63,7 @@ function emptyVehicleForm(): VehicleFormState {
 function VehiclesScreen() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const { vehicles, isLoading, error, refetch } = useVehicles();
+  const { vehicles, error, refetch } = useVehicles();
   const { visits } = useCarService("all");
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const initialExpandedVehicleId = searchParams.get("vehicleId")?.trim() || null;
@@ -156,10 +156,6 @@ function VehiclesScreen() {
         ) : null}
 
         <div className="space-y-2">
-          {isLoading ? (
-            <div className="text-[11px] text-muted-foreground">{t("common.loading")}</div>
-          ) : null}
-
           {vehicles.map((vehicle) => (
             <VehicleAccordionItem
               key={vehicle.id}

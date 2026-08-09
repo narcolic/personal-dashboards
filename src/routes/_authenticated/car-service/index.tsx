@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { ReminderStatusBadge } from "@/routes/_authenticated/car-service/components/ReminderStatusBadge";
 import { useCarServiceWorkspace } from "@/routes/_authenticated/car-service/components/CarServiceWorkspaceState";
 import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
+import { useCarServiceAnalytics } from "@/routes/_authenticated/car-service/hooks/useCarServiceAnalytics";
 import { parseVehicleMeta } from "@/routes/_authenticated/car-service/hooks/useVehicleMutations";
 import { useAllReminders } from "@/routes/_authenticated/car-service/hooks/useReminders";
 import { useVehicles } from "@/routes/_authenticated/car-service/hooks/useVehicles";
@@ -11,10 +12,6 @@ import {
   formatCurrency,
   formatDate,
   formatKm,
-  getCostThisYear,
-  getLastVisit,
-  getTotalLifetimeCost,
-  getTotalVisits,
 } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 import { Link } from "@tanstack/react-router";
@@ -27,13 +24,20 @@ function CarServiceOverview() {
   const { t } = useTranslation();
   const { vehicles } = useVehicles();
   const { selectedVehicleId } = useCarServiceWorkspace();
-  const { visits, isLoading, error } = useCarService(selectedVehicleId);
+  const { visits, isLoading: visitsLoading, error: visitsError } = useCarService(selectedVehicleId);
+  const {
+    analytics,
+    isLoading: analyticsLoading,
+    error: analyticsError,
+  } = useCarServiceAnalytics(selectedVehicleId);
   const { serviceReminders } = useAllReminders();
 
-  const totalLifetimeCost = getTotalLifetimeCost(visits);
-  const costThisYear = getCostThisYear(visits);
-  const lastVisit = getLastVisit(visits);
-  const totalVisits = getTotalVisits(visits);
+  const isLoading = visitsLoading || analyticsLoading;
+  const error = visitsError ?? analyticsError;
+  const totalLifetimeCost = analytics?.totalLifetimeCost ?? 0;
+  const costThisYear = analytics?.costThisYear ?? 0;
+  const lastVisitDate = analytics?.lastVisitDate ?? null;
+  const totalVisits = analytics?.visitCount ?? 0;
   const recentVisits = visits.slice(0, 3);
   const vehicleById = new Map(vehicles.map((v) => [v.id, v]));
   const nowMs = useMemo(() => new Date().getTime(), []);
@@ -171,7 +175,7 @@ function CarServiceOverview() {
             />
             <OverviewMetric
               label={t("car.lastServiceDate")}
-              value={isLoading ? "..." : lastVisit ? formatDate(lastVisit.service_date) : "--"}
+              value={isLoading ? "..." : lastVisitDate ? formatDate(lastVisitDate) : "--"}
             />
             <OverviewMetric
               label={t("car.totalVisits")}

@@ -1,4 +1,12 @@
 import { z } from "zod";
+import { apiFetch } from "@/lib/api/client";
+
+export type PortfolioRecord = {
+  id: string;
+  name: string;
+  broker: string | null;
+  notes: string | null;
+};
 
 const PortfolioInput = z.object({
   name: z.string().trim().min(1).max(80),
@@ -7,3 +15,7 @@ const PortfolioInput = z.object({
 });
 
 export type PortfolioInputType = z.infer<typeof PortfolioInput>;
+
+export function listPortfolios(signal?: AbortSignal) {
+  return apiFetch<PortfolioRecord[]>("/api/portfolio/portfolios", { signal });
+}

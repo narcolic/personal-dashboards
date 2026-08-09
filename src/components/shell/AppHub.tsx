@@ -4,12 +4,10 @@ import { dashboards } from "@/components/shell/dashboards";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
-import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
+import { useCarServiceAnalytics } from "@/routes/_authenticated/car-service/hooks/useCarServiceAnalytics";
 import {
   formatCurrency as formatCarCurrency,
   formatDate as formatCarDate,
-  getCostThisYear,
-  getLastVisit,
 } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
@@ -133,7 +131,7 @@ function PortfolioHubSummary() {
 
 function CarServiceHubSummary() {
   const { t } = useTranslation();
-  const { visits, isLoading, error } = useCarService("all");
+  const { analytics, isLoading, error } = useCarServiceAnalytics("all");
 
   if (isLoading) {
     return (
@@ -151,16 +149,13 @@ function CarServiceHubSummary() {
     );
   }
 
-  if (visits.length === 0) {
+  if (!analytics || analytics.visitCount === 0) {
     return (
       <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
         {t("common.noData")}
       </div>
     );
   }
-
-  const lastVisit = getLastVisit(visits);
-  const costThisYear = getCostThisYear(visits);
 
   return (
     <div className="mt-3 space-y-1.5">
@@ -170,7 +165,7 @@ function CarServiceHubSummary() {
           last
         </span>
         <span className="text-sm font-semibold text-foreground">
-          {lastVisit ? formatCarDate(lastVisit.service_date) : "--"}
+          {analytics.lastVisitDate ? formatCarDate(analytics.lastVisitDate) : "--"}
         </span>
       </div>
       <div className="flex items-baseline justify-between gap-2">
@@ -178,7 +173,7 @@ function CarServiceHubSummary() {
           year
         </span>
         <span className="text-sm font-semibold text-foreground">
-          {formatCarCurrency(costThisYear)}
+          {formatCarCurrency(analytics.costThisYear)}
         </span>
       </div>
     </div>

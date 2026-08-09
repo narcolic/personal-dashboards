@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { apiFetch } from "@/lib/api/client";
+import type { TransactionRow } from "@/lib/portfolio/types";
 
 const TransactionInput = z.object({
   ticker: z
@@ -20,3 +22,39 @@ const TransactionInput = z.object({
 });
 
 export type TransactionInputType = z.infer<typeof TransactionInput>;
+
+export type TransactionListOptions = {
+  page?: number;
+  pageSize?: number;
+  ticker?: string;
+  portfolioId?: string;
+  assetType?: string;
+  currency?: string;
+  dateFrom?: string;
+  dateTo?: string;
+};
+
+export type TransactionListResult = {
+  rows: TransactionRow[];
+  count: number;
+};
+
+export function listTransactions(options: TransactionListOptions, signal?: AbortSignal) {
+  const query = new URLSearchParams();
+
+  if (options.page != null) query.set("page", String(options.page));
+  if (options.pageSize != null) query.set("pageSize", String(options.pageSize));
+  if (options.ticker?.trim()) query.set("ticker", options.ticker.trim());
+  if (options.portfolioId === "__unassigned__") {
+    query.set("unassignedPortfolio", "true");
+  } else if (options.portfolioId) {
+    query.set("portfolioId", options.portfolioId);
+  }
+  if (options.assetType) query.set("assetType", options.assetType);
+  if (options.currency) query.set("currency", options.currency);
+  if (options.dateFrom) query.set("dateFrom", options.dateFrom);
+  if (options.dateTo) query.set("dateTo", options.dateTo);
+
+  const suffix = query.size > 0 ? `?${query.toString()}` : "";
+  return apiFetch<TransactionListResult>(`/api/portfolio/transactions${suffix}`, { signal });
+}

@@ -2,18 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CarServiceKpiCard } from "@/routes/_authenticated/car-service/components/CarServiceKpiCard";
 import { ServiceAnalyticsPanel } from "@/routes/_authenticated/car-service/components/ServiceAnalyticsPanel";
 import { useCarServiceWorkspace } from "@/routes/_authenticated/car-service/components/CarServiceWorkspaceState";
-import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
+import { useCarServiceAnalytics } from "@/routes/_authenticated/car-service/hooks/useCarServiceAnalytics";
 import {
   formatCurrency,
   formatDate,
   formatKm,
-  getAnnualSpend,
-  getAverageKmInterval,
-  getAverageVisitCost,
-  getCostPer1000km,
-  getJobFrequency,
-  getMostExpensiveVisit,
-  getSpendByCategory,
 } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 
@@ -24,27 +17,7 @@ export const Route = createFileRoute("/_authenticated/car-service/analytics")({
 function CarServiceAnalytics() {
   const { t } = useTranslation();
   const { selectedVehicleId } = useCarServiceWorkspace();
-  const { visits, isLoading, error } = useCarService(selectedVehicleId);
-
-  const annualSpend = getAnnualSpend(visits);
-  const categorySpend = getSpendByCategory(visits);
-  const jobFrequency = getJobFrequency(visits);
-  const avgVisitCost = getAverageVisitCost(visits);
-  const avgKmInterval = getAverageKmInterval(visits);
-  const mostExpensiveVisit = getMostExpensiveVisit(visits);
-  const costPer1000km = getCostPer1000km(visits);
-
-  const topJobs = jobFrequency.map((item) => {
-    let totalSpent = 0;
-    for (const visit of visits) {
-      for (const job of visit.jobs) {
-        if (job.job_name_snapshot.trim() === item.jobName) {
-          totalSpent += Number(job.line_total_ex_vat ?? 0) * (1 + Number(visit.vat_rate ?? 0));
-        }
-      }
-    }
-    return { ...item, totalSpent };
-  });
+  const { analytics, isLoading, error } = useCarServiceAnalytics(selectedVehicleId);
 
   return (
     <div className="space-y-6 font-mono">
@@ -56,7 +29,7 @@ function CarServiceAnalytics() {
 
       {isLoading ? (
         <AnalyticsLoadingSkeleton />
-      ) : visits.length === 0 ? (
+      ) : !analytics || analytics.visitCount === 0 ? (
         <div className="analytics-panel rounded-[10px] border border-border/70 bg-card/70 p-10 text-center shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
           <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
             {t("car.noDataYet")}
@@ -81,30 +54,36 @@ function CarServiceAnalytics() {
             <div className="analytics-panel grid grid-cols-2 overflow-hidden rounded-[10px] border border-border/70 bg-card/70 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] md:grid-cols-4">
               <CarServiceKpiCard
                 label={t("car.avgCostPerVisit")}
-                value={formatCurrency(avgVisitCost)}
+                value={formatCurrency(analytics.averageVisitCost)}
               />
               <CarServiceKpiCard
                 label={t("car.avgKmBetween")}
-                value={avgKmInterval === null ? "--" : formatKm(Math.round(avgKmInterval))}
+                value={
+                  analytics.averageKmInterval === null
+                    ? "--"
+                    : formatKm(Math.round(analytics.averageKmInterval))
+                }
               />
               <CarServiceKpiCard
                 label={t("car.costPer1000km")}
-                value={costPer1000km === null ? "--" : formatCurrency(costPer1000km)}
+                value={
+                  analytics.costPer1000Km === null ? "--" : formatCurrency(analytics.costPer1000Km)
+                }
               />
               <CarServiceKpiCard
                 label={t("car.mostExpensiveVisit")}
                 value={
-                  mostExpensiveVisit
-                    ? `${formatDate(mostExpensiveVisit.service_date)} ${formatCurrency(Number(mostExpensiveVisit.total_amount))}`
+                  analytics.mostExpensiveVisit
+                    ? `${formatDate(analytics.mostExpensiveVisit.serviceDate)} ${formatCurrency(analytics.mostExpensiveVisit.totalAmount)}`
                     : "--"
                 }
               />
             </div>
           </section>
           <ServiceAnalyticsPanel
-            annualSpend={annualSpend}
-            categorySpend={categorySpend}
-            topJobs={topJobs}
+            annualSpend={analytics.annualSpend}
+            categorySpend={analytics.categorySpend}
+            topJobs={analytics.topJobs}
           />
         </>
       )}
