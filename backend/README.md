@@ -69,6 +69,49 @@ The local API listens on `http://localhost:5080` by default.
 - `GET /api/car-service/analytics?vehicleId={vehicleId}` returns server-calculated service analytics. Omit `vehicleId` for all vehicles.
 - `GET /api/car-service/reminders?vehicleId={vehicleId}` returns service intervals with server-calculated status. Use `activeOnly=true` for the dashboard list.
 
+## Run with Docker
+
+Build the production container from the repository root:
+
+```powershell
+docker build --file .\backend\Dockerfile --tag portfolio-terminal-api:local .\backend
+```
+
+Create `backend/.env.docker.local` with the runtime settings below. This file is
+ignored by Git; never commit the real database password.
+
+```text
+ASPNETCORE_ENVIRONMENT=Production
+Supabase__Url=https://xcqxfyylqtcgmugpnjzt.supabase.co
+Supabase__Audience=authenticated
+ConnectionStrings__AppDatabase=Host=...;Port=5432;Database=postgres;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true
+Cors__AllowedOrigins__0=http://localhost:5173
+```
+
+Run the container and expose its port as `http://localhost:8080`:
+
+```powershell
+docker run --rm --name portfolio-terminal-api --publish 8080:8080 --env-file .\backend\.env.docker.local portfolio-terminal-api:local
+```
+
+Verify `GET /health/live` for process health and `GET /health/ready` for the
+database connection. Stop the foreground container with `Ctrl+C`.
+
+## Publish the container
+
+The `Publish backend container` GitHub Actions workflow builds the API whenever
+backend files change on `main`. It publishes two Linux image tags to GitHub
+Container Registry:
+
+```text
+ghcr.io/narcolic/portfolio-terminal-api:latest
+ghcr.io/narcolic/portfolio-terminal-api:sha-<commit>
+```
+
+Azure uses the immutable commit tag for controlled deployments. The `latest`
+tag remains available for convenient manual smoke tests. The package must be
+public before Azure Container Apps can pull it without registry credentials.
+
 ## Migrated slices
 
 - Portfolio and transaction list reads now flow through the .NET API. Portfolio
