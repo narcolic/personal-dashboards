@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { apiFetch } from "@/lib/api/client";
 import type { Quote } from "@/lib/portfolio/types";
 import { normalizeQuote, type RawQuote } from "@/lib/portfolio/quotes/mappers";
 
@@ -14,14 +15,9 @@ const STALE_MS = 30 * 60_000;
 async function fetchYahooQuotes(symbols: string[]): Promise<Quote[]> {
   if (symbols.length === 0) return [];
 
-  const response = await fetch(`/api/quotes?symbols=${encodeURIComponent(symbols.join(","))}`);
-  if (!response.ok) {
-    throw new Error(`Quote API error (${response.status})`);
-  }
-
-  const json = (await response.json()) as {
+  const json = await apiFetch<{
     quotes?: RawQuote[];
-  };
+  }>(`/api/portfolio/quotes?symbols=${encodeURIComponent(symbols.join(","))}`);
   const rows = json.quotes ?? [];
 
   const bySymbol = new Map<string, RawQuote>();

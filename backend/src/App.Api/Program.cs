@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using PortfolioTerminal.Api;
@@ -10,6 +11,10 @@ using PortfolioTerminal.CarService.Visits;
 using PortfolioTerminal.CarService.Vehicles;
 using PortfolioTerminal.Data;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.Holdings;
+using PortfolioTerminal.Portfolio.MarketData;
+using PortfolioTerminal.Portfolio.Snapshots;
+using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -46,8 +51,37 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton(
     new AppDataSource(builder.Configuration.GetConnectionString("AppDatabase")));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHttpClient<IQuoteService, YahooQuoteService>(client =>
+{
+    client.BaseAddress = new Uri("https://query1.finance.yahoo.com/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddHttpClient<IFxRateService, FxRateService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddHttpClient<IMarketStatusService, MarketStatusService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+    var apiKey = builder.Configuration["MarketHours:ApiKey"] ??
+        builder.Configuration["MARKETHOURS_API_KEY"];
+    if (!string.IsNullOrWhiteSpace(apiKey))
+    {
+        client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+    }
+});
 builder.Services.AddScoped<IPortfolioQueries, PortfolioQueries>();
 builder.Services.AddScoped<IPortfolioCommands, PortfolioCommands>();
+builder.Services.AddScoped<IPortfolioHoldingQueries, PortfolioHoldingQueries>();
+builder.Services.AddScoped<IPortfolioSnapshotQueries, PortfolioSnapshotQueries>();
+builder.Services.AddScoped<IPortfolioSnapshotStore, PortfolioSnapshotStore>();
+builder.Services.AddScoped<IPortfolioSnapshotJob, PortfolioSnapshotJob>();
+builder.Services.AddScoped<ITickerCatalogQueries, TickerCatalogQueries>();
 builder.Services.AddScoped<ITransactionQueries, TransactionQueries>();
 builder.Services.AddScoped<ITransactionCommands, TransactionCommands>();
 builder.Services.AddScoped<IVehicleQueries, VehicleQueries>();
@@ -92,6 +126,41 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapIdentityEndpoints();
 app.MapPortfolioEndpoints();
 app.MapCarServiceEndpoints();
+
+if (args.Any(argument => string.Equals(
+        argument,
+        "--run-portfolio-snapshot=true",
+        StringComparison.OrdinalIgnoreCase)))
+{
+    var force = args.Any(argument => string.Equals(
+        argument,
+        "--snapshot-force=true",
+        StringComparison.OrdinalIgnoreCase));
+    var dateArgument = args.FirstOrDefault(argument =>
+        argument.StartsWith("--snapshot-date=", StringComparison.OrdinalIgnoreCase));
+    DateOnly? snapshotDate = null;
+    if (dateArgument is not null)
+    {
+        var rawDate = dateArgument[(dateArgument.IndexOf('=') + 1)..];
+        if (!DateOnly.TryParseExact(
+                rawDate,
+                "yyyy-MM-dd",
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.None,
+                out var parsedDate))
+        {
+            throw new InvalidOperationException("snapshot-date must use YYYY-MM-DD format.");
+        }
+        snapshotDate = parsedDate;
+    }
+
+    await using var scope = app.Services.CreateAsyncScope();
+    var job = scope.ServiceProvider.GetRequiredService<IPortfolioSnapshotJob>();
+    var result = await job.RunAsync(
+        new PortfolioSnapshotRunRequest(force, snapshotDate));
+    Console.WriteLine(JsonSerializer.Serialize(result));
+    return;
+}
 
 app.Run();
 

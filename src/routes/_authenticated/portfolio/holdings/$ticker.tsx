@@ -23,8 +23,16 @@ function HoldingDetailsPage() {
   const normalizedTicker = ticker.trim().toUpperCase();
   const [editing, setEditing] = useState<(TransactionInputType & { id?: string }) | null>(null);
   const [txSortDirection, setTxSortDirection] = useState<"asc" | "desc">("desc");
-  const { txQ, quotesQ, transactions, portfolios, allRows, portfolioMap, convertTo } =
-    usePortfolioHoldingsView();
+  const {
+    txQ,
+    holdingsQ,
+    quotesQ,
+    transactions,
+    portfolios,
+    allRows,
+    portfolioMap,
+    convertTo,
+  } = usePortfolioHoldingsView();
   const { tickerCatalog } = useTickerCatalog();
 
   const holdingRows = useMemo(
@@ -195,7 +203,7 @@ function HoldingDetailsPage() {
     },
   });
 
-  if (txQ.isLoading || quotesQ.isLoading) {
+  if (txQ.isLoading || holdingsQ.isLoading || quotesQ.isLoading) {
     return <HoldingDetailsSkeleton />;
   }
   if (holdingRows.length === 0) return <HoldingDetailsMissing ticker={normalizedTicker} />;

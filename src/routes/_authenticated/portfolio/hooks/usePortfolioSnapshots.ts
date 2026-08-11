@@ -1,8 +1,10 @@
 import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import type { Database } from "@/integrations/supabase/types";
+import {
+  listPortfolioSnapshots,
+  type PortfolioSnapshotRow,
+} from "@/lib/portfolio/snapshots/api";
 
-export type PortfolioSnapshotRow = Database["public"]["Tables"]["portfolio_value_snapshots"]["Row"];
+export type { PortfolioSnapshotRow } from "@/lib/portfolio/snapshots/api";
 
 export function isCompletePortfolioSnapshot(row: PortfolioSnapshotRow) {
   const metadata = row.quote_metadata;
@@ -15,17 +17,7 @@ export function isCompletePortfolioSnapshot(row: PortfolioSnapshotRow) {
 export function usePortfolioSnapshots() {
   return useQuery({
     queryKey: ["portfolio-value-snapshots"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("portfolio_value_snapshots")
-        .select("*")
-        .order("snapshot_date", { ascending: false })
-        .order("scope", { ascending: true })
-        .limit(1000);
-
-      if (error) throw new Error(error.message);
-      return (data ?? []) as PortfolioSnapshotRow[];
-    },
+    queryFn: ({ signal }) => listPortfolioSnapshots(signal),
     staleTime: 10 * 60_000,
   });
 }

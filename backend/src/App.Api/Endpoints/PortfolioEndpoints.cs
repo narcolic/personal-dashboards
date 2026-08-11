@@ -1,8 +1,13 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using PortfolioTerminal.Api.Auth;
 using PortfolioTerminal.Portfolio;
+using PortfolioTerminal.Portfolio.Holdings;
+using PortfolioTerminal.Portfolio.MarketData;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.Snapshots;
+using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
 
 namespace PortfolioTerminal.Api.Endpoints;
@@ -32,6 +37,99 @@ public static class PortfolioEndpoints
             .WithName("CreatePortfolio");
         group.MapDelete("/portfolios/{portfolioId:guid}", DeletePortfolioAsync)
             .WithName("DeletePortfolio");
+
+        group.MapGet("/ticker-catalog", async (
+                ITickerCatalogQueries queries,
+                ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                var items = await queries.ListAsync(currentUser.UserId, cancellationToken);
+                return TypedResults.Ok(items.Select(TickerCatalogResponse.From));
+            })
+            .WithName("ListTickerCatalog");
+
+        group.MapGet("/snapshots", async Task<IResult> (
+                int? limit,
+                IPortfolioSnapshotQueries queries,
+                ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                var requestedLimit = limit ?? 1000;
+                if (requestedLimit is < 1 or > 1000)
+                {
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["limit"] = ["Limit must be between 1 and 1000."],
+                    });
+                }
+
+                var items = await queries.ListAsync(
+                    currentUser.UserId,
+                    requestedLimit,
+                    cancellationToken);
+                return TypedResults.Ok(items.Select(PortfolioSnapshotResponse.From));
+            })
+            .WithName("ListPortfolioSnapshots");
+
+        group.MapGet("/holdings", async (
+                IPortfolioHoldingQueries queries,
+                ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                var holdings = await queries.ListAsync(
+                    currentUser.UserId,
+                    cancellationToken);
+                return TypedResults.Ok(holdings.Select(PortfolioHoldingResponse.From));
+            })
+            .WithName("ListPortfolioHoldings");
+
+        group.MapGet("/quotes", async Task<IResult> (
+                string? symbols,
+                IQuoteService service,
+                CancellationToken cancellationToken) =>
+            {
+                var requested = SplitDistinct(symbols, value => value.ToUpperInvariant());
+                if (requested.Length > 100 || requested.Any(value => value.Length > 32))
+                {
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["symbols"] = ["Supply at most 100 symbols, each no longer than 32 characters."],
+                    });
+                }
+
+                return TypedResults.Ok(await service.GetAsync(requested, cancellationToken));
+            })
+            .WithName("GetPortfolioQuotes");
+
+        group.MapGet("/fx-rates", async Task<IResult> (
+                string? from,
+                IFxRateService service,
+                CancellationToken cancellationToken) =>
+            {
+                var baseCurrency = string.IsNullOrWhiteSpace(from)
+                    ? "USD"
+                    : from.Trim().ToUpperInvariant();
+                if (!Regex.IsMatch(baseCurrency, "^[A-Z]{3,5}$"))
+                {
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["from"] = ["Currency must contain 3 to 5 letters."],
+                    });
+                }
+
+                return Results.Json(await service.GetAsync(baseCurrency, cancellationToken));
+            })
+            .WithName("GetPortfolioFxRates");
+
+        group.MapGet("/market-status", async (
+                string? exchanges,
+                IMarketStatusService service,
+                CancellationToken cancellationToken) =>
+            {
+                var requested = SplitDistinct(exchanges, NormalizeExchangeCode);
+                return TypedResults.Ok(await service.GetAsync(requested, cancellationToken));
+            })
+            .WithName("GetPortfolioMarketStatus");
 
         group.MapGet("/transactions", async Task<IResult> (
                 int? page,
@@ -109,6 +207,24 @@ public static class PortfolioEndpoints
 
         return endpoints;
     }
+
+    private static string[] SplitDistinct(
+        string? value,
+        Func<string, string> normalize) =>
+        [.. (value ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(normalize)
+        .Where(item => item.Length > 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+    private static string NormalizeExchangeCode(string value) =>
+        value.Trim().ToLowerInvariant() switch
+        {
+            "xams" => "ams",
+            "xetr" => "xetra",
+            "xlon" => "lse",
+            var code => code,
+        };
 
     private static async Task<IResult> CreatePortfolioAsync(
         PortfolioMutationRequest request,
@@ -374,6 +490,74 @@ public static class PortfolioEndpoints
 }
 
 public sealed record PortfolioMutationResponse(Guid Id);
+
+public sealed record PortfolioHoldingResponse(
+    string Id,
+    string Ticker,
+    string? Name,
+    [property: JsonPropertyName("asset_type")] string AssetType,
+    string? Market,
+    string Currency,
+    decimal Shares,
+    [property: JsonPropertyName("avg_cost")] decimal AvgCost,
+    string? Notes,
+    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
+    [property: JsonPropertyName("tx_count")] int TransactionCount,
+    [property: JsonPropertyName("first_date")] DateOnly? FirstDate,
+    [property: JsonPropertyName("last_date")] DateOnly? LastDate)
+{
+    public static PortfolioHoldingResponse From(PortfolioHolding holding) =>
+        new(holding.Id, holding.Ticker, holding.Name, holding.AssetType,
+            holding.Market, holding.Currency, holding.Shares, holding.AvgCost,
+            holding.Notes, holding.PortfolioId, holding.TransactionCount,
+            holding.FirstDate, holding.LastDate);
+}
+
+public sealed record TickerCatalogResponse(
+    Guid Id,
+    [property: JsonPropertyName("user_id")] Guid UserId,
+    string Ticker,
+    string? Name,
+    [property: JsonPropertyName("asset_type")] string? AssetType,
+    string? Market,
+    string? Currency,
+    [property: JsonPropertyName("is_active")] bool IsActive,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt)
+{
+    public static TickerCatalogResponse From(TickerCatalogListItem item) =>
+        new(item.Id, item.UserId, item.Ticker, item.Name, item.AssetType, item.Market,
+            item.Currency, item.IsActive, item.CreatedAt, item.UpdatedAt);
+}
+
+public sealed record PortfolioSnapshotResponse(
+    Guid Id,
+    [property: JsonPropertyName("user_id")] Guid UserId,
+    [property: JsonPropertyName("snapshot_date")] DateOnly SnapshotDate,
+    [property: JsonPropertyName("snapshot_at")] DateTimeOffset SnapshotAt,
+    string Scope,
+    [property: JsonPropertyName("scope_key")] string ScopeKey,
+    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
+    [property: JsonPropertyName("portfolio_name")] string? PortfolioName,
+    [property: JsonPropertyName("market_value_eur")] decimal MarketValueEur,
+    [property: JsonPropertyName("market_value_usd")] decimal MarketValueUsd,
+    [property: JsonPropertyName("cost_basis_eur")] decimal CostBasisEur,
+    [property: JsonPropertyName("cost_basis_usd")] decimal CostBasisUsd,
+    [property: JsonPropertyName("unrealized_eur")] decimal UnrealizedEur,
+    [property: JsonPropertyName("unrealized_usd")] decimal UnrealizedUsd,
+    [property: JsonPropertyName("quote_metadata")] JsonElement QuoteMetadata,
+    [property: JsonPropertyName("fx_metadata")] JsonElement FxMetadata,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt)
+{
+    public static PortfolioSnapshotResponse From(PortfolioSnapshotListItem item) =>
+        new(item.Id, item.UserId, item.SnapshotDate, item.SnapshotAt,
+            item.Scope, item.ScopeKey, item.PortfolioId, item.PortfolioName,
+            item.MarketValueEur, item.MarketValueUsd,
+            item.CostBasisEur, item.CostBasisUsd,
+            item.UnrealizedEur, item.UnrealizedUsd,
+            item.QuoteMetadata, item.FxMetadata, item.CreatedAt, item.UpdatedAt);
+}
 
 public sealed record PortfolioBulkMutationResponse(int Deleted);
 

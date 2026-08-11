@@ -50,13 +50,12 @@ public static class CarServiceAnalyticsCalculator
 
     private static AnnualSpendResult[] CalculateAnnualSpend(
         IReadOnlyList<ServiceVisitListItem> visits) =>
-        visits
+        [.. visits
             .GroupBy(visit => visit.ServiceDate.Year)
             .OrderBy(group => group.Key)
             .Select(group => new AnnualSpendResult(
                 group.Key.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                group.Sum(visit => visit.TotalAmount)))
-            .ToArray();
+                group.Sum(visit => visit.TotalAmount)))];
 
     private static CategorySpendResult[] CalculateCategorySpend(
         IReadOnlyList<ServiceVisitListItem> visits)
@@ -75,10 +74,9 @@ public static class CarServiceAnalyticsCalculator
             }
         }
 
-        return totals
+        return [.. totals
             .Select(item => new CategorySpendResult(item.Key, item.Value))
-            .OrderByDescending(item => item.Total)
-            .ToArray();
+            .OrderByDescending(item => item.Total)];
     }
 
     private static TopJobResult[] CalculateTopJobs(
@@ -104,14 +102,13 @@ public static class CarServiceAnalyticsCalculator
             }
         }
 
-        return totals
+        return [.. totals
             .Select(item => new TopJobResult(
                 item.Key,
                 item.Value.Count,
                 item.Value.TotalSpent))
             .OrderByDescending(item => item.Count)
             .ThenBy(item => item.JobName, StringComparer.Ordinal)
-            .Take(10)
-            .ToArray();
+            .Take(10)];
     }
 }

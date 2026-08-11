@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
-import { supabase } from "@/integrations/supabase/client";
+import { listTickerCatalog } from "@/lib/portfolio/catalog/api";
 import type { TickerCatalogRow } from "@/lib/portfolio/tickerCatalog";
 
 export function useTickerCatalog() {
@@ -11,14 +11,7 @@ export function useTickerCatalog() {
   const tickerCatalogQ = useQuery({
     queryKey: ["ticker-catalog", userId],
     enabled: Boolean(userId),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ticker_catalog")
-        .select("*")
-        .order("ticker", { ascending: true });
-      if (error) throw new Error(error.message);
-      return (data ?? []) as TickerCatalogRow[];
-    },
+    queryFn: ({ signal }) => listTickerCatalog(signal),
   });
 
   const tickerCatalogByTicker = useMemo(

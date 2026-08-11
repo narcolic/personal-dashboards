@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { aggregateTransactions, enrich } from "@/lib/portfolio/transactions/calculations";
+import { enrich } from "@/lib/portfolio/transactions/calculations";
 import { getQuotesClient } from "@/lib/portfolio/quotes/api";
-import type { TransactionRow } from "@/lib/portfolio/types";
+import type { HoldingRow } from "@/lib/portfolio/types";
 
 export function useQuotes(
-  transactions: TransactionRow[],
+  positions: HoldingRow[],
   options: {
     staleTime?: number;
     gcTime?: number;
@@ -13,8 +13,6 @@ export function useQuotes(
     enabled?: boolean;
   } = {},
 ) {
-  const positions = useMemo(() => aggregateTransactions(transactions), [transactions]);
-
   const tickers = useMemo(
     () => Array.from(new Set(positions.map((p) => p.ticker.toUpperCase()))),
     [positions],
