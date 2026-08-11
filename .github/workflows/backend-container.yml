@@ -4,7 +4,12 @@ on:
   push:
     branches:
       - main
-      - codex/azure-container-deploy
+    paths:
+      - "backend/**"
+      - ".github/workflows/backend-container.yml"
+  pull_request:
+    branches:
+      - main
     paths:
       - "backend/**"
       - ".github/workflows/backend-container.yml"
@@ -13,6 +18,7 @@ on:
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 concurrency:
   group: backend-container-${{ github.ref }}
@@ -21,11 +27,15 @@ concurrency:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository_owner }}/portfolio-terminal-api
+  AZURE_RESOURCE_GROUP: portfolio-terminal-rg
+  AZURE_CONTAINER_APP: portfolio-terminal-api
+  API_BASE_URL: https://portfolio-terminal-api.yellowforest-c9892f85.northeurope.azurecontainerapps.io
 
 jobs:
   build-and-push:
-    name: Build and publish Linux image
+    name: Build, publish, and deploy Linux image
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Check out repository
@@ -48,15 +58,50 @@ jobs:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
-            type=sha,prefix=sha-
+            type=raw,value=sha-${{ github.sha }}
 
       - name: Build and publish image
         uses: docker/build-push-action@v7
         with:
           context: ./backend
           file: ./backend/Dockerfile
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.metadata.outputs.tags }}
           labels: ${{ steps.metadata.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Log in to Azure with GitHub OIDC
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Deploy image to Azure Container Apps
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          containerAppName: ${{ env.AZURE_CONTAINER_APP }}
+          resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
+          imageToDeploy: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
+          registryUrl: ${{ env.REGISTRY }}
+
+      - name: Verify production readiness
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error "${API_BASE_URL}/health/ready"; then
+              echo
+              echo "Production API is ready."
+              exit 0
+            fi
+
+            echo "Waiting for the new revision to become ready (${attempt}/20)..."
+            sleep 10
+          done
+
+          echo "Production API did not become ready in time."
+          exit 1

@@ -101,16 +101,24 @@ database connection. Stop the foreground container with `Ctrl+C`.
 
 The `Publish backend container` GitHub Actions workflow builds the API whenever
 backend files change on `main`. It publishes two Linux image tags to GitHub
-Container Registry:
+Container Registry and deploys the immutable commit image to Azure Container
+Apps:
 
 ```text
 ghcr.io/narcolic/portfolio-terminal-api:latest
-ghcr.io/narcolic/portfolio-terminal-api:sha-<commit>
+ghcr.io/narcolic/portfolio-terminal-api:sha-<full-commit-sha>
 ```
 
 Azure uses the immutable commit tag for controlled deployments. The `latest`
 tag remains available for convenient manual smoke tests. The package must be
 public before Azure Container Apps can pull it without registry credentials.
+
+Azure authentication uses GitHub OIDC rather than a stored client secret. The
+repository must define `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and
+`AZURE_SUBSCRIPTION_ID` Actions secrets. The corresponding Microsoft Entra
+application trusts only the repository's `main` branch and has the `Container
+Apps Contributor` role scoped to `portfolio-terminal-rg`. After deployment, the
+workflow verifies the production `/health/ready` endpoint.
 
 ## Migrated slices
 
