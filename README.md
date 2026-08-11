@@ -10,13 +10,12 @@ It lets you manage transactions, monitor holdings and P&L, and view live market 
 - Transactions management (manual entry and CSV upload)
 - Multi-currency display (EUR default)
 - Live market session indicators (ATHEX, NYSE, XETR) with local-time tooltips
-- Supabase-backed storage for portfolios and transactions
+- Supabase authentication with portfolio and car-service data accessed through the .NET API
 
 ## Project Structure (high level)
 
 - `src/routes/_authenticated/portfolio/` - portfolio pages, local components, and hooks
 - `src/lib/portfolio/` - portfolio domain logic (types, api, mappers, calculations)
-- `api/` - server-side API routes (including market status proxy)
 - `supabase/` - Supabase related assets/config
-- `backend/` - shared .NET 10 API foundation for the gradual Portfolio and Car
-  Service migration; see [`backend/README.md`](backend/README.md)
+- `backend/` - .NET 10 API, business logic, market-data integrations, and scheduled
+  portfolio snapshot worker; see [`backend/README.md`](backend/README.md)
