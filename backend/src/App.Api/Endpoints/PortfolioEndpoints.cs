@@ -1,8 +1,11 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using PortfolioTerminal.Api.Auth;
 using PortfolioTerminal.Portfolio;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.Snapshots;
+using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
 
 namespace PortfolioTerminal.Api.Endpoints;
@@ -32,6 +35,39 @@ public static class PortfolioEndpoints
             .WithName("CreatePortfolio");
         group.MapDelete("/portfolios/{portfolioId:guid}", DeletePortfolioAsync)
             .WithName("DeletePortfolio");
+
+        group.MapGet("/ticker-catalog", async (
+                ITickerCatalogQueries queries,
+                ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                var items = await queries.ListAsync(currentUser.UserId, cancellationToken);
+                return TypedResults.Ok(items.Select(TickerCatalogResponse.From));
+            })
+            .WithName("ListTickerCatalog");
+
+        group.MapGet("/snapshots", async Task<IResult> (
+                int? limit,
+                IPortfolioSnapshotQueries queries,
+                ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                var requestedLimit = limit ?? 1000;
+                if (requestedLimit is < 1 or > 1000)
+                {
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["limit"] = ["Limit must be between 1 and 1000."],
+                    });
+                }
+
+                var items = await queries.ListAsync(
+                    currentUser.UserId,
+                    requestedLimit,
+                    cancellationToken);
+                return TypedResults.Ok(items.Select(PortfolioSnapshotResponse.From));
+            })
+            .WithName("ListPortfolioSnapshots");
 
         group.MapGet("/transactions", async Task<IResult> (
                 int? page,
@@ -374,6 +410,52 @@ public static class PortfolioEndpoints
 }
 
 public sealed record PortfolioMutationResponse(Guid Id);
+
+public sealed record TickerCatalogResponse(
+    Guid Id,
+    [property: JsonPropertyName("user_id")] Guid UserId,
+    string Ticker,
+    string? Name,
+    [property: JsonPropertyName("asset_type")] string? AssetType,
+    string? Market,
+    string? Currency,
+    [property: JsonPropertyName("is_active")] bool IsActive,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt)
+{
+    public static TickerCatalogResponse From(TickerCatalogListItem item) =>
+        new(item.Id, item.UserId, item.Ticker, item.Name, item.AssetType, item.Market,
+            item.Currency, item.IsActive, item.CreatedAt, item.UpdatedAt);
+}
+
+public sealed record PortfolioSnapshotResponse(
+    Guid Id,
+    [property: JsonPropertyName("user_id")] Guid UserId,
+    [property: JsonPropertyName("snapshot_date")] DateOnly SnapshotDate,
+    [property: JsonPropertyName("snapshot_at")] DateTimeOffset SnapshotAt,
+    string Scope,
+    [property: JsonPropertyName("scope_key")] string ScopeKey,
+    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
+    [property: JsonPropertyName("portfolio_name")] string? PortfolioName,
+    [property: JsonPropertyName("market_value_eur")] decimal MarketValueEur,
+    [property: JsonPropertyName("market_value_usd")] decimal MarketValueUsd,
+    [property: JsonPropertyName("cost_basis_eur")] decimal CostBasisEur,
+    [property: JsonPropertyName("cost_basis_usd")] decimal CostBasisUsd,
+    [property: JsonPropertyName("unrealized_eur")] decimal UnrealizedEur,
+    [property: JsonPropertyName("unrealized_usd")] decimal UnrealizedUsd,
+    [property: JsonPropertyName("quote_metadata")] JsonElement QuoteMetadata,
+    [property: JsonPropertyName("fx_metadata")] JsonElement FxMetadata,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt)
+{
+    public static PortfolioSnapshotResponse From(PortfolioSnapshotListItem item) =>
+        new(item.Id, item.UserId, item.SnapshotDate, item.SnapshotAt,
+            item.Scope, item.ScopeKey, item.PortfolioId, item.PortfolioName,
+            item.MarketValueEur, item.MarketValueUsd,
+            item.CostBasisEur, item.CostBasisUsd,
+            item.UnrealizedEur, item.UnrealizedUsd,
+            item.QuoteMetadata, item.FxMetadata, item.CreatedAt, item.UpdatedAt);
+}
 
 public sealed record PortfolioBulkMutationResponse(int Deleted);
 

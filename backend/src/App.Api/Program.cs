@@ -10,6 +10,8 @@ using PortfolioTerminal.CarService.Visits;
 using PortfolioTerminal.CarService.Vehicles;
 using PortfolioTerminal.Data;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.Snapshots;
+using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -48,6 +50,8 @@ builder.Services.AddSingleton(
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPortfolioQueries, PortfolioQueries>();
 builder.Services.AddScoped<IPortfolioCommands, PortfolioCommands>();
+builder.Services.AddScoped<IPortfolioSnapshotQueries, PortfolioSnapshotQueries>();
+builder.Services.AddScoped<ITickerCatalogQueries, TickerCatalogQueries>();
 builder.Services.AddScoped<ITransactionQueries, TransactionQueries>();
 builder.Services.AddScoped<ITransactionCommands, TransactionCommands>();
 builder.Services.AddScoped<IVehicleQueries, VehicleQueries>();
