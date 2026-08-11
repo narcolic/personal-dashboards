@@ -23,7 +23,7 @@ public sealed class ServiceReminderService(
 
         return ServiceReminderCalculator.Calculate(
             await remindersTask.ConfigureAwait(false),
-            (await visitsTask.ConfigureAwait(false)).ToArray(),
+            [.. (await visitsTask.ConfigureAwait(false))],
             timeProvider.GetUtcNow(),
             useLatestVisitOdometer: vehicleId.HasValue);
     }

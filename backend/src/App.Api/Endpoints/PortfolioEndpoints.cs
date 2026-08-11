@@ -211,12 +211,11 @@ public static class PortfolioEndpoints
     private static string[] SplitDistinct(
         string? value,
         Func<string, string> normalize) =>
-        (value ?? string.Empty)
+        [.. (value ?? string.Empty)
         .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
         .Select(normalize)
         .Where(item => item.Length > 0)
-        .Distinct(StringComparer.OrdinalIgnoreCase)
-        .ToArray();
+        .Distinct(StringComparer.OrdinalIgnoreCase)];
 
     private static string NormalizeExchangeCode(string value) =>
         value.Trim().ToLowerInvariant() switch

@@ -51,11 +51,10 @@ public static class PortfolioHoldingCalculator
                 last.TransactionDate));
         }
 
-        return holdings
+        return [.. holdings
             .OrderBy(holding => holding.Ticker, StringComparer.Ordinal)
             .ThenBy(holding => holding.PortfolioId)
-            .ThenBy(holding => holding.Currency, StringComparer.Ordinal)
-            .ToArray();
+            .ThenBy(holding => holding.Currency, StringComparer.Ordinal)];
     }
 
     private static string NormalizeCurrency(string? currency) =>

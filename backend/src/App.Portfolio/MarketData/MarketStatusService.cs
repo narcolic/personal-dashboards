@@ -114,19 +114,19 @@ public sealed class MarketStatusService(HttpClient httpClient, TimeProvider time
         {
             if (data.ValueKind == JsonValueKind.Array)
             {
-                return data.EnumerateArray().Select(item => item.Clone()).ToArray();
+                return [.. data.EnumerateArray().Select(item => item.Clone())];
             }
             if (data.ValueKind == JsonValueKind.Object &&
                 data.TryGetProperty("markets", out var dataMarkets) &&
                 dataMarkets.ValueKind == JsonValueKind.Array)
             {
-                return dataMarkets.EnumerateArray().Select(item => item.Clone()).ToArray();
+                return [.. dataMarkets.EnumerateArray().Select(item => item.Clone())];
             }
         }
 
         return root.TryGetProperty("markets", out var markets) &&
                markets.ValueKind == JsonValueKind.Array
-            ? markets.EnumerateArray().Select(item => item.Clone()).ToArray()
+            ? [.. markets.EnumerateArray().Select(item => item.Clone())]
             : [];
     }
 

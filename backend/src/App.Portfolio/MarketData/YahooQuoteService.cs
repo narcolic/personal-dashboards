@@ -12,12 +12,8 @@ public sealed class YahooQuoteService(HttpClient httpClient) : IQuoteService
         var tasks = symbols.Select(symbol => GetOneAsync(symbol, cancellationToken));
         var results = await Task.WhenAll(tasks).ConfigureAwait(false);
         return new QuoteLookupResult(
-            results.Where(result => result.Quote is not null)
-                .Select(result => result.Quote!)
-                .ToArray(),
-            results.Where(result => result.Failure is not null)
-                .Select(result => result.Failure!)
-                .ToArray());
+            [.. results.Where(result => result.Quote is not null).Select(result => result.Quote!)],
+            [.. results.Where(result => result.Failure is not null).Select(result => result.Failure!)]);
     }
 
     private async Task<QuoteAttempt> GetOneAsync(
