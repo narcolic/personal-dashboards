@@ -62,6 +62,29 @@ public sealed class AppDataSource : IAsyncDisposable
         return result;
     }
 
+    /// <summary>
+    /// Executes trusted background work with the configured database role. This path
+    /// is reserved for system jobs that must process every user's rows and must never
+    /// be called from a user-controlled HTTP request.
+    /// </summary>
+    public async Task<T> ExecuteAsSystemAsync<T>(
+        Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        await using var connection = await OpenConnectionAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await using var transaction = await connection
+            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            .ConfigureAwait(false);
+
+        var result = await operation(connection, transaction, cancellationToken)
+            .ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
     private static async Task SetUserContextAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
