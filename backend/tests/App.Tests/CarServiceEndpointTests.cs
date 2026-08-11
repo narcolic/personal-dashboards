@@ -80,6 +80,15 @@ public sealed class CarServiceEndpointTests(ApiFactory factory) : IClassFixture<
     {
         public Guid? RequestedUserId { get; private set; }
 
+        public Task<VehicleListItem?> GetAsync(
+            Guid userId,
+            Guid vehicleId,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedUserId = userId;
+            return Task.FromResult(vehicles.SingleOrDefault(vehicle => vehicle.Id == vehicleId));
+        }
+
         public Task<IReadOnlyList<VehicleListItem>> ListAsync(
             Guid userId,
             CancellationToken cancellationToken = default)

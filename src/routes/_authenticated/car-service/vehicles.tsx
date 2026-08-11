@@ -1,7 +1,5 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/hooks/use-auth";
 import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import {
   createServiceReminder,
@@ -62,7 +60,6 @@ function emptyVehicleForm(): VehicleFormState {
 
 function VehiclesScreen() {
   const { t } = useTranslation();
-  const { user } = useAuth();
   const { vehicles, error, refetch } = useVehicles();
   const { visits } = useCarService("all");
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
@@ -87,7 +84,7 @@ function VehiclesScreen() {
   };
 
   const saveNewVehicle = async () => {
-    if (!user?.id || !newVehicleForm) return;
+    if (!newVehicleForm) return;
     const make = newVehicleForm.make.trim();
     const model = newVehicleForm.model.trim();
     const plate = newVehicleForm.plate.trim();
@@ -112,7 +109,7 @@ function VehiclesScreen() {
     setBusy(true);
     setInlineError(null);
     try {
-      await createVehicle(supabase, user.id, {
+      await createVehicle({
         ...newVehicleForm,
         make,
         model,
@@ -310,7 +307,7 @@ function VehicleAccordionItem({
     onBusyChange(true);
     onError(null);
     try {
-      await updateVehicle(supabase, vehicle.id, {
+      await updateVehicle(vehicle.id, {
         ...details,
         make,
         model,
@@ -336,7 +333,7 @@ function VehicleAccordionItem({
     onBusyChange(true);
     onError(null);
     try {
-      await deleteVehicle(supabase, vehicle.id);
+      await deleteVehicle(vehicle.id);
       await onMutated();
     } catch (e) {
       onError(e instanceof Error ? e.message : t("car.failedDeleteVehicle"));
@@ -366,11 +363,8 @@ function VehicleAccordionItem({
     onBusyChange(true);
     onError(null);
     try {
-      const { data } = await supabase.auth.getUser();
-      if (!data.user?.id) throw new Error(t("car.authRequired"));
-
-      if (editingIntervalId) await updateServiceReminder(supabase, editingIntervalId, payload);
-      else await createServiceReminder(supabase, data.user.id, payload);
+      if (editingIntervalId) await updateServiceReminder(editingIntervalId, payload);
+      else await createServiceReminder(payload);
 
       await refetch();
       setIntervalForm(null);
@@ -401,7 +395,7 @@ function VehicleAccordionItem({
       confirmLabel: t("common.delete"),
       isConfirming: false,
       onConfirm: async () => {
-        await deleteServiceReminder(supabase, reminder.id);
+        await deleteServiceReminder(reminder.id);
         await refetch();
       },
     });

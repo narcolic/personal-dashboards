@@ -1,5 +1,4 @@
-﻿import type { SupabaseClient } from "@supabase/supabase-js";
-import type { Database } from "@/integrations/supabase/types";
+import { apiFetch } from "@/lib/api/client";
 import type {
   ServiceReminder,
   ServiceReminderInsert,
@@ -7,39 +6,26 @@ import type {
 } from "@/routes/_authenticated/car-service/types";
 
 export async function createServiceReminder(
-  client: SupabaseClient<Database>,
-  userId: string,
   data: Omit<ServiceReminderInsert, "id" | "created_at" | "user_id">,
-): Promise<ServiceReminder> {
-  const row: ServiceReminderInsert = { ...data, user_id: userId };
-  const { data: inserted, error } = await client
-    .from("service_reminders")
-    .insert(row)
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
-  return inserted;
+): Promise<Pick<ServiceReminder, "id">> {
+  return apiFetch<Pick<ServiceReminder, "id">>("/api/car-service/reminders", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
 }
 
 export async function updateServiceReminder(
-  client: SupabaseClient<Database>,
   id: string,
   data: ServiceReminderUpdate,
-): Promise<ServiceReminder> {
-  const { data: updated, error } = await client
-    .from("service_reminders")
-    .update(data)
-    .eq("id", id)
-    .select("*")
-    .single();
-  if (error) throw new Error(error.message);
-  return updated;
+): Promise<Pick<ServiceReminder, "id">> {
+  return apiFetch<Pick<ServiceReminder, "id">>(
+    `/api/car-service/reminders/${encodeURIComponent(id)}`,
+    { method: "PUT", body: JSON.stringify(data) },
+  );
 }
 
-export async function deleteServiceReminder(
-  client: SupabaseClient<Database>,
-  id: string,
-): Promise<void> {
-  const { error } = await client.from("service_reminders").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+export async function deleteServiceReminder(id: string): Promise<void> {
+  await apiFetch<void>(`/api/car-service/reminders/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }

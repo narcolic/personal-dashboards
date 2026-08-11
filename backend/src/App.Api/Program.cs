@@ -49,10 +49,13 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPortfolioQueries, PortfolioQueries>();
 builder.Services.AddScoped<ITransactionQueries, TransactionQueries>();
 builder.Services.AddScoped<IVehicleQueries, VehicleQueries>();
+builder.Services.AddScoped<IVehicleCommands, VehicleCommands>();
 builder.Services.AddScoped<IServiceVisitQueries, ServiceVisitQueries>();
+builder.Services.AddScoped<IServiceVisitCommands, ServiceVisitCommands>();
 builder.Services.AddScoped<ICarServiceAnalytics, CarServiceAnalyticsService>();
 builder.Services.AddScoped<IServiceReminderQueries, ServiceReminderQueries>();
 builder.Services.AddScoped<IServiceReminderService, ServiceReminderService>();
+builder.Services.AddScoped<IServiceReminderCommands, ServiceReminderCommands>();
 
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), ["live"])
