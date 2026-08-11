@@ -11,6 +11,7 @@ using PortfolioTerminal.CarService.Vehicles;
 using PortfolioTerminal.Data;
 using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.Holdings;
+using PortfolioTerminal.Portfolio.MarketData;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
@@ -49,6 +50,30 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton(
     new AppDataSource(builder.Configuration.GetConnectionString("AppDatabase")));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddHttpClient<IQuoteService, YahooQuoteService>(client =>
+{
+    client.BaseAddress = new Uri("https://query1.finance.yahoo.com/");
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddHttpClient<IFxRateService, FxRateService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddHttpClient<IMarketStatusService, MarketStatusService>(client =>
+{
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+    var apiKey = builder.Configuration["MarketHours:ApiKey"] ??
+        builder.Configuration["MARKETHOURS_API_KEY"];
+    if (!string.IsNullOrWhiteSpace(apiKey))
+    {
+        client.DefaultRequestHeaders.Add("X-API-Key", apiKey);
+        client.DefaultRequestHeaders.Authorization =
+            new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
+    }
+});
 builder.Services.AddScoped<IPortfolioQueries, PortfolioQueries>();
 builder.Services.AddScoped<IPortfolioCommands, PortfolioCommands>();
 builder.Services.AddScoped<IPortfolioHoldingQueries, PortfolioHoldingQueries>();

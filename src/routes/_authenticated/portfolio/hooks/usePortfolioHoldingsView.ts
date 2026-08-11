@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { apiFetch } from "@/lib/api/client";
 import type { Enriched } from "@/lib/portfolio/types";
 import { listPortfolioHoldings } from "@/lib/portfolio/holdings/api";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
@@ -54,11 +55,10 @@ export function usePortfolioHoldingsView() {
       };
 
       try {
-        const response = await fetch("/api/fx-rates?from=USD");
-        if (response.ok) {
-          const data = (await response.json()) as { rates?: Record<string, number> };
-          if (data.rates) return { rates: toUsdPerUnit(data.rates) };
-        }
+        const data = await apiFetch<{ rates?: Record<string, number> }>(
+          "/api/portfolio/fx-rates?from=USD",
+        );
+        if (data.rates) return { rates: toUsdPerUnit(data.rates) };
       } catch (error) {
         void error;
       }

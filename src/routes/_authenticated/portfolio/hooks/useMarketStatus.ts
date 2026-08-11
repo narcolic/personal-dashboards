@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { apiFetch } from "@/lib/api/client";
 
 export type MarketSession = "OPEN" | "PRE_MARKET" | "POST_MARKET" | "CLOSED" | "UNKNOWN";
 
@@ -273,9 +274,9 @@ export function useMarketStatus(exchanges: string[]) {
     queryKey: ["market-status", requested.join(",")],
     queryFn: async () => {
       const qs = encodeURIComponent(requested.join(","));
-      const response = await fetch(`/api/market-status?exchanges=${qs}`);
-      if (!response.ok) throw new Error(`Market status API error (${response.status})`);
-      const json = (await response.json()) as ApiPayload;
+      const json = await apiFetch<ApiPayload>(
+        `/api/portfolio/market-status?exchanges=${qs}`,
+      );
       return (json.markets ?? []).map(normalizeMarket);
     },
     enabled: requested.length > 0,

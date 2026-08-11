@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using PortfolioTerminal.Api.Auth;
 using PortfolioTerminal.Portfolio;
 using PortfolioTerminal.Portfolio.Holdings;
+using PortfolioTerminal.Portfolio.MarketData;
 using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
@@ -82,6 +83,54 @@ public static class PortfolioEndpoints
             })
             .WithName("ListPortfolioHoldings");
 
+        group.MapGet("/quotes", async Task<IResult> (
+                string? symbols,
+                IQuoteService service,
+                CancellationToken cancellationToken) =>
+            {
+                var requested = SplitDistinct(symbols, value => value.ToUpperInvariant());
+                if (requested.Length > 100 || requested.Any(value => value.Length > 32))
+                {
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["symbols"] = ["Supply at most 100 symbols, each no longer than 32 characters."],
+                    });
+                }
+
+                return TypedResults.Ok(await service.GetAsync(requested, cancellationToken));
+            })
+            .WithName("GetPortfolioQuotes");
+
+        group.MapGet("/fx-rates", async Task<IResult> (
+                string? from,
+                IFxRateService service,
+                CancellationToken cancellationToken) =>
+            {
+                var baseCurrency = string.IsNullOrWhiteSpace(from)
+                    ? "USD"
+                    : from.Trim().ToUpperInvariant();
+                if (!Regex.IsMatch(baseCurrency, "^[A-Z]{3,5}$"))
+                {
+                    return TypedResults.ValidationProblem(new Dictionary<string, string[]>
+                    {
+                        ["from"] = ["Currency must contain 3 to 5 letters."],
+                    });
+                }
+
+                return Results.Json(await service.GetAsync(baseCurrency, cancellationToken));
+            })
+            .WithName("GetPortfolioFxRates");
+
+        group.MapGet("/market-status", async (
+                string? exchanges,
+                IMarketStatusService service,
+                CancellationToken cancellationToken) =>
+            {
+                var requested = SplitDistinct(exchanges, NormalizeExchangeCode);
+                return TypedResults.Ok(await service.GetAsync(requested, cancellationToken));
+            })
+            .WithName("GetPortfolioMarketStatus");
+
         group.MapGet("/transactions", async Task<IResult> (
                 int? page,
                 int? pageSize,
@@ -158,6 +207,25 @@ public static class PortfolioEndpoints
 
         return endpoints;
     }
+
+    private static string[] SplitDistinct(
+        string? value,
+        Func<string, string> normalize) =>
+        (value ?? string.Empty)
+        .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+        .Select(normalize)
+        .Where(item => item.Length > 0)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .ToArray();
+
+    private static string NormalizeExchangeCode(string value) =>
+        value.Trim().ToLowerInvariant() switch
+        {
+            "xams" => "ams",
+            "xetr" => "xetra",
+            "xlon" => "lse",
+            var code => code,
+        };
 
     private static async Task<IResult> CreatePortfolioAsync(
         PortfolioMutationRequest request,
