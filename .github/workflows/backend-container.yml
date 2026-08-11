@@ -29,6 +29,7 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/portfolio-terminal-api
   AZURE_RESOURCE_GROUP: portfolio-terminal-rg
   AZURE_CONTAINER_APP: portfolio-terminal-api
+  AZURE_SNAPSHOT_JOB: portfolio-snapshot-job
   API_BASE_URL: https://portfolio-terminal-api.yellowforest-c9892f85.northeurope.azurecontainerapps.io
 
 jobs:
@@ -87,6 +88,23 @@ jobs:
           resourceGroup: ${{ env.AZURE_RESOURCE_GROUP }}
           imageToDeploy: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
           registryUrl: ${{ env.REGISTRY }}
+
+      - name: Update snapshot job image when configured
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          if az containerapp job show \
+            --name "${AZURE_SNAPSHOT_JOB}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            >/dev/null 2>&1; then
+            az containerapp job update \
+              --name "${AZURE_SNAPSHOT_JOB}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+            echo "Snapshot job image updated."
+          else
+            echo "Snapshot job is not configured yet; skipping its image update."
+          fi
 
       - name: Verify production readiness
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'

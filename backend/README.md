@@ -9,8 +9,8 @@ continues to use Supabase directly except for the vertical slices listed below.
   error handling, and health endpoints.
 - `App.Data`: shared Npgsql connection pool. Existing `supabase/migrations` files
   remain the authoritative schema history.
-- `App.Portfolio`: portfolio business module placeholder.
-- `App.CarService`: car-service business module placeholder.
+- `App.Portfolio`: portfolio queries, commands, holdings, market data, and snapshot logic.
+- `App.CarService`: vehicle, service-visit, reminder, and analytics logic.
 - `App.Tests`: foundation-level integration tests.
 
 ## Configure
@@ -63,6 +63,10 @@ The local API listens on `http://localhost:5080` by default.
 - `GET /api/me` is the first protected smoke-test endpoint.
 - `GET /api/portfolio/portfolios` lists the authenticated user's portfolios.
 - `GET /api/portfolio/transactions` lists the authenticated user's transactions. It supports Activity-page pagination and the existing ticker, portfolio, asset-type, currency, and date filters.
+- `GET /api/portfolio/holdings` returns server-aggregated holdings and weighted average costs.
+- `GET /api/portfolio/ticker-catalog` lists the authenticated user's ticker catalogue.
+- `GET /api/portfolio/snapshots` lists daily portfolio-value snapshots.
+- `GET /api/portfolio/quotes`, `/fx-rates`, and `/market-status` proxy external market data through the authenticated API.
 - `GET /api/car-service/vehicles` lists the authenticated user's vehicles.
 - `GET /api/car-service/visits?vehicleId={vehicleId}` lists service visits with nested jobs. Omit `vehicleId` to list all vehicles.
 - `GET /api/car-service/visits/{visitId}` returns one owned service visit with its nested jobs.
@@ -97,6 +101,44 @@ docker run --rm --name portfolio-terminal-api --publish 8080:8080 --env-file .\b
 Verify `GET /health/live` for process health and `GET /health/ready` for the
 database connection. Stop the foreground container with `Ctrl+C`.
 
+## Run the portfolio snapshot worker
+
+The same API image can run as a finite background worker. A forced local run is
+useful for validation and upserts the requested day's records atomically:
+
+```powershell
+dotnet run --project .\src\App.Api\App.Api.csproj -c Release -- --run-portfolio-snapshot=true --snapshot-force=true
+```
+
+Omit `--snapshot-force=true` for scheduled executions. The worker then writes only
+during the Athens midnight hour, allowing the UTC schedule to cover both standard
+time and daylight-saving time without creating duplicate rows. To backfill a date,
+add `--snapshot-date=YYYY-MM-DD` together with the force flag.
+
+The worker uses the trusted backend PostgreSQL connection to read all users and
+upsert `portfolio_value_snapshots`. Never expose this command through a public HTTP
+endpoint or place the database connection string in the frontend.
+
+The production Azure Container Apps Job is named `portfolio-snapshot-job`. Configure
+it in the existing `portfolio-terminal-env` environment with:
+
+```text
+Trigger: Schedule
+Cron expression: 0 21,22 * * *
+Image: ghcr.io/narcolic/portfolio-terminal-api:latest
+Arguments override: --run-portfolio-snapshot=true
+CPU / memory: 0.25 / 0.5 Gi
+Parallelism / completions: 1 / 1
+Retry limit: 2
+Replica timeout: 600 seconds
+Secret environment variable: ConnectionStrings__AppDatabase
+```
+
+Azure evaluates the cron expression in UTC. The two executions cover midnight in
+Athens across DST changes; the worker skips whichever execution is outside the
+Athens midnight window. After the job exists, the deployment workflow updates it to
+the same immutable `sha-<commit>` image deployed to the API.
+
 ## Publish the container
 
 The `Publish backend container` GitHub Actions workflow builds the API whenever
@@ -125,5 +167,8 @@ workflow verifies the production `/health/ready` endpoint.
 - Portfolio and transaction reads and writes now flow through the .NET API.
   Transaction writes update the ticker catalogue in the same transaction, and CSV
   imports atomically create missing portfolios, transactions, and catalogue entries.
+- Portfolio holdings, ticker catalogue, snapshots, quotes, FX rates, and market
+  status now flow through .NET. The same Portfolio services power the finite daily
+  snapshot worker used by Azure Container Apps Jobs.
 - Car Service vehicle, service-visit, analytics, and reminder reads and writes now
   flow through the .NET API. Service-visit and job changes are committed atomically.
