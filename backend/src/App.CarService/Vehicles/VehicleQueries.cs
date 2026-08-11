@@ -6,19 +6,38 @@ namespace PortfolioTerminal.CarService.Vehicles;
 
 public sealed class VehicleQueries(AppDataSource dataSource) : IVehicleQueries
 {
+    public Task<VehicleListItem?> GetAsync(
+        Guid userId,
+        Guid vehicleId,
+        CancellationToken cancellationToken = default) =>
+        dataSource.ExecuteAsUserAsync(
+            userId,
+            async (connection, transaction, token) =>
+            {
+                var vehicles = await ReadVehiclesAsync(
+                    connection,
+                    transaction,
+                    userId,
+                    vehicleId,
+                    token).ConfigureAwait(false);
+                return vehicles.SingleOrDefault();
+            },
+            cancellationToken);
+
     public Task<IReadOnlyList<VehicleListItem>> ListAsync(
         Guid userId,
         CancellationToken cancellationToken = default) =>
         dataSource.ExecuteAsUserAsync(
             userId,
             (connection, transaction, token) =>
-                ReadVehiclesAsync(connection, transaction, userId, token),
+                ReadVehiclesAsync(connection, transaction, userId, null, token),
             cancellationToken);
 
     private static async Task<IReadOnlyList<VehicleListItem>> ReadVehiclesAsync(
         NpgsqlConnection connection,
         NpgsqlTransaction transaction,
         Guid userId,
+        Guid? vehicleId,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
@@ -27,12 +46,18 @@ public sealed class VehicleQueries(AppDataSource dataSource) : IVehicleQueries
             select id, user_id, name, make, model, plate, year, created_at, updated_at
             from public.vehicles
             where user_id = $1
+              and ($2::uuid is null or id = $2)
             order by created_at, id;
             """;
         command.Parameters.Add(new NpgsqlParameter
         {
             NpgsqlDbType = NpgsqlDbType.Uuid,
             Value = userId,
+        });
+        command.Parameters.Add(new NpgsqlParameter
+        {
+            NpgsqlDbType = NpgsqlDbType.Uuid,
+            Value = (object?)vehicleId ?? DBNull.Value,
         });
 
         var vehicles = new List<VehicleListItem>();

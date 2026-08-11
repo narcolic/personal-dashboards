@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { ApiError, apiFetch } from "@/lib/api/client";
 import { ServiceHistoryEditor } from "@/routes/_authenticated/car-service/components/ServiceHistoryEditor";
 import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
@@ -96,7 +95,6 @@ function CarServiceEditVisit() {
 
     try {
       await updateServiceVisit(
-        supabase,
         visitId,
         {
           vehicle_id: payload.visit.vehicle_id,
@@ -129,7 +127,7 @@ function CarServiceEditVisit() {
     setIsDeleting(true);
 
     try {
-      await deleteServiceVisit(supabase, visitId);
+      await deleteServiceVisit(visitId);
       await navigate({
         to: "/car-service/history",
         search: {

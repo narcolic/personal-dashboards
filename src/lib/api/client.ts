@@ -34,6 +34,9 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
   const headers = new Headers(init.headers);
   headers.set("accept", "application/json");
   headers.set("authorization", `Bearer ${accessToken}`);
+  if (init.body != null && !headers.has("content-type")) {
+    headers.set("content-type", "application/json");
+  }
 
   const response = await fetch(`${getApiBaseUrl()}${path}`, {
     ...init,
@@ -56,6 +59,8 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
       response.status,
     );
   }
+
+  if (response.status === 204) return undefined as T;
 
   return (await response.json()) as T;
 }

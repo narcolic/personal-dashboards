@@ -124,5 +124,5 @@ workflow verifies the production `/health/ready` endpoint.
 
 - Portfolio and transaction list reads now flow through the .NET API. Portfolio
   and transaction writes still use Supabase directly.
-- Car Service vehicle, service-visit, analytics, and reminder reads now flow through
-  the .NET API. Car Service writes and job-catalog reads still use Supabase directly.
+- Car Service vehicle, service-visit, analytics, and reminder reads and writes now
+  flow through the .NET API. Service-visit and job changes are committed atomically.

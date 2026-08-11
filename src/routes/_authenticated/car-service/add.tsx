@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { ServiceHistoryEditor } from "@/routes/_authenticated/car-service/components/ServiceHistoryEditor";
 import { useCarServiceWorkspace } from "@/routes/_authenticated/car-service/components/CarServiceWorkspaceState";
@@ -46,8 +45,6 @@ function CarServiceAddVisit() {
 
     try {
       await createServiceVisit(
-        supabase,
-        user.id,
         {
           vehicle_id: payload.visit.vehicle_id,
           service_date: payload.visit.service_date,
