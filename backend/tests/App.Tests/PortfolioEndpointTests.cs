@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.Holdings;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
 
@@ -166,6 +167,48 @@ public sealed class PortfolioEndpointTests(ApiFactory factory) : IClassFixture<A
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
+    [Fact]
+    public async Task HoldingsListUsesAuthenticatedSubjectAndPreservesClientContract()
+    {
+        var userId = Guid.Parse(TestAuthHandler.UserId);
+        var portfolioId = Guid.Parse("7fe18546-82e6-46b4-a6ce-8967cb7541ea");
+        var queries = new RecordingPortfolioHoldingQueries(
+        [
+            new PortfolioHolding(
+                $"ABC|{portfolioId}|USD",
+                "ABC",
+                "Example holding",
+                "stock",
+                "NYSE",
+                "USD",
+                5m,
+                12.5m,
+                null,
+                portfolioId,
+                2,
+                new DateOnly(2026, 1, 2),
+                new DateOnly(2026, 2, 3)),
+        ]);
+
+        using var authenticatedFactory = CreateAuthenticatedFactory(services =>
+        {
+            services.RemoveAll<IPortfolioHoldingQueries>();
+            services.AddSingleton<IPortfolioHoldingQueries>(queries);
+        });
+        using var client = authenticatedFactory.CreateClient();
+
+        var response = await client.GetAsync("/api/portfolio/holdings");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(userId, queries.RequestedUserId);
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var item = Assert.Single(payload.EnumerateArray());
+        Assert.Equal("ABC", item.GetProperty("ticker").GetString());
+        Assert.Equal(12.5m, item.GetProperty("avg_cost").GetDecimal());
+        Assert.Equal(2, item.GetProperty("tx_count").GetInt32());
+        Assert.Equal(portfolioId.ToString(), item.GetProperty("portfolio_id").GetString());
+    }
+
     private WebApplicationFactory<Program> CreateAuthenticatedFactory(
         Action<IServiceCollection> configureServices) =>
         factory.WithWebHostBuilder(builder =>
@@ -225,6 +268,20 @@ public sealed class PortfolioEndpointTests(ApiFactory factory) : IClassFixture<A
         {
             RequestedUserId = userId;
             RequestedLimit = limit;
+            return Task.FromResult(items);
+        }
+    }
+
+    private sealed class RecordingPortfolioHoldingQueries(
+        IReadOnlyList<PortfolioHolding> items) : IPortfolioHoldingQueries
+    {
+        public Guid? RequestedUserId { get; private set; }
+
+        public Task<IReadOnlyList<PortfolioHolding>> ListAsync(
+            Guid userId,
+            CancellationToken cancellationToken = default)
+        {
+            RequestedUserId = userId;
             return Task.FromResult(items);
         }
     }

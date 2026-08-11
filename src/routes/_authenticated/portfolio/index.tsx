@@ -40,8 +40,17 @@ function PortfolioPage() {
   const [currencyFilter, setCurrencyFilter] = useState("__all__");
   const [regionFilter, setRegionFilter] = useState("__all__");
   const [allocationKind, setAllocationKind] = useState<AllocationKind>("assetType");
-  const { txQ, quotesQ, transactions, rows, display, selected, portfolioMap, convert } =
-    usePortfolioHoldingsView();
+  const {
+    txQ,
+    holdingsQ,
+    quotesQ,
+    transactions,
+    rows,
+    display,
+    selected,
+    portfolioMap,
+    convert,
+  } = usePortfolioHoldingsView();
 
   const totals = useMemo(() => computeTotals(rows, convert), [convert, rows]);
   const rowRegions = useMemo(
@@ -121,7 +130,7 @@ function PortfolioPage() {
     Number(regionFilter !== "__all__") +
     Number(Boolean(activeAllocation));
 
-  if (txQ.isLoading || quotesQ.isLoading) return <PortfolioSkeleton />;
+  if (txQ.isLoading || holdingsQ.isLoading || quotesQ.isLoading) return <PortfolioSkeleton />;
   if (transactions.length === 0) return <PortfolioEmptyState />;
 
   const clearFilters = () => {

@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using PortfolioTerminal.Api.Auth;
 using PortfolioTerminal.Portfolio;
+using PortfolioTerminal.Portfolio.Holdings;
 using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
@@ -68,6 +69,18 @@ public static class PortfolioEndpoints
                 return TypedResults.Ok(items.Select(PortfolioSnapshotResponse.From));
             })
             .WithName("ListPortfolioSnapshots");
+
+        group.MapGet("/holdings", async (
+                IPortfolioHoldingQueries queries,
+                ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            {
+                var holdings = await queries.ListAsync(
+                    currentUser.UserId,
+                    cancellationToken);
+                return TypedResults.Ok(holdings.Select(PortfolioHoldingResponse.From));
+            })
+            .WithName("ListPortfolioHoldings");
 
         group.MapGet("/transactions", async Task<IResult> (
                 int? page,
@@ -410,6 +423,28 @@ public static class PortfolioEndpoints
 }
 
 public sealed record PortfolioMutationResponse(Guid Id);
+
+public sealed record PortfolioHoldingResponse(
+    string Id,
+    string Ticker,
+    string? Name,
+    [property: JsonPropertyName("asset_type")] string AssetType,
+    string? Market,
+    string Currency,
+    decimal Shares,
+    [property: JsonPropertyName("avg_cost")] decimal AvgCost,
+    string? Notes,
+    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
+    [property: JsonPropertyName("tx_count")] int TransactionCount,
+    [property: JsonPropertyName("first_date")] DateOnly? FirstDate,
+    [property: JsonPropertyName("last_date")] DateOnly? LastDate)
+{
+    public static PortfolioHoldingResponse From(PortfolioHolding holding) =>
+        new(holding.Id, holding.Ticker, holding.Name, holding.AssetType,
+            holding.Market, holding.Currency, holding.Shares, holding.AvgCost,
+            holding.Notes, holding.PortfolioId, holding.TransactionCount,
+            holding.FirstDate, holding.LastDate);
+}
 
 public sealed record TickerCatalogResponse(
     Guid Id,

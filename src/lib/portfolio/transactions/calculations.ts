@@ -1,41 +1,5 @@
 import type { Quote } from "@/lib/portfolio/types";
 
-export function aggregateTransactions(txs: import("@/lib/portfolio/types").TransactionRow[]) {
-  const groups = new Map<string, import("@/lib/portfolio/types").TransactionRow[]>();
-  for (const t of txs) {
-    if ((t.action ?? "buy") !== "buy") continue;
-    const key = `${t.ticker.toUpperCase()}|${t.portfolio_id ?? ""}|${t.currency}`;
-    const arr = groups.get(key) ?? [];
-    arr.push(t);
-    groups.set(key, arr);
-  }
-
-  const out: import("@/lib/portfolio/types").HoldingRow[] = [];
-  for (const [key, items] of groups) {
-    const totalShares = items.reduce((s, t) => s + Number(t.shares), 0);
-    const totalCost = items.reduce((s, t) => s + Number(t.shares) * Number(t.price), 0);
-    if (totalShares <= 0) continue;
-    const first = items.reduce((a, b) => (a.transaction_date < b.transaction_date ? a : b));
-    const last = items.reduce((a, b) => (a.transaction_date > b.transaction_date ? a : b));
-    out.push({
-      id: key,
-      ticker: last.ticker.toUpperCase(),
-      name: last.name,
-      asset_type: last.asset_type,
-      market: last.market,
-      currency: last.currency,
-      shares: totalShares,
-      avg_cost: totalCost / totalShares,
-      notes: last.notes,
-      portfolio_id: last.portfolio_id,
-      tx_count: items.length,
-      first_date: first.transaction_date,
-      last_date: last.transaction_date,
-    });
-  }
-  return out.sort((a, b) => a.ticker.localeCompare(b.ticker));
-}
-
 export function enrich(
   positions: import("@/lib/portfolio/types").HoldingRow[],
   quotes: Quote[],

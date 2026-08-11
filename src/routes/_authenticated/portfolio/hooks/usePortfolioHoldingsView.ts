@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import type { Enriched } from "@/lib/portfolio/types";
+import { listPortfolioHoldings } from "@/lib/portfolio/holdings/api";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
 import { useTransactionsFilters } from "@/routes/_authenticated/portfolio/hooks/useTransactionsFilters";
@@ -11,7 +12,12 @@ export type RowWithNative = Enriched & { _nativeCurrency: string };
 export function usePortfolioHoldingsView() {
   const { t } = useTranslation();
   const { txQ, portfoliosQ, transactions } = usePortfolioData();
-  const { positions, quotesQ, enrichedRows } = useQuotes(transactions, {
+  const holdingsQ = useQuery({
+    queryKey: ["positions", "holdings"],
+    queryFn: ({ signal }) => listPortfolioHoldings(signal),
+  });
+  const positions = holdingsQ.data ?? [];
+  const { quotesQ, enrichedRows } = useQuotes(positions, {
     staleTime: 60_000,
     gcTime: 30 * 60_000,
     retry: 1,
@@ -127,6 +133,7 @@ export function usePortfolioHoldingsView() {
 
   return {
     txQ,
+    holdingsQ,
     quotesQ,
     transactions,
     portfolios: portfoliosQ.data ?? [],

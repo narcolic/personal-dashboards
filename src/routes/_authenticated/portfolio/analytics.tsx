@@ -51,7 +51,8 @@ export function PortfolioInsights({
   const { t } = useTranslation();
   const navigate = useNavigate();
   const snapshotsQ = usePortfolioSnapshots();
-  const { rows, convertTo, quotesQ, display, selected, portfolioMap } = usePortfolioHoldingsView();
+  const { rows, convertTo, holdingsQ, quotesQ, display, selected, portfolioMap } =
+    usePortfolioHoldingsView();
   const currency: SnapshotCurrency = display === "USD" ? "USD" : "EUR";
   const scopeKey = selected === "__all__" ? "total" : `portfolio:${selected}`;
   const selectedScopeLabel =
@@ -197,7 +198,7 @@ export function PortfolioInsights({
           })}
           title={t("portfolio.analytics.topAllocations")}
           emptyLabel={t("portfolio.analytics.noAllocation")}
-          loading={quotesQ.isLoading}
+          loading={holdingsQ.isLoading || quotesQ.isLoading}
           loadingLabel={t("common.loading")}
         />
         <div id="movers" className="grid scroll-mt-28 grid-cols-1 items-start gap-3 lg:grid-cols-2">
