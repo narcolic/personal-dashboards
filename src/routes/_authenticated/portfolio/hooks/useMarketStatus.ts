@@ -274,9 +274,7 @@ export function useMarketStatus(exchanges: string[]) {
     queryKey: ["market-status", requested.join(",")],
     queryFn: async () => {
       const qs = encodeURIComponent(requested.join(","));
-      const json = await apiFetch<ApiPayload>(
-        `/api/portfolio/market-status?exchanges=${qs}`,
-      );
+      const json = await apiFetch<ApiPayload>(`/api/portfolio/market-status?exchanges=${qs}`);
       return (json.markets ?? []).map(normalizeMarket);
     },
     enabled: requested.length > 0,

@@ -1,4 +1,4 @@
-export type AssetType = "Stock" | "ETF" | "Fund" | "Unknown";
+type AssetType = "Stock" | "ETF" | "Fund" | "Unknown";
 export type RegionCategory =
   | "Greece"
   | "United States"
@@ -7,7 +7,7 @@ export type RegionCategory =
   | "Global Developed"
   | "Global Thematic"
   | "Unknown";
-export type ThemeCategory =
+type ThemeCategory =
   | "Broad Index"
   | "Bank"
   | "Semiconductor"

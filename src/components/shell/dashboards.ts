@@ -1,37 +1,17 @@
-export type DashboardItem = {
-  titleKey: string;
-  path: string | null;
-  descriptionKey: string;
-  placeholder?: boolean;
-};
-
-export type DashboardCategory = {
-  categoryKey: string;
-  items: DashboardItem[];
-};
-
-export const dashboardCategories: DashboardCategory[] = [
+export const dashboards = [
   {
-    categoryKey: "dashboards.finance",
-    items: [
-      {
-        titleKey: "dashboards.portfolioTitle",
-        path: "/portfolio",
-        descriptionKey: "dashboards.portfolioDescription",
-      },
-      {
-        titleKey: "dashboards.carServiceTitle",
-        path: "/car-service",
-        descriptionKey: "dashboards.carServiceDescription",
-      },
-      {
-        titleKey: "dashboards.energyTitle",
-        path: null,
-        descriptionKey: "dashboards.energyDescription",
-        placeholder: true,
-      },
-    ],
+    titleKey: "dashboards.portfolioTitle",
+    path: "/portfolio",
+    descriptionKey: "dashboards.portfolioDescription",
+  },
+  {
+    titleKey: "dashboards.carServiceTitle",
+    path: "/car-service",
+    descriptionKey: "dashboards.carServiceDescription",
+  },
+  {
+    titleKey: "dashboards.energyTitle",
+    path: null,
+    descriptionKey: "dashboards.energyDescription",
   },
 ];
-
-export const dashboards = dashboardCategories.flatMap((group) => group.items);

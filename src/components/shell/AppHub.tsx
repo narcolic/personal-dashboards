@@ -1,9 +1,11 @@
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { dashboards } from "@/components/shell/dashboards";
-import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
+import { listPortfolioHoldings } from "@/lib/portfolio/holdings/api";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
+import type { HoldingRow } from "@/lib/portfolio/types";
 import { useCarServiceAnalytics } from "@/routes/_authenticated/car-service/hooks/useCarServiceAnalytics";
 import {
   formatCurrency as formatCarCurrency,
@@ -11,6 +13,8 @@ import {
 } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
+
+const EMPTY_HOLDINGS: HoldingRow[] = [];
 
 export function AppHub() {
   const { t } = useTranslation();
@@ -85,14 +89,17 @@ export function AppHub() {
 
 function PortfolioHubSummary() {
   const { t } = useTranslation();
-  const { txQ, transactions } = usePortfolioData({ includePortfolios: false });
-  const { enrichedRows, quotesQ } = useQuotes(transactions, {
+  const holdingsQ = useQuery({
+    queryKey: ["positions", "holdings"],
+    queryFn: ({ signal }) => listPortfolioHoldings(signal),
+  });
+  const { enrichedRows, quotesQ } = useQuotes(holdingsQ.data ?? EMPTY_HOLDINGS, {
     staleTime: 60_000,
     gcTime: 30 * 60_000,
     retry: 1,
   });
 
-  if (txQ.isLoading || quotesQ.isLoading) {
+  if (holdingsQ.isLoading || quotesQ.isLoading) {
     return (
       <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
         {t("common.loading")}
@@ -100,7 +107,7 @@ function PortfolioHubSummary() {
     );
   }
 
-  if (txQ.isError || quotesQ.isError) {
+  if (holdingsQ.isError || quotesQ.isError) {
     return (
       <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
         {t("common.noData")}
