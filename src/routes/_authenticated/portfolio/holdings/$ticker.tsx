@@ -6,10 +6,8 @@ import { useTranslation } from "react-i18next";
 import { StatCard } from "@/components/terminal/StatCard";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
-import { supabase } from "@/integrations/supabase/client";
 import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
-import { upsertTickerCatalogEntry } from "@/lib/portfolio/tickerCatalog";
-import { type TransactionInputType } from "@/lib/portfolio/transactions/api";
+import { createTransaction, type TransactionInputType } from "@/lib/portfolio/transactions/api";
 import { TransactionEditor } from "@/routes/_authenticated/portfolio/components/TransactionEditor";
 import { usePortfolioHoldingsView } from "@/routes/_authenticated/portfolio/hooks/usePortfolioHoldingsView";
 import { useTickerCatalog } from "@/routes/_authenticated/portfolio/hooks/useTickerCatalog";
@@ -183,14 +181,7 @@ function HoldingDetailsPage() {
 
   const createM = useMutation({
     mutationFn: async (value: TransactionInputType) => {
-      const { data, error: authError } = await supabase.auth.getUser();
-      if (authError) throw new Error(authError.message);
-      const userId = data.user?.id;
-      if (!userId) throw new Error(t("portfolio.mustBeLoggedIn"));
-
-      const { error } = await supabase.from("transactions").insert([{ ...value, user_id: userId }]);
-      if (error) throw new Error(error.message);
-      await upsertTickerCatalogEntry(userId, value);
+      await createTransaction(value);
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["positions"] });

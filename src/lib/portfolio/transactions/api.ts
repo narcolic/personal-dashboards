@@ -39,6 +39,18 @@ export type TransactionListResult = {
   count: number;
 };
 
+export type ImportedTransactionInput = {
+  ticker: string;
+  name: string | null;
+  asset_type: TransactionInputType["asset_type"];
+  currency: string;
+  shares: number;
+  price: number;
+  transaction_date: string;
+  notes: string | null;
+  portfolio_name: string;
+};
+
 export function listTransactions(options: TransactionListOptions, signal?: AbortSignal) {
   const query = new URLSearchParams();
 
@@ -57,4 +69,41 @@ export function listTransactions(options: TransactionListOptions, signal?: Abort
 
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
   return apiFetch<TransactionListResult>(`/api/portfolio/transactions${suffix}`, { signal });
+}
+
+export function createTransaction(value: TransactionInputType) {
+  return apiFetch<{ id: string }>("/api/portfolio/transactions", {
+    method: "POST",
+    body: JSON.stringify(value),
+  });
+}
+
+export function updateTransaction(id: string, value: TransactionInputType) {
+  return apiFetch<{ id: string }>(`/api/portfolio/transactions/${encodeURIComponent(id)}`, {
+    method: "PUT",
+    body: JSON.stringify(value),
+  });
+}
+
+export async function deleteTransaction(id: string) {
+  await apiFetch<void>(`/api/portfolio/transactions/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
+
+export function deleteTransactions(ids: string[]) {
+  return apiFetch<{ deleted: number }>("/api/portfolio/transactions/bulk-delete", {
+    method: "POST",
+    body: JSON.stringify({ ids }),
+  });
+}
+
+export function importTransactions(
+  rows: ImportedTransactionInput[],
+  importedPortfolioNotes: string,
+) {
+  return apiFetch<{ inserted: number }>("/api/portfolio/transactions/import", {
+    method: "POST",
+    body: JSON.stringify({ rows, importedPortfolioNotes }),
+  });
 }

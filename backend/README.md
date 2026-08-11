@@ -122,7 +122,8 @@ workflow verifies the production `/health/ready` endpoint.
 
 ## Migrated slices
 
-- Portfolio and transaction list reads now flow through the .NET API. Portfolio
-  and transaction writes still use Supabase directly.
+- Portfolio and transaction reads and writes now flow through the .NET API.
+  Transaction writes update the ticker catalogue in the same transaction, and CSV
+  imports atomically create missing portfolios, transactions, and catalogue entries.
 - Car Service vehicle, service-visit, analytics, and reminder reads and writes now
   flow through the .NET API. Service-visit and job changes are committed atomically.

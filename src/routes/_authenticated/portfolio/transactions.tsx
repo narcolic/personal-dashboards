@@ -3,16 +3,22 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { supabase } from "@/integrations/supabase/client";
 import { mapCsvRows, parseCSV } from "@/lib/csv";
+import { normalizeTicker, type TickerSuggestion } from "@/lib/portfolio/tickerCatalog";
 import {
-  normalizeTicker,
-  type TickerSuggestion,
-  upsertTickerCatalogEntries,
-  upsertTickerCatalogEntry,
-} from "@/lib/portfolio/tickerCatalog";
-import { type PortfolioInputType } from "@/lib/portfolio/portfolios/api";
-import { type TransactionInputType } from "@/lib/portfolio/transactions/api";
+  createPortfolio,
+  deletePortfolio,
+  type PortfolioInputType,
+} from "@/lib/portfolio/portfolios/api";
+import {
+  createTransaction,
+  deleteTransaction,
+  deleteTransactions,
+  importTransactions,
+  type ImportedTransactionInput,
+  type TransactionInputType,
+  updateTransaction,
+} from "@/lib/portfolio/transactions/api";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import { TransactionsTable } from "@/routes/_authenticated/portfolio/components/TransactionsTable";
@@ -157,14 +163,6 @@ export function ActivityPage({
     qc.invalidateQueries({ queryKey: ["ticker-catalog"] });
   };
 
-  const getCurrentUserId = async () => {
-    const { data, error } = await supabase.auth.getUser();
-    if (error) throw new Error(error.message);
-    const userId = data.user?.id;
-    if (!userId) throw new Error(t("portfolio.mustBeLoggedIn"));
-    return userId;
-  };
-
   const portfolioName = useMemo(() => {
     const map = new Map(portfolios.map((p) => [p.id, p.name]));
     return (id: string | null) => (id ? (map.get(id) ?? "-") : t("portfolio.unassigned"));
@@ -172,11 +170,7 @@ export function ActivityPage({
 
   const createM = useMutation({
     mutationFn: async (value: TransactionInputType) => {
-      const userId = await getCurrentUserId();
-      const { error } = await supabase.from("transactions").insert([{ ...value, user_id: userId }]);
-
-      if (error) throw new Error(error.message);
-      await upsertTickerCatalogEntry(userId, value);
+      await createTransaction(value);
     },
     onSuccess: () => {
       invalidate();
@@ -190,12 +184,8 @@ export function ActivityPage({
 
   const updateM = useMutation({
     mutationFn: async (value: TransactionInputType & { id: string }) => {
-      const userId = await getCurrentUserId();
       const { id, ...rest } = value;
-      const { error } = await supabase.from("transactions").update(rest).eq("id", id);
-
-      if (error) throw new Error(error.message);
-      await upsertTickerCatalogEntry(userId, value);
+      await updateTransaction(id, rest);
     },
     onSuccess: () => {
       invalidate();
@@ -207,8 +197,7 @@ export function ActivityPage({
 
   const deleteM = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("transactions").delete().eq("id", id);
-      if (error) throw new Error(error.message);
+      await deleteTransaction(id);
     },
     onSuccess: () => {
       if (data.length === 1 && page > 1) {
@@ -223,9 +212,7 @@ export function ActivityPage({
 
   const bulkDeleteM = useMutation({
     mutationFn: async (ids: string[]) => {
-      const { error } = await supabase.from("transactions").delete().in("id", ids);
-      if (error) throw new Error(error.message);
-      return { deleted: ids.length };
+      return deleteTransactions(ids);
     },
     onSuccess: (result) => {
       if (result.deleted >= data.length && page > 1) {
@@ -241,10 +228,7 @@ export function ActivityPage({
 
   const createP = useMutation({
     mutationFn: async (value: PortfolioInputType) => {
-      const userId = await getCurrentUserId();
-      const { error } = await supabase.from("portfolios").insert([{ ...value, user_id: userId }]);
-
-      if (error) throw new Error(error.message);
+      await createPortfolio(value);
     },
     onSuccess: () => {
       invalidate();
@@ -255,8 +239,7 @@ export function ActivityPage({
 
   const delP = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("portfolios").delete().eq("id", id);
-      if (error) throw new Error(error.message);
+      await deletePortfolio(id);
     },
     onSuccess: () => {
       invalidate();
@@ -268,7 +251,6 @@ export function ActivityPage({
 
   const importM = useMutation({
     mutationFn: async (file: File) => {
-      const userId = await getCurrentUserId();
       const text = await file.text();
       const parsed = parseCSV(text);
       const { rows, errors } = mapCsvRows(parsed);
@@ -280,74 +262,22 @@ export function ActivityPage({
         throw new Error(t("portfolio.noValidRows"));
       }
 
-      const { data: userPortfolios, error: pfError } = await supabase
-        .from("portfolios")
-        .select("id,name")
-        .eq("user_id", userId);
-      if (pfError) throw new Error(pfError.message);
+      const payload: ImportedTransactionInput[] = rows.map((row) => ({
+        ticker: row.ticker,
+        name: row.name ?? null,
+        asset_type: (ASSET_TYPES as readonly string[]).includes(row.asset_type ?? "")
+          ? (row.asset_type as TransactionInputType["asset_type"])
+          : "stock",
+        market: null,
+        currency: row.currency ?? "USD",
+        shares: row.shares,
+        price: row.price,
+        transaction_date: row.transaction_date,
+        notes: row.notes ?? null,
+        portfolio_name: row.portfolio?.trim() ?? "",
+      }));
 
-      const portfolioIdByName = new Map<string, string>();
-      for (const p of userPortfolios ?? []) {
-        if (p.name) portfolioIdByName.set(p.name.trim().toLowerCase(), p.id);
-      }
-
-      const csvPortfolioNames = Array.from(
-        new Set(
-          rows.map((row) => row.portfolio?.trim()).filter((name): name is string => Boolean(name)),
-        ),
-      );
-
-      for (const portfolioName of csvPortfolioNames) {
-        const key = portfolioName.toLowerCase();
-        if (portfolioIdByName.has(key)) continue;
-
-        const { data: created, error: createPfError } = await supabase
-          .from("portfolios")
-          .insert([
-            {
-              name: portfolioName,
-              broker: portfolioName,
-              notes: t("portfolio.importedViaCsv"),
-              user_id: userId,
-            },
-          ])
-          .select("id,name")
-          .single();
-        if (createPfError) throw new Error(createPfError.message);
-        portfolioIdByName.set(key, created.id);
-      }
-
-      const payload = rows.map((row) => {
-        const portfolioName = row.portfolio?.trim();
-        const portfolioId = portfolioName
-          ? (portfolioIdByName.get(portfolioName.toLowerCase()) ?? null)
-          : null;
-        if (!portfolioId) {
-          throw new Error(t("portfolio.couldNotResolvePortfolio", { name: portfolioName ?? "" }));
-        }
-
-        return {
-          ticker: row.ticker,
-          action: "buy" as const,
-          name: row.name ?? null,
-          asset_type: (ASSET_TYPES as readonly string[]).includes(row.asset_type ?? "")
-            ? (row.asset_type as TransactionInputType["asset_type"])
-            : "stock",
-          market: null,
-          currency: row.currency ?? "USD",
-          shares: row.shares,
-          price: row.price,
-          transaction_date: row.transaction_date,
-          notes: row.notes ?? null,
-          portfolio_id: portfolioId,
-          user_id: userId,
-        };
-      });
-
-      const { error } = await supabase.from("transactions").insert(payload);
-      if (error) throw new Error(error.message);
-      await upsertTickerCatalogEntries(userId, payload);
-      return { inserted: payload.length };
+      return importTransactions(payload, t("portfolio.importedViaCsv"));
     },
     onSuccess: (result) => {
       invalidate();

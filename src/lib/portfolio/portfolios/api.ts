@@ -19,3 +19,16 @@ export type PortfolioInputType = z.infer<typeof PortfolioInput>;
 export function listPortfolios(signal?: AbortSignal) {
   return apiFetch<PortfolioRecord[]>("/api/portfolio/portfolios", { signal });
 }
+
+export function createPortfolio(value: PortfolioInputType) {
+  return apiFetch<{ id: string }>("/api/portfolio/portfolios", {
+    method: "POST",
+    body: JSON.stringify(value),
+  });
+}
+
+export async function deletePortfolio(id: string) {
+  await apiFetch<void>(`/api/portfolio/portfolios/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
+}
