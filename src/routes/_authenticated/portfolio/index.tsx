@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import { TerminalSelect } from "@/components/ui/TerminalSelect";
-import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
+import { fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
 import { classifyHolding } from "@/lib/portfolio/transactions/mappers";
 import { PortfolioChart } from "@/routes/_authenticated/portfolio/components/PortfolioChart";
 import { PortfolioHoldingsTable } from "@/routes/_authenticated/portfolio/components/PortfolioHoldingsTable";
@@ -40,17 +40,8 @@ function PortfolioPage() {
   const [currencyFilter, setCurrencyFilter] = useState("__all__");
   const [regionFilter, setRegionFilter] = useState("__all__");
   const [allocationKind, setAllocationKind] = useState<AllocationKind>("assetType");
-  const {
-    txQ,
-    holdingsQ,
-    quotesQ,
-    transactions,
-    rows,
-    display,
-    selected,
-    portfolioMap,
-    convert,
-  } = usePortfolioHoldingsView();
+  const { txQ, holdingsQ, quotesQ, transactions, rows, display, selected, portfolioMap, convert } =
+    usePortfolioHoldingsView();
 
   const totals = useMemo(() => computeTotals(rows, convert), [convert, rows]);
   const rowRegions = useMemo(

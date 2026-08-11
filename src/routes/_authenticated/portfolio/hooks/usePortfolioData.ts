@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { listPortfolios, type PortfolioRecord } from "@/lib/portfolio/portfolios/api";
+import { listPortfolios } from "@/lib/portfolio/portfolios/api";
 import { listTransactions } from "@/lib/portfolio/transactions/api";
 
 export type { PortfolioRecord } from "@/lib/portfolio/portfolios/api";

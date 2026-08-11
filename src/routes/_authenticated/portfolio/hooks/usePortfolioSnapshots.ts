@@ -1,8 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import {
-  listPortfolioSnapshots,
-  type PortfolioSnapshotRow,
-} from "@/lib/portfolio/snapshots/api";
+import { listPortfolioSnapshots, type PortfolioSnapshotRow } from "@/lib/portfolio/snapshots/api";
 
 export type { PortfolioSnapshotRow } from "@/lib/portfolio/snapshots/api";
 

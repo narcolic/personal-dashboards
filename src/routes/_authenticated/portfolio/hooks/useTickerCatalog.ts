@@ -2,7 +2,6 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { listTickerCatalog } from "@/lib/portfolio/catalog/api";
-import type { TickerCatalogRow } from "@/lib/portfolio/tickerCatalog";
 
 export function useTickerCatalog() {
   const { user } = useAuth();
@@ -17,7 +16,9 @@ export function useTickerCatalog() {
   const tickerCatalogByTicker = useMemo(
     () =>
       new Map(
-        (tickerCatalogQ.data ?? []).map((item) => [item.ticker.trim().toUpperCase(), item] as const),
+        (tickerCatalogQ.data ?? []).map(
+          (item) => [item.ticker.trim().toUpperCase(), item] as const,
+        ),
       ),
     [tickerCatalogQ.data],
   );
