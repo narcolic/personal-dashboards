@@ -47,7 +47,9 @@ builder.Services.AddSingleton(
     new AppDataSource(builder.Configuration.GetConnectionString("AppDatabase")));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IPortfolioQueries, PortfolioQueries>();
+builder.Services.AddScoped<IPortfolioCommands, PortfolioCommands>();
 builder.Services.AddScoped<ITransactionQueries, TransactionQueries>();
+builder.Services.AddScoped<ITransactionCommands, TransactionCommands>();
 builder.Services.AddScoped<IVehicleQueries, VehicleQueries>();
 builder.Services.AddScoped<IVehicleCommands, VehicleCommands>();
 builder.Services.AddScoped<IServiceVisitQueries, ServiceVisitQueries>();
