@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { apiFetch } from "@/lib/api/client";
 import type { Enriched, HoldingRow } from "@/lib/portfolio/types";
-import { listPortfolioHoldings } from "@/lib/portfolio/holdings/api";
+import { portfolioHoldingsQueryOptions } from "@/lib/portfolio/queries";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
 import { useTransactionsFilters } from "@/routes/_authenticated/portfolio/hooks/useTransactionsFilters";
@@ -15,10 +15,7 @@ const EMPTY_HOLDINGS: HoldingRow[] = [];
 export function usePortfolioHoldingsView() {
   const { t } = useTranslation();
   const { txQ, portfoliosQ, transactions } = usePortfolioData();
-  const holdingsQ = useQuery({
-    queryKey: ["positions", "holdings"],
-    queryFn: ({ signal }) => listPortfolioHoldings(signal),
-  });
+  const holdingsQ = useQuery(portfolioHoldingsQueryOptions());
   const positions = holdingsQ.data ?? EMPTY_HOLDINGS;
   const { quotesQ, enrichedRows } = useQuotes(positions, {
     staleTime: 60_000,

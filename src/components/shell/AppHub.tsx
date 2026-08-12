@@ -3,8 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { dashboards } from "@/components/shell/dashboards";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
-import { listPortfolioHoldings } from "@/lib/portfolio/holdings/api";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
+import { portfolioHoldingsQueryOptions } from "@/lib/portfolio/queries";
 import type { HoldingRow } from "@/lib/portfolio/types";
 import { useCarServiceAnalytics } from "@/routes/_authenticated/car-service/hooks/useCarServiceAnalytics";
 import {
@@ -89,10 +89,7 @@ export function AppHub() {
 
 function PortfolioHubSummary() {
   const { t } = useTranslation();
-  const holdingsQ = useQuery({
-    queryKey: ["positions", "holdings"],
-    queryFn: ({ signal }) => listPortfolioHoldings(signal),
-  });
+  const holdingsQ = useQuery(portfolioHoldingsQueryOptions());
   const { enrichedRows, quotesQ } = useQuotes(holdingsQ.data ?? EMPTY_HOLDINGS, {
     staleTime: 60_000,
     gcTime: 30 * 60_000,

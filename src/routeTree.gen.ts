@@ -9,108 +9,66 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from "./routes/__root"
-import { Route as IndexRouteImport } from "./routes/index"
-import { Route as AuthenticatedRouteImport } from "./routes/_authenticated"
 import { Route as LoginRouteImport } from "./routes/login"
-import { Route as AuthenticatedCarServiceRouteImport } from "./routes/_authenticated/car-service"
+import { Route as AuthenticatedRouteImport } from "./routes/_authenticated"
+import { Route as IndexRouteImport } from "./routes/index"
 import { Route as AuthenticatedPortfolioRouteImport } from "./routes/_authenticated/portfolio"
-import { Route as AuthenticatedCarServiceIndexRouteImport } from "./routes/_authenticated/car-service/index"
-import { Route as AuthenticatedCarServiceVisitIdRouteImport } from "./routes/_authenticated/car-service/$visitId"
-import { Route as AuthenticatedCarServiceAddRouteImport } from "./routes/_authenticated/car-service/add"
-import { Route as AuthenticatedCarServiceAnalyticsRouteImport } from "./routes/_authenticated/car-service/analytics"
-import { Route as AuthenticatedCarServiceHistoryRouteImport } from "./routes/_authenticated/car-service/history"
-import { Route as AuthenticatedCarServiceVehiclesRouteImport } from "./routes/_authenticated/car-service/vehicles"
+import { Route as AuthenticatedCarServiceRouteImport } from "./routes/_authenticated/car-service"
 import { Route as AuthenticatedPortfolioIndexRouteImport } from "./routes/_authenticated/portfolio/index"
-import { Route as AuthenticatedPortfolioActivityRouteImport } from "./routes/_authenticated/portfolio/activity"
-import { Route as AuthenticatedPortfolioAnalyticsRouteImport } from "./routes/_authenticated/portfolio/analytics"
-import { Route as AuthenticatedPortfolioInsightsRouteImport } from "./routes/_authenticated/portfolio/insights"
-import { Route as AuthenticatedPortfolioPnlRouteImport } from "./routes/_authenticated/portfolio/pnl"
+import { Route as AuthenticatedCarServiceIndexRouteImport } from "./routes/_authenticated/car-service/index"
 import { Route as AuthenticatedPortfolioTransactionsRouteImport } from "./routes/_authenticated/portfolio/transactions"
+import { Route as AuthenticatedPortfolioPnlRouteImport } from "./routes/_authenticated/portfolio/pnl"
+import { Route as AuthenticatedPortfolioInsightsRouteImport } from "./routes/_authenticated/portfolio/insights"
+import { Route as AuthenticatedPortfolioAnalyticsRouteImport } from "./routes/_authenticated/portfolio/analytics"
+import { Route as AuthenticatedPortfolioActivityRouteImport } from "./routes/_authenticated/portfolio/activity"
+import { Route as AuthenticatedCarServiceVehiclesRouteImport } from "./routes/_authenticated/car-service/vehicles"
+import { Route as AuthenticatedCarServiceHistoryRouteImport } from "./routes/_authenticated/car-service/history"
+import { Route as AuthenticatedCarServiceAnalyticsRouteImport } from "./routes/_authenticated/car-service/analytics"
+import { Route as AuthenticatedCarServiceAddRouteImport } from "./routes/_authenticated/car-service/add"
+import { Route as AuthenticatedCarServiceVisitIdRouteImport } from "./routes/_authenticated/car-service/$visitId"
 import { Route as AuthenticatedPortfolioHoldingsIndexRouteImport } from "./routes/_authenticated/portfolio/holdings/index"
 import { Route as AuthenticatedPortfolioHoldingsTickerRouteImport } from "./routes/_authenticated/portfolio/holdings/$ticker"
 
-const IndexRoute = IndexRouteImport.update({
-  id: "/",
-  path: "/",
+const LoginRoute = LoginRouteImport.update({
+  id: "/login",
+  path: "/login",
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: "/_authenticated",
   getParentRoute: () => rootRouteImport,
 } as any)
-const LoginRoute = LoginRouteImport.update({
-  id: "/login",
-  path: "/login",
+const IndexRoute = IndexRouteImport.update({
+  id: "/",
+  path: "/",
   getParentRoute: () => rootRouteImport,
-} as any)
-const AuthenticatedCarServiceRoute = AuthenticatedCarServiceRouteImport.update({
-  id: "/car-service",
-  path: "/car-service",
-  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
   id: "/portfolio",
   path: "/portfolio",
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedCarServiceIndexRoute =
-  AuthenticatedCarServiceIndexRouteImport.update({
-    id: "/",
-    path: "/",
-    getParentRoute: () => AuthenticatedCarServiceRoute,
-  } as any)
-const AuthenticatedCarServiceVisitIdRoute =
-  AuthenticatedCarServiceVisitIdRouteImport.update({
-    id: "/$visitId",
-    path: "/$visitId",
-    getParentRoute: () => AuthenticatedCarServiceRoute,
-  } as any)
-const AuthenticatedCarServiceAddRoute =
-  AuthenticatedCarServiceAddRouteImport.update({
-    id: "/add",
-    path: "/add",
-    getParentRoute: () => AuthenticatedCarServiceRoute,
-  } as any)
-const AuthenticatedCarServiceAnalyticsRoute =
-  AuthenticatedCarServiceAnalyticsRouteImport.update({
-    id: "/analytics",
-    path: "/analytics",
-    getParentRoute: () => AuthenticatedCarServiceRoute,
-  } as any)
-const AuthenticatedCarServiceHistoryRoute =
-  AuthenticatedCarServiceHistoryRouteImport.update({
-    id: "/history",
-    path: "/history",
-    getParentRoute: () => AuthenticatedCarServiceRoute,
-  } as any)
-const AuthenticatedCarServiceVehiclesRoute =
-  AuthenticatedCarServiceVehiclesRouteImport.update({
-    id: "/vehicles",
-    path: "/vehicles",
-    getParentRoute: () => AuthenticatedCarServiceRoute,
-  } as any)
+const AuthenticatedCarServiceRoute = AuthenticatedCarServiceRouteImport.update({
+  id: "/car-service",
+  path: "/car-service",
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedPortfolioIndexRoute =
   AuthenticatedPortfolioIndexRouteImport.update({
     id: "/",
     path: "/",
     getParentRoute: () => AuthenticatedPortfolioRoute,
   } as any)
-const AuthenticatedPortfolioActivityRoute =
-  AuthenticatedPortfolioActivityRouteImport.update({
-    id: "/activity",
-    path: "/activity",
-    getParentRoute: () => AuthenticatedPortfolioRoute,
+const AuthenticatedCarServiceIndexRoute =
+  AuthenticatedCarServiceIndexRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
-const AuthenticatedPortfolioAnalyticsRoute =
-  AuthenticatedPortfolioAnalyticsRouteImport.update({
-    id: "/analytics",
-    path: "/analytics",
-    getParentRoute: () => AuthenticatedPortfolioRoute,
-  } as any)
-const AuthenticatedPortfolioInsightsRoute =
-  AuthenticatedPortfolioInsightsRouteImport.update({
-    id: "/insights",
-    path: "/insights",
+const AuthenticatedPortfolioTransactionsRoute =
+  AuthenticatedPortfolioTransactionsRouteImport.update({
+    id: "/transactions",
+    path: "/transactions",
     getParentRoute: () => AuthenticatedPortfolioRoute,
   } as any)
 const AuthenticatedPortfolioPnlRoute =
@@ -119,11 +77,53 @@ const AuthenticatedPortfolioPnlRoute =
     path: "/pnl",
     getParentRoute: () => AuthenticatedPortfolioRoute,
   } as any)
-const AuthenticatedPortfolioTransactionsRoute =
-  AuthenticatedPortfolioTransactionsRouteImport.update({
-    id: "/transactions",
-    path: "/transactions",
+const AuthenticatedPortfolioInsightsRoute =
+  AuthenticatedPortfolioInsightsRouteImport.update({
+    id: "/insights",
+    path: "/insights",
     getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioAnalyticsRoute =
+  AuthenticatedPortfolioAnalyticsRouteImport.update({
+    id: "/analytics",
+    path: "/analytics",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedPortfolioActivityRoute =
+  AuthenticatedPortfolioActivityRouteImport.update({
+    id: "/activity",
+    path: "/activity",
+    getParentRoute: () => AuthenticatedPortfolioRoute,
+  } as any)
+const AuthenticatedCarServiceVehiclesRoute =
+  AuthenticatedCarServiceVehiclesRouteImport.update({
+    id: "/vehicles",
+    path: "/vehicles",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
+  } as any)
+const AuthenticatedCarServiceHistoryRoute =
+  AuthenticatedCarServiceHistoryRouteImport.update({
+    id: "/history",
+    path: "/history",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
+  } as any)
+const AuthenticatedCarServiceAnalyticsRoute =
+  AuthenticatedCarServiceAnalyticsRouteImport.update({
+    id: "/analytics",
+    path: "/analytics",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
+  } as any)
+const AuthenticatedCarServiceAddRoute =
+  AuthenticatedCarServiceAddRouteImport.update({
+    id: "/add",
+    path: "/add",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
+  } as any)
+const AuthenticatedCarServiceVisitIdRoute =
+  AuthenticatedCarServiceVisitIdRouteImport.update({
+    id: "/$visitId",
+    path: "/$visitId",
+    getParentRoute: () => AuthenticatedCarServiceRoute,
   } as any)
 const AuthenticatedPortfolioHoldingsIndexRoute =
   AuthenticatedPortfolioHoldingsIndexRouteImport.update({
@@ -268,11 +268,11 @@ export interface RootRouteChildren {
 
 declare module "@tanstack/react-router" {
   interface FileRoutesByPath {
-    "/": {
-      id: "/"
-      path: "/"
-      fullPath: "/"
-      preLoaderRoute: typeof IndexRouteImport
+    "/login": {
+      id: "/login"
+      path: "/login"
+      fullPath: "/login"
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
     "/_authenticated": {
@@ -282,19 +282,12 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    "/login": {
-      id: "/login"
-      path: "/login"
-      fullPath: "/login"
-      preLoaderRoute: typeof LoginRouteImport
+    "/": {
+      id: "/"
+      path: "/"
+      fullPath: "/"
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    "/_authenticated/car-service": {
-      id: "/_authenticated/car-service"
-      path: "/car-service"
-      fullPath: "/car-service"
-      preLoaderRoute: typeof AuthenticatedCarServiceRouteImport
-      parentRoute: typeof AuthenticatedRoute
     }
     "/_authenticated/portfolio": {
       id: "/_authenticated/portfolio"
@@ -303,47 +296,12 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedPortfolioRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    "/_authenticated/car-service/": {
-      id: "/_authenticated/car-service/"
-      path: "/"
-      fullPath: "/car-service/"
-      preLoaderRoute: typeof AuthenticatedCarServiceIndexRouteImport
-      parentRoute: typeof AuthenticatedCarServiceRoute
-    }
-    "/_authenticated/car-service/$visitId": {
-      id: "/_authenticated/car-service/$visitId"
-      path: "/$visitId"
-      fullPath: "/car-service/$visitId"
-      preLoaderRoute: typeof AuthenticatedCarServiceVisitIdRouteImport
-      parentRoute: typeof AuthenticatedCarServiceRoute
-    }
-    "/_authenticated/car-service/add": {
-      id: "/_authenticated/car-service/add"
-      path: "/add"
-      fullPath: "/car-service/add"
-      preLoaderRoute: typeof AuthenticatedCarServiceAddRouteImport
-      parentRoute: typeof AuthenticatedCarServiceRoute
-    }
-    "/_authenticated/car-service/analytics": {
-      id: "/_authenticated/car-service/analytics"
-      path: "/analytics"
-      fullPath: "/car-service/analytics"
-      preLoaderRoute: typeof AuthenticatedCarServiceAnalyticsRouteImport
-      parentRoute: typeof AuthenticatedCarServiceRoute
-    }
-    "/_authenticated/car-service/history": {
-      id: "/_authenticated/car-service/history"
-      path: "/history"
-      fullPath: "/car-service/history"
-      preLoaderRoute: typeof AuthenticatedCarServiceHistoryRouteImport
-      parentRoute: typeof AuthenticatedCarServiceRoute
-    }
-    "/_authenticated/car-service/vehicles": {
-      id: "/_authenticated/car-service/vehicles"
-      path: "/vehicles"
-      fullPath: "/car-service/vehicles"
-      preLoaderRoute: typeof AuthenticatedCarServiceVehiclesRouteImport
-      parentRoute: typeof AuthenticatedCarServiceRoute
+    "/_authenticated/car-service": {
+      id: "/_authenticated/car-service"
+      path: "/car-service"
+      fullPath: "/car-service"
+      preLoaderRoute: typeof AuthenticatedCarServiceRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     "/_authenticated/portfolio/": {
       id: "/_authenticated/portfolio/"
@@ -352,25 +310,18 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedPortfolioIndexRouteImport
       parentRoute: typeof AuthenticatedPortfolioRoute
     }
-    "/_authenticated/portfolio/activity": {
-      id: "/_authenticated/portfolio/activity"
-      path: "/activity"
-      fullPath: "/portfolio/activity"
-      preLoaderRoute: typeof AuthenticatedPortfolioActivityRouteImport
-      parentRoute: typeof AuthenticatedPortfolioRoute
+    "/_authenticated/car-service/": {
+      id: "/_authenticated/car-service/"
+      path: "/"
+      fullPath: "/car-service/"
+      preLoaderRoute: typeof AuthenticatedCarServiceIndexRouteImport
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
-    "/_authenticated/portfolio/analytics": {
-      id: "/_authenticated/portfolio/analytics"
-      path: "/analytics"
-      fullPath: "/portfolio/analytics"
-      preLoaderRoute: typeof AuthenticatedPortfolioAnalyticsRouteImport
-      parentRoute: typeof AuthenticatedPortfolioRoute
-    }
-    "/_authenticated/portfolio/insights": {
-      id: "/_authenticated/portfolio/insights"
-      path: "/insights"
-      fullPath: "/portfolio/insights"
-      preLoaderRoute: typeof AuthenticatedPortfolioInsightsRouteImport
+    "/_authenticated/portfolio/transactions": {
+      id: "/_authenticated/portfolio/transactions"
+      path: "/transactions"
+      fullPath: "/portfolio/transactions"
+      preLoaderRoute: typeof AuthenticatedPortfolioTransactionsRouteImport
       parentRoute: typeof AuthenticatedPortfolioRoute
     }
     "/_authenticated/portfolio/pnl": {
@@ -380,12 +331,61 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedPortfolioPnlRouteImport
       parentRoute: typeof AuthenticatedPortfolioRoute
     }
-    "/_authenticated/portfolio/transactions": {
-      id: "/_authenticated/portfolio/transactions"
-      path: "/transactions"
-      fullPath: "/portfolio/transactions"
-      preLoaderRoute: typeof AuthenticatedPortfolioTransactionsRouteImport
+    "/_authenticated/portfolio/insights": {
+      id: "/_authenticated/portfolio/insights"
+      path: "/insights"
+      fullPath: "/portfolio/insights"
+      preLoaderRoute: typeof AuthenticatedPortfolioInsightsRouteImport
       parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/analytics": {
+      id: "/_authenticated/portfolio/analytics"
+      path: "/analytics"
+      fullPath: "/portfolio/analytics"
+      preLoaderRoute: typeof AuthenticatedPortfolioAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/portfolio/activity": {
+      id: "/_authenticated/portfolio/activity"
+      path: "/activity"
+      fullPath: "/portfolio/activity"
+      preLoaderRoute: typeof AuthenticatedPortfolioActivityRouteImport
+      parentRoute: typeof AuthenticatedPortfolioRoute
+    }
+    "/_authenticated/car-service/vehicles": {
+      id: "/_authenticated/car-service/vehicles"
+      path: "/vehicles"
+      fullPath: "/car-service/vehicles"
+      preLoaderRoute: typeof AuthenticatedCarServiceVehiclesRouteImport
+      parentRoute: typeof AuthenticatedCarServiceRoute
+    }
+    "/_authenticated/car-service/history": {
+      id: "/_authenticated/car-service/history"
+      path: "/history"
+      fullPath: "/car-service/history"
+      preLoaderRoute: typeof AuthenticatedCarServiceHistoryRouteImport
+      parentRoute: typeof AuthenticatedCarServiceRoute
+    }
+    "/_authenticated/car-service/analytics": {
+      id: "/_authenticated/car-service/analytics"
+      path: "/analytics"
+      fullPath: "/car-service/analytics"
+      preLoaderRoute: typeof AuthenticatedCarServiceAnalyticsRouteImport
+      parentRoute: typeof AuthenticatedCarServiceRoute
+    }
+    "/_authenticated/car-service/add": {
+      id: "/_authenticated/car-service/add"
+      path: "/add"
+      fullPath: "/car-service/add"
+      preLoaderRoute: typeof AuthenticatedCarServiceAddRouteImport
+      parentRoute: typeof AuthenticatedCarServiceRoute
+    }
+    "/_authenticated/car-service/$visitId": {
+      id: "/_authenticated/car-service/$visitId"
+      path: "/$visitId"
+      fullPath: "/car-service/$visitId"
+      preLoaderRoute: typeof AuthenticatedCarServiceVisitIdRouteImport
+      parentRoute: typeof AuthenticatedCarServiceRoute
     }
     "/_authenticated/portfolio/holdings/": {
       id: "/_authenticated/portfolio/holdings/"

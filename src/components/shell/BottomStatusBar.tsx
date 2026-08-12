@@ -1,10 +1,4 @@
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type KeyboardEvent as ReactKeyboardEvent,
-} from "react";
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { useRouterState } from "@tanstack/react-router";
 import i18n from "@/i18n";
@@ -34,10 +28,7 @@ export function BottomStatusBar() {
   const languageButtonRef = useRef<HTMLButtonElement | null>(null);
 
   const currentLanguage = i18n.resolvedLanguage === "el" || i18n.language === "el" ? "el" : "en";
-  const currentLanguageLabel = useMemo(
-    () => languages.find((language) => language.code === currentLanguage)?.label ?? "EN",
-    [currentLanguage],
-  );
+  const currentLanguageLabel = currentLanguage === "el" ? "EL" : "EN";
 
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1_000);

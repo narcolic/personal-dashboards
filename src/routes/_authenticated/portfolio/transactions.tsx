@@ -10,6 +10,7 @@ import {
   deletePortfolio,
   type PortfolioInputType,
 } from "@/lib/portfolio/portfolios/api";
+import { invalidatePortfolioData } from "@/lib/portfolio/queries";
 import {
   createTransaction,
   deleteTransaction,
@@ -158,9 +159,7 @@ export function ActivityPage({
   );
 
   const invalidate = () => {
-    qc.invalidateQueries({ queryKey: ["positions"] });
-    qc.invalidateQueries({ queryKey: ["portfolios"] });
-    qc.invalidateQueries({ queryKey: ["ticker-catalog"] });
+    invalidatePortfolioData(qc);
   };
 
   const portfolioName = useMemo(() => {

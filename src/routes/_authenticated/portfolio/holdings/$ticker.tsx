@@ -7,6 +7,7 @@ import { StatCard } from "@/components/terminal/StatCard";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
+import { invalidatePortfolioData } from "@/lib/portfolio/queries";
 import { createTransaction, type TransactionInputType } from "@/lib/portfolio/transactions/api";
 import { TransactionEditor } from "@/routes/_authenticated/portfolio/components/TransactionEditor";
 import { usePortfolioHoldingsView } from "@/routes/_authenticated/portfolio/hooks/usePortfolioHoldingsView";
@@ -184,9 +185,7 @@ function HoldingDetailsPage() {
       await createTransaction(value);
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["positions"] });
-      qc.invalidateQueries({ queryKey: ["portfolios"] });
-      qc.invalidateQueries({ queryKey: ["ticker-catalog"] });
+      invalidatePortfolioData(qc);
       setEditing(null);
       toast.success(t("portfolio.transactionAdded"));
     },

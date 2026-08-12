@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { listPortfolios } from "@/lib/portfolio/portfolios/api";
+import { portfolioQueryKeys } from "@/lib/portfolio/queries";
 import { listTransactions } from "@/lib/portfolio/transactions/api";
 
 export type { PortfolioRecord } from "@/lib/portfolio/portfolios/api";
@@ -57,7 +58,7 @@ export function usePortfolioData({
   });
 
   const portfoliosQ = useQuery({
-    queryKey: ["portfolios"],
+    queryKey: portfolioQueryKeys.portfolios,
     queryFn: ({ signal }) => listPortfolios(signal),
     enabled: includePortfolios,
   });

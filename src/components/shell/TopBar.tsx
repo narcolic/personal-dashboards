@@ -2,6 +2,8 @@ import { Link } from "@tanstack/react-router";
 import { dashboards } from "@/components/shell/dashboards";
 import { useTranslation } from "react-i18next";
 
+const navItems = dashboards.filter((item) => item.path);
+
 function GridIcon() {
   return (
     <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
@@ -15,7 +17,6 @@ function GridIcon() {
 
 export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
   const { t } = useTranslation();
-  const navItems = dashboards.filter((item) => item.path);
 
   return (
     <div className="sticky top-0 z-10 h-10 w-full bg-background/65 px-2 pt-1 backdrop-blur-xl">

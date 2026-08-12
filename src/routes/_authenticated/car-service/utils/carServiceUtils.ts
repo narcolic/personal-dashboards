@@ -1,21 +1,27 @@
-import type { ServiceVisitWithJobs } from "@/routes/_authenticated/car-service/types";
-import type { ServiceReminderStatusInfo } from "@/routes/_authenticated/car-service/types";
+import type {
+  ServiceReminderStatusInfo,
+  ServiceVisitWithJobs,
+} from "@/routes/_authenticated/car-service/types";
+
+const currencyFormatter = new Intl.NumberFormat("en-IE", {
+  style: "currency",
+  currency: "EUR",
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
+const dateFormatter = new Intl.DateTimeFormat("en-GB");
+const distanceFormatter = new Intl.NumberFormat("en-US");
 
 export function formatCurrency(value: number): string {
-  return new Intl.NumberFormat("en-IE", {
-    style: "currency",
-    currency: "EUR",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  }).format(value);
+  return currencyFormatter.format(value);
 }
 
 export function formatDate(date: string): string {
-  return new Date(date).toLocaleDateString("en-GB");
+  return dateFormatter.format(new Date(date));
 }
 
 export function formatKm(km: number): string {
-  return `${new Intl.NumberFormat("en-US").format(km)} km`;
+  return `${distanceFormatter.format(km)} km`;
 }
 
 export function computeAnnualServiceStatus(
