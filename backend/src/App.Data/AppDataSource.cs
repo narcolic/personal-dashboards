@@ -63,6 +63,38 @@ public sealed class AppDataSource : IAsyncDisposable
     }
 
     /// <summary>
+    /// Executes a user-scoped query in a database-enforced read-only transaction.
+    /// The same authenticated JWT context is installed, so RLS remains active.
+    /// </summary>
+    public async Task<T> ExecuteAsUserReadOnlyAsync<T>(
+        Guid userId,
+        Func<NpgsqlConnection, NpgsqlTransaction, CancellationToken, Task<T>> operation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(operation);
+
+        await using var connection = await OpenConnectionAsync(cancellationToken)
+            .ConfigureAwait(false);
+        await using var transaction = await connection
+            .BeginTransactionAsync(IsolationLevel.ReadCommitted, cancellationToken)
+            .ConfigureAwait(false);
+
+        await using (var readOnlyCommand = connection.CreateCommand())
+        {
+            readOnlyCommand.Transaction = transaction;
+            readOnlyCommand.CommandText = "set transaction read only;";
+            await readOnlyCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        await SetUserContextAsync(connection, transaction, userId, cancellationToken)
+            .ConfigureAwait(false);
+        var result = await operation(connection, transaction, cancellationToken)
+            .ConfigureAwait(false);
+        await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
+        return result;
+    }
+
+    /// <summary>
     /// Executes trusted background work with the configured database role. This path
     /// is reserved for system jobs that must process every user's rows and must never
     /// be called from a user-controlled HTTP request.

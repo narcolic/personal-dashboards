@@ -1,1 +1,6 @@
-project_id = "wxvkaksfopcxdzglhmxh"
+project_id = "xcqxfyylqtcgmugpnjzt"
+
+[auth.oauth_server]
+enabled = true
+authorization_url_path = "/oauth/consent"
+allow_dynamic_registration = true

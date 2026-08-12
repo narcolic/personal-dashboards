@@ -21,8 +21,14 @@ function LoginPage() {
 
   useEffect(() => {
     if (!user) return;
-    window.location.replace(redirect || "/");
+    window.location.replace(safeLocalRedirect(redirect));
   }, [user, redirect]);
+
+  const loginCallbackUrl = () => {
+    const callback = new URL("/login", window.location.origin);
+    if (redirect) callback.searchParams.set("redirect", safeLocalRedirect(redirect));
+    return callback.toString();
+  };
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +42,7 @@ function LoginPage() {
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: window.location.origin },
+          options: { emailRedirectTo: loginCallbackUrl() },
         });
         if (error) throw error;
         toast.success("Account created. Check your email to confirm.");
@@ -61,7 +67,7 @@ function LoginPage() {
       }
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: window.location.origin },
+        options: { redirectTo: loginCallbackUrl() },
       });
       if (error) throw error;
     } catch (_err) {
@@ -168,6 +174,17 @@ function LoginPage() {
       </div>
     </div>
   );
+}
+
+function safeLocalRedirect(value?: string) {
+  if (!value) return "/";
+  try {
+    const target = new URL(value, window.location.origin);
+    if (target.origin !== window.location.origin) return "/";
+    return `${target.pathname}${target.search}${target.hash}`;
+  } catch {
+    return "/";
+  }
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
