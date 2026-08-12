@@ -8,6 +8,14 @@ public interface IPortfolioSnapshotQueries
         Guid userId,
         int limit,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<PortfolioSnapshotListItem>> SearchAsync(
+        Guid userId,
+        string scopeKey,
+        DateOnly dateFrom,
+        DateOnly dateTo,
+        CancellationToken cancellationToken = default) =>
+        Task.FromResult<IReadOnlyList<PortfolioSnapshotListItem>>([]);
 }
 
 public sealed record PortfolioSnapshotListItem(

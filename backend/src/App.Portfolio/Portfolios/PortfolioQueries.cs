@@ -9,7 +9,7 @@ public sealed class PortfolioQueries(AppDataSource dataSource) : IPortfolioQueri
     public Task<IReadOnlyList<PortfolioListItem>> ListAsync(
         Guid userId,
         CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
+        dataSource.ExecuteAsUserReadOnlyAsync(
             userId,
             (connection, transaction, token) =>
                 ReadPortfoliosAsync(connection, transaction, userId, token),

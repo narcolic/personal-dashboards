@@ -22,6 +22,10 @@ Supabase__Url=https://xcqxfyylqtcgmugpnjzt.supabase.co
 Supabase__Audience=authenticated
 ConnectionStrings__AppDatabase=Host=...;Port=5432;Database=postgres;Username=...;Password=...;SSL Mode=Require;Trust Server Certificate=true
 Cors__AllowedOrigins__0=http://localhost:5173
+Mcp__ResourceUri=https://portfolio-terminal-api.yellowforest-c9892f85.northeurope.azurecontainerapps.io/mcp
+Mcp__AuthorizationServer=https://xcqxfyylqtcgmugpnjzt.supabase.co/auth/v1
+Mcp__RequiredAccessClaim=read
+Mcp__MaxHoldings=100
 ```
 
 The backend does not load the Vite `.env` file. Configure `Supabase__Url` in the
@@ -72,6 +76,70 @@ The local API listens on `http://localhost:5080` by default.
 - `GET /api/car-service/visits/{visitId}` returns one owned service visit with its nested jobs.
 - `GET /api/car-service/analytics?vehicleId={vehicleId}` returns server-calculated service analytics. Omit `vehicleId` for all vehicles.
 - `GET /api/car-service/reminders?vehicleId={vehicleId}` returns service intervals with server-calculated status. Use `activeOnly=true` for the dashboard list.
+
+## Portfolio MCP server
+
+The API hosts a stateless, read-only MCP server at `/mcp`. It exposes exactly these
+tools: `portfolio_list`, `portfolio_get_summary`, `portfolio_get_holdings`,
+`portfolio_get_history`, `portfolio_get_allocation`, and
+`portfolio_simulate_purchase`. No Car Service or mutation handlers are registered.
+
+MCP access uses a separate Supabase JWT audience and authorization policy. A valid
+token must have:
+
+```text
+aud = the exact Mcp__ResourceUri
+client_id = the Supabase OAuth client ID
+portfolio_access = read
+```
+
+Ordinary frontend tokens retain `aud=authenticated`, so they cannot call `/mcp`.
+Conversely, MCP tokens cannot call the existing REST API. User identity always comes
+from JWT `sub`, then application ownership filters and PostgreSQL RLS both enforce
+isolation.
+
+### Enable Supabase OAuth
+
+1. Confirm the frontend, backend, and `supabase/config.toml` all use project
+   `xcqxfyylqtcgmugpnjzt`.
+2. Rotate the project to an asymmetric signing key if it still uses HS256. The
+   `openid` scope and remote JWT validation require asymmetric keys.
+3. Apply the migration containing `portfolio_mcp_access_token_hook`.
+4. In **Authentication → OAuth Server**, enable OAuth 2.1, set the authorization
+   path to `/oauth/consent`, and enable dynamic client registration for private
+   ChatGPT testing.
+5. In **Authentication → Hooks**, select
+   `public.portfolio_mcp_access_token_hook` as the Custom Access Token Hook.
+6. Set the Supabase Site URL to the deployed frontend and allow the frontend login
+   callback URLs. The React consent route uses Supabase's validated authorization
+   details and approve/deny APIs.
+7. Configure the Azure Container App with the four `Mcp__*` settings above. The
+   resource URI must exactly match the token hook's canonical URI.
+
+The migration intentionally stamps only tokens containing `client_id`; normal web
+sessions are unchanged. Refresh-token issuance must be verified to retain both MCP
+claims before release.
+
+### OAuth release gate
+
+Do not treat deployment as complete until all of the following pass against the
+cloud project:
+
+1. `GET /.well-known/oauth-protected-resource` returns the exact `/mcp` resource and
+   Supabase authorization server.
+2. MCP Inspector completes DCR, authorization code + PKCE, consent, token exchange,
+   `tools/list`, refresh, and revoked-grant rejection.
+3. The access and refreshed tokens contain the exact MCP `aud`, a nonempty
+   `client_id`, and `portfolio_access=read`.
+4. ChatGPT Developer Mode connects to the production URL ending in `/mcp` and can
+   run the six read-only tools.
+5. Wrong-audience frontend tokens fail on `/mcp`, MCP tokens fail on `/api`, and an
+   attempted write or Car Service request has no available tool.
+
+Supabase's OAuth server is beta and currently does not natively bind the RFC 8707
+`resource` parameter into `aud`; the access-token hook is the single-resource
+workaround. If the Inspector or ChatGPT rejects the flow, do not add a custom OAuth
+proxy. Switch to a compliant identity provider or wait for native support.
 
 ## Run with Docker
 

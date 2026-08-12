@@ -9,7 +9,7 @@ public sealed class TickerCatalogQueries(AppDataSource dataSource) : ITickerCata
     public Task<IReadOnlyList<TickerCatalogListItem>> ListAsync(
         Guid userId,
         CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
+        dataSource.ExecuteAsUserReadOnlyAsync(
             userId,
             (connection, transaction, token) =>
                 ReadAsync(connection, transaction, userId, token),

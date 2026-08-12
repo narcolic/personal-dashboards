@@ -23,4 +23,6 @@ internal sealed class HttpCurrentUser(IHttpContextAccessor httpContextAccessor) 
     }
 
     public string? Email => Principal.FindFirstValue("email");
+
+    public string? ClientId => Principal.FindFirstValue("client_id");
 }
