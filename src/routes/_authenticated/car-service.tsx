@@ -16,11 +16,7 @@ export const Route = createFileRoute("/_authenticated/car-service")({
 function CarServiceLayout() {
   return (
     <CarServiceWorkspaceProvider>
-      <div className="relative isolate overflow-x-clip">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full bg-primary/[0.045] blur-3xl"
-        />
+      <div className="relative isolate">
         <CarServiceContextBar />
         <Outlet />
       </div>

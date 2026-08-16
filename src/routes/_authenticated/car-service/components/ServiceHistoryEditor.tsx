@@ -241,8 +241,13 @@ export function ServiceHistoryEditor({
       onSubmit={save}
       className="analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/70 font-mono shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]"
     >
-      <section className="p-4 md:p-6">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+      <section className="p-4 md:p-5">
+        <SectionHeader
+          eyebrow={t("car.editor.visitDetails")}
+          summary={initialVisit ? form.serviceDate : undefined}
+        />
+
+        <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <Field label={t("car.editor.vehicle")} error={errors.vehicleId}>
             <TerminalSelect
               value={resolvedVehicleId}
@@ -287,16 +292,30 @@ export function ServiceHistoryEditor({
             />
           </Field>
 
-          <Field label={t("car.editor.vatRate")}>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.vatRatePct}
-              onChange={(e) => setFormField("vatRatePct", e.target.value)}
-              className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
-            />
-          </Field>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,180px)_1fr] md:col-span-2">
+            <Field label={t("car.editor.vatRate")}>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.vatRatePct}
+                onChange={(e) => setFormField("vatRatePct", e.target.value)}
+                className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-sm text-foreground focus:border-primary focus:outline-none"
+              />
+            </Field>
+
+            <label className="flex min-h-10 cursor-pointer items-center gap-3 rounded-md border border-border/70 bg-background/25 px-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground sm:mt-[18px]">
+              <input
+                type="checkbox"
+                checked={form.isAnnualService}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, isAnnualService: e.target.checked }))
+                }
+                className="h-4 w-4 accent-primary"
+              />
+              <span>{t("car.editor.markAsAnnualService")}</span>
+            </label>
+          </div>
 
           <Field label={t("car.editor.notes")} className="md:col-span-2">
             <textarea
@@ -306,262 +325,272 @@ export function ServiceHistoryEditor({
               className="w-full rounded-md border border-border/70 bg-input px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none"
             />
           </Field>
-
-          <label className="md:col-span-2 inline-flex items-center gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-            <input
-              type="checkbox"
-              checked={form.isAnnualService}
-              onChange={(e) => setForm((prev) => ({ ...prev, isAnnualService: e.target.checked }))}
-              className="h-4 w-4 accent-primary"
-            />
-            <span>{t("car.editor.markAsAnnualService")}</span>
-          </label>
         </div>
       </section>
 
       <div className="border-b border-border" />
 
-      <section className="p-4 md:p-6 space-y-3">
-        <div className="hidden grid-cols-14 gap-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground md:grid">
-          <div className="col-span-3">{t("car.editor.jobTask")}</div>
-          <div className="col-span-2">{t("car.editor.category")}</div>
-          <div className="col-span-2 text-right">{t("car.editor.priceExVat")}</div>
-          <div className="col-span-1 text-right">{t("car.editor.qty")}</div>
-          <div className="col-span-2 text-right">{t("car.editor.lineTotal")}</div>
-          <div className="col-span-2">{t("car.editor.notes")}</div>
-          <div className="col-span-2 text-right">{t("car.editor.remove")}</div>
+      <section className="space-y-3 p-4 md:p-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <SectionHeader
+            eyebrow={t("car.editor.serviceJobs")}
+            summary={t("car.editor.jobCount", { count: lines.length })}
+          />
+          <button
+            type="button"
+            onClick={addLine}
+            className="inline-flex h-9 items-center rounded-md border border-primary/35 px-3 text-[10px] uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+          >
+            {t("car.editor.addJob")}
+          </button>
         </div>
 
-        {lines.map((line, index) => {
-          const query = line.jobName.trim().toLowerCase();
-          const options = jobSuggestions
-            .filter((item) => item.toLowerCase().includes(query))
-            .sort((a, b) => a.localeCompare(b));
-          const exactMatch = options.some((option) => option.toLowerCase() === query);
+        <div className="overflow-visible rounded-lg border border-border/70 bg-background/20">
+          <div className="hidden grid-cols-14 gap-2 border-b border-border/70 bg-secondary/15 px-3 py-2.5 text-[9px] uppercase tracking-[0.16em] text-muted-foreground md:grid">
+            <div className="col-span-3">{t("car.editor.jobTask")}</div>
+            <div className="col-span-2">{t("car.editor.category")}</div>
+            <div className="col-span-2 text-right">{t("car.editor.priceExVat")}</div>
+            <div className="col-span-1 text-right">{t("car.editor.qty")}</div>
+            <div className="col-span-2 text-right">{t("car.editor.lineTotal")}</div>
+            <div className="col-span-2">{t("car.editor.notes")}</div>
+            <div className="col-span-2 text-right">{t("car.editor.actions")}</div>
+          </div>
 
-          const categoryQuery = line.category.trim().toUpperCase();
-          const categoryOptions = mergedCategorySuggestions.filter((item) =>
-            item.includes(categoryQuery),
-          );
-          const categoryExactMatch = categoryOptions.some((option) => option === categoryQuery);
+          {lines.map((line, index) => {
+            const query = line.jobName.trim().toLowerCase();
+            const options = jobSuggestions
+              .filter((item) => item.toLowerCase().includes(query))
+              .sort((a, b) => a.localeCompare(b));
+            const exactMatch = options.some((option) => option.toLowerCase() === query);
 
-          return (
-            <div
-              key={`line-${index}`}
-              className="space-y-1 rounded-lg border border-border/70 bg-background/30 p-3 md:rounded-none md:border-0 md:bg-transparent md:p-0"
-            >
-              <div className="grid grid-cols-2 gap-3 text-[11px] md:grid-cols-14 md:gap-2">
-                <div className="relative col-span-2 md:col-span-3">
-                  <MobileFieldLabel>{t("car.editor.jobTask")}</MobileFieldLabel>
-                  <input
-                    value={line.jobName}
-                    onFocus={() => setJobMenuOpenIndex(index)}
-                    onBlur={() =>
-                      setTimeout(() => setJobMenuOpenIndex((v) => (v === index ? null : v)), 120)
-                    }
-                    onChange={(e) => setLineField(index, "jobName", e.target.value)}
-                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
-                  />
-                  {jobMenuOpenIndex === index && (query.length > 0 || options.length > 0) ? (
-                    <div className="terminal-scrollbar absolute z-10 mt-1 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl">
-                      {options.map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onMouseDown={() => {
-                            setLineField(index, "jobName", option);
-                            setJobMenuOpenIndex(null);
-                          }}
-                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors hover:bg-secondary/55 hover:text-foreground"
-                        >
-                          {option}
-                        </button>
-                      ))}
-                      {query.length > 0 && !exactMatch ? (
-                        <button
-                          type="button"
-                          onMouseDown={() => {
-                            setLineField(index, "jobName", line.jobName.trim());
-                            setJobMenuOpenIndex(null);
-                          }}
-                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary/10"
-                        >
-                          {t("car.editor.createValue", { value: line.jobName.trim() })}
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
+            const categoryQuery = line.category.trim().toUpperCase();
+            const categoryOptions = mergedCategorySuggestions.filter((item) =>
+              item.includes(categoryQuery),
+            );
+            const categoryExactMatch = categoryOptions.some((option) => option === categoryQuery);
 
-                <div className="relative col-span-2 md:col-span-2">
-                  <MobileFieldLabel>{t("car.editor.category")}</MobileFieldLabel>
-                  <input
-                    value={line.category}
-                    onFocus={() => setCategoryMenuOpenIndex(index)}
-                    onBlur={() =>
-                      setTimeout(
-                        () => setCategoryMenuOpenIndex((v) => (v === index ? null : v)),
-                        120,
-                      )
-                    }
-                    onChange={(e) => setLineField(index, "category", e.target.value.toUpperCase())}
-                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
-                  />
-                  {categoryMenuOpenIndex === index &&
-                  (categoryQuery.length > 0 || categoryOptions.length > 0) ? (
-                    <div className="terminal-scrollbar absolute z-10 mt-1 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl">
-                      {categoryOptions.map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onMouseDown={() => {
-                            setLineField(index, "category", option);
-                            setCategoryMenuOpenIndex(null);
-                          }}
-                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors hover:bg-secondary/55 hover:text-foreground"
-                        >
-                          {option}
-                        </button>
-                      ))}
-                      {categoryQuery.length > 0 && !categoryExactMatch ? (
-                        <button
-                          type="button"
-                          onMouseDown={() => {
-                            setLineField(index, "category", line.category.trim().toUpperCase());
-                            setCategoryMenuOpenIndex(null);
-                          }}
-                          className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary/10"
-                        >
-                          {t("car.editor.createValue", {
-                            value: line.category.trim().toUpperCase(),
-                          })}
-                        </button>
-                      ) : null}
-                    </div>
-                  ) : null}
-                </div>
-
-                <div className="col-span-1 md:col-span-2">
-                  <MobileFieldLabel>{t("car.editor.priceExVat")}</MobileFieldLabel>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={line.unitPriceExVat}
-                    onChange={(e) => setLineField(index, "unitPriceExVat", e.target.value)}
-                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-right text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
-                  />
-                </div>
-                <div className="col-span-1 md:col-span-1">
-                  <MobileFieldLabel>{t("car.editor.qty")}</MobileFieldLabel>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={line.quantity}
-                    onChange={(e) => setLineField(index, "quantity", e.target.value)}
-                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-right text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
-                  />
-                </div>
-                <div className="col-span-1 rounded-md bg-secondary/25 px-3 py-2 text-left text-muted-foreground md:col-span-2 md:bg-transparent md:px-2 md:py-1.5 md:text-right">
-                  <MobileFieldLabel>{t("car.editor.lineTotal")}</MobileFieldLabel>
-                  <span className="font-semibold tabular-nums text-foreground">
-                    {formatCurrency(computedLines[index]?.total ?? 0)}
+            return (
+              <div
+                key={`line-${index}`}
+                className="space-y-1 border-b border-border/55 bg-background/10 p-3 last:border-b-0 md:px-3 md:py-2"
+              >
+                <div className="mb-2 flex items-center justify-between md:hidden">
+                  <span className="text-[9px] uppercase tracking-[0.18em] text-primary">
+                    {t("car.editor.jobNumber", { number: String(index + 1).padStart(2, "0") })}
                   </span>
-                </div>
-                <div className="col-span-2 md:col-span-2">
-                  <MobileFieldLabel>{t("car.editor.notes")}</MobileFieldLabel>
-                  <input
-                    value={line.notes}
-                    onChange={(e) => setLineField(index, "notes", e.target.value)}
-                    className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-auto md:rounded-none md:px-2 md:py-1.5"
-                  />
-                </div>
-                <div className="col-span-1 flex items-end justify-end md:col-span-2 md:block md:text-right">
                   <button
                     type="button"
                     onClick={() => removeLine(index)}
-                    className="inline-flex h-9 items-center rounded-md px-3 text-[10px] uppercase text-destructive hover:bg-destructive/10 md:h-auto md:px-2 md:py-1.5"
+                    disabled={lines.length === 1}
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-destructive/25 text-base text-destructive transition-colors hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-30"
                     aria-label={t("car.editor.removeJobAria", { index: index + 1 })}
                   >
-                    {t("car.editor.remove")}
+                    ×
                   </button>
                 </div>
-              </div>
-              {errors.jobRows?.[index] ? (
-                <div className="text-[11px] text-destructive">{errors.jobRows[index]}</div>
-              ) : null}
-            </div>
-          );
-        })}
+                <div className="grid grid-cols-2 gap-3 text-[11px] md:grid-cols-14 md:gap-2">
+                  <div className="relative col-span-2 md:col-span-3">
+                    <MobileFieldLabel>{t("car.editor.jobTask")}</MobileFieldLabel>
+                    <input
+                      value={line.jobName}
+                      onFocus={() => setJobMenuOpenIndex(index)}
+                      onBlur={() =>
+                        setTimeout(() => setJobMenuOpenIndex((v) => (v === index ? null : v)), 120)
+                      }
+                      onChange={(e) => setLineField(index, "jobName", e.target.value)}
+                      className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-9 md:px-2"
+                    />
+                    {jobMenuOpenIndex === index && (query.length > 0 || options.length > 0) ? (
+                      <div className="terminal-scrollbar absolute z-10 mt-1 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+                        {options.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            onMouseDown={() => {
+                              setLineField(index, "jobName", option);
+                              setJobMenuOpenIndex(null);
+                            }}
+                            className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors hover:bg-secondary/55 hover:text-foreground"
+                          >
+                            {option}
+                          </button>
+                        ))}
+                        {query.length > 0 && !exactMatch ? (
+                          <button
+                            type="button"
+                            onMouseDown={() => {
+                              setLineField(index, "jobName", line.jobName.trim());
+                              setJobMenuOpenIndex(null);
+                            }}
+                            className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary/10"
+                          >
+                            {t("car.editor.createValue", { value: line.jobName.trim() })}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
 
-        <button
-          type="button"
-          onClick={addLine}
-          className="inline-flex h-9 items-center rounded-md border border-primary/35 px-3 text-[10px] uppercase tracking-[0.14em] text-primary hover:bg-primary/10"
-        >
-          {t("car.editor.addJob")}
-        </button>
+                  <div className="relative col-span-2 md:col-span-2">
+                    <MobileFieldLabel>{t("car.editor.category")}</MobileFieldLabel>
+                    <input
+                      value={line.category}
+                      onFocus={() => setCategoryMenuOpenIndex(index)}
+                      onBlur={() =>
+                        setTimeout(
+                          () => setCategoryMenuOpenIndex((v) => (v === index ? null : v)),
+                          120,
+                        )
+                      }
+                      onChange={(e) =>
+                        setLineField(index, "category", e.target.value.toUpperCase())
+                      }
+                      className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-9 md:px-2"
+                    />
+                    {categoryMenuOpenIndex === index &&
+                    (categoryQuery.length > 0 || categoryOptions.length > 0) ? (
+                      <div className="terminal-scrollbar absolute z-10 mt-1 max-h-44 w-full overflow-auto rounded-lg border border-border/70 bg-popover/95 p-1.5 shadow-[0_18px_40px_-18px_rgba(0,0,0,0.95)] backdrop-blur-xl">
+                        {categoryOptions.map((option) => (
+                          <button
+                            key={option}
+                            type="button"
+                            onMouseDown={() => {
+                              setLineField(index, "category", option);
+                              setCategoryMenuOpenIndex(null);
+                            }}
+                            className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors hover:bg-secondary/55 hover:text-foreground"
+                          >
+                            {option}
+                          </button>
+                        ))}
+                        {categoryQuery.length > 0 && !categoryExactMatch ? (
+                          <button
+                            type="button"
+                            onMouseDown={() => {
+                              setLineField(index, "category", line.category.trim().toUpperCase());
+                              setCategoryMenuOpenIndex(null);
+                            }}
+                            className="block w-full rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] text-primary transition-colors hover:bg-primary/10"
+                          >
+                            {t("car.editor.createValue", {
+                              value: line.category.trim().toUpperCase(),
+                            })}
+                          </button>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+
+                  <div className="col-span-1 md:col-span-2">
+                    <MobileFieldLabel>{t("car.editor.priceExVat")}</MobileFieldLabel>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={line.unitPriceExVat}
+                      onChange={(e) => setLineField(index, "unitPriceExVat", e.target.value)}
+                      className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-right text-foreground focus:border-primary focus:outline-none md:h-9 md:px-2"
+                    />
+                  </div>
+                  <div className="col-span-1 md:col-span-1">
+                    <MobileFieldLabel>{t("car.editor.qty")}</MobileFieldLabel>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={line.quantity}
+                      onChange={(e) => setLineField(index, "quantity", e.target.value)}
+                      className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-right text-foreground focus:border-primary focus:outline-none md:h-9 md:px-2"
+                    />
+                  </div>
+                  <div className="col-span-1 rounded-md bg-secondary/25 px-3 py-2 text-left text-muted-foreground md:col-span-2 md:flex md:h-9 md:items-center md:justify-end md:bg-transparent md:px-2 md:py-0 md:text-right">
+                    <MobileFieldLabel>{t("car.editor.lineTotal")}</MobileFieldLabel>
+                    <span className="font-semibold tabular-nums text-foreground">
+                      {formatCurrency(computedLines[index]?.total ?? 0)}
+                    </span>
+                  </div>
+                  <div className="col-span-2 md:col-span-2">
+                    <MobileFieldLabel>{t("car.editor.notes")}</MobileFieldLabel>
+                    <input
+                      value={line.notes}
+                      onChange={(e) => setLineField(index, "notes", e.target.value)}
+                      className="h-10 w-full rounded-md border border-border/70 bg-input px-3 text-foreground focus:border-primary focus:outline-none md:h-9 md:px-2"
+                    />
+                  </div>
+                  <div className="hidden items-center justify-end md:col-span-2 md:flex">
+                    <button
+                      type="button"
+                      onClick={() => removeLine(index)}
+                      disabled={lines.length === 1}
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-md border border-transparent text-base text-destructive transition-colors hover:border-destructive/25 hover:bg-destructive/10 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={t("car.editor.removeJobAria", { index: index + 1 })}
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+                {errors.jobRows?.[index] ? (
+                  <div className="text-[11px] text-destructive">{errors.jobRows[index]}</div>
+                ) : null}
+              </div>
+            );
+          })}
+        </div>
         {errors.jobs ? <div className="text-[11px] text-destructive">{errors.jobs}</div> : null}
       </section>
 
-      <div className="sticky bottom-10 z-[8] border-t border-border/70 bg-card/95 p-3 backdrop-blur-xl md:static md:bg-transparent md:p-6 md:backdrop-blur-none">
-        <div className="space-y-4">
-          <div className="w-full space-y-1.5 text-[10px] uppercase tracking-[0.12em] sm:max-w-xs md:ml-auto md:text-[11px] md:tracking-[0.2em]">
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("car.editor.subtotalExVat")}</span>
-              <span>{formatCurrency(subtotal)}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-muted-foreground">{t("car.editor.vatAmount")}</span>
-              <span>{formatCurrency(vatAmount)}</span>
-            </div>
-            <div className="flex items-center justify-between border-t border-border pt-2">
-              <span className="text-muted-foreground">{t("car.editor.totalInclVat")}</span>
-              <span className="text-primary">{formatCurrency(totalAmount)}</span>
+      <div className="sticky bottom-10 z-[8] border-t border-border/70 bg-card/95 p-3 backdrop-blur-xl md:static md:p-5">
+        {saveError ? (
+          <div className="mb-3 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-[11px] text-destructive">
+            {saveError}
+          </div>
+        ) : null}
+
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div
+            role="group"
+            aria-label={t("car.editor.actionsGroupAria")}
+            className="order-2 flex flex-wrap items-center gap-2 lg:order-1"
+          >
+            {onDelete ? (
+              <button
+                type="button"
+                onClick={() => setIsDeleteDialogOpen(true)}
+                className="inline-flex h-10 items-center rounded-md border border-destructive/30 px-3 text-[10px] uppercase tracking-[0.14em] text-destructive transition-colors hover:bg-destructive/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-destructive/50"
+              >
+                {t("car.editor.deleteVisit")}
+              </button>
+            ) : null}
+
+            <div className="ml-auto flex items-center gap-2 lg:ml-2">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-foreground transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 disabled:opacity-60"
+              >
+                {isSaving ? t("car.editor.saving") : submitLabel}
+              </button>
+
+              {onCancel ? (
+                <button
+                  type="button"
+                  onClick={onCancel}
+                  className="inline-flex h-10 items-center rounded-md border border-border/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-foreground/25 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+                >
+                  {t("common.cancel")}
+                </button>
+              ) : null}
             </div>
           </div>
 
-          <div className="space-y-3">
-            {saveError ? <div className="text-[11px] text-destructive">{saveError}</div> : null}
-
-            <div className="border-t border-border/40 pt-2">
-              <div
-                role="group"
-                aria-label={t("car.editor.actionsGroupAria")}
-                className="inline-flex flex-wrap items-center gap-2"
-              >
-                <button
-                  type="submit"
-                  disabled={isSaving}
-                  className="inline-flex h-10 items-center rounded-md bg-primary px-4 text-[11px] font-bold uppercase tracking-[0.14em] text-primary-foreground hover:opacity-90 disabled:opacity-60"
-                >
-                  {isSaving ? t("car.editor.saving") : submitLabel}
-                </button>
-
-                {onCancel ? (
-                  <button
-                    type="button"
-                    onClick={onCancel}
-                    className="inline-flex h-10 items-center rounded-md border border-border/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
-                  >
-                    {t("common.cancel")}
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {onDelete ? (
-              <div className="border-t border-destructive/40 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setIsDeleteDialogOpen(true)}
-                  className="px-3 py-2 text-[11px] uppercase tracking-[0.2em] text-destructive hover:underline"
-                >
-                  {t("common.delete")}
-                </button>
-              </div>
-            ) : null}
+          <div className="order-1 grid grid-cols-3 overflow-hidden rounded-md border border-border/70 bg-background/30 text-[9px] uppercase tracking-[0.12em] lg:order-2 lg:min-w-[440px]">
+            <TotalMetric label={t("car.editor.subtotalExVat")} value={formatCurrency(subtotal)} />
+            <TotalMetric label={t("car.editor.vatAmount")} value={formatCurrency(vatAmount)} />
+            <TotalMetric
+              label={t("car.editor.totalInclVat")}
+              value={formatCurrency(totalAmount)}
+              emphasized
+            />
           </div>
         </div>
       </div>
@@ -598,6 +627,44 @@ function Field({
       {children}
       {error ? <div className="mt-1 text-[11px] text-destructive">{error}</div> : null}
     </label>
+  );
+}
+
+function SectionHeader({ eyebrow, summary }: { eyebrow: string; summary?: string }) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <span className="text-primary">›</span>
+      <h2 className="text-[10px] font-semibold uppercase tracking-[0.2em] text-foreground">
+        {eyebrow}
+      </h2>
+      <span className="h-px min-w-4 flex-1 bg-border/60" />
+      {summary ? (
+        <span className="shrink-0 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+          {summary}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
+function TotalMetric({
+  label,
+  value,
+  emphasized = false,
+}: {
+  label: string;
+  value: string;
+  emphasized?: boolean;
+}) {
+  return (
+    <div className="min-w-0 border-r border-border/60 px-3 py-2.5 text-right last:border-r-0">
+      <div className="truncate text-[8px] text-muted-foreground">{label}</div>
+      <div
+        className={`mt-1 truncate text-[11px] font-semibold tabular-nums ${emphasized ? "text-primary" : "text-foreground"}`}
+      >
+        {value}
+      </div>
+    </div>
   );
 }
 
