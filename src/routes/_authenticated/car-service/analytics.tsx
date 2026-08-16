@@ -37,22 +37,40 @@ function CarServiceAnalytics() {
   const scopeLabel = selectedVehicle
     ? `${selectedVehicle.make ?? "—"} ${selectedVehicle.model ?? ""}`.trim()
     : t("car.allVehicles");
+  const showScopeLabel = vehicles.length > 1;
   const hasPeriodAnalytics = Boolean(analytics?.period);
+  const dateRange = analytics?.period.startDate
+    ? t("car.analyticsModern.dateRange", {
+        from: formatDate(analytics.period.startDate),
+        to: formatDate(analytics.period.endDate),
+      })
+    : analytics?.period
+      ? t("car.analyticsModern.allTimeRange", {
+          to: formatDate(analytics.period.endDate),
+        })
+      : null;
 
   return (
     <div className="space-y-6 font-[family-name:var(--font-analytics)] sm:space-y-7">
       <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
-          <div className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
-            {scopeLabel}
-          </div>
-          <h1 className="mt-3 text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
+          {showScopeLabel ? (
+            <div className="mb-3 inline-flex items-center gap-2 text-xs font-semibold text-primary">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden="true" />
+              {scopeLabel}
+            </div>
+          ) : null}
+          <h1 className="text-3xl font-semibold tracking-[-0.035em] text-foreground sm:text-4xl">
             {t("car.analyticsModern.title")}
           </h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
             {t("car.analyticsModern.subtitle")}
           </p>
+          {dateRange ? (
+            <p className="mt-2 text-xs font-medium tabular-nums text-muted-foreground/80">
+              {dateRange}
+            </p>
+          ) : null}
         </div>
 
         <PeriodPicker
@@ -82,17 +100,6 @@ function CarServiceAnalytics() {
         <EmptyAnalytics />
       ) : (
         <>
-          <div className="text-xs text-muted-foreground">
-            {analytics.period.startDate
-              ? t("car.analyticsModern.dateRange", {
-                  from: formatDate(analytics.period.startDate),
-                  to: formatDate(analytics.period.endDate),
-                })
-              : t("car.analyticsModern.allTimeRange", {
-                  to: formatDate(analytics.period.endDate),
-                })}
-          </div>
-
           <AnalyticsSummary analytics={analytics} />
 
           <ServiceAnalyticsPanel
@@ -158,21 +165,17 @@ function AnalyticsSummary({
   return (
     <section
       aria-label={t("car.analyticsModern.summary")}
-      className="grid gap-4 lg:grid-cols-[1.25fr_1fr]"
+      className="overflow-hidden rounded-2xl border border-border/60 bg-card/90 shadow-[0_18px_50px_-42px_rgba(0,0,0,0.8)]"
     >
-      <article className="relative overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(135deg,color-mix(in_oklch,var(--color-primary)_14%,var(--color-card)),var(--color-card)_62%)] p-6 shadow-[0_28px_70px_-48px_var(--color-primary)] sm:p-7">
-        <div
-          className="absolute -right-12 -top-16 h-44 w-44 rounded-full bg-primary/10 blur-3xl"
-          aria-hidden="true"
-        />
-        <div className="relative">
-          <div className="text-sm font-medium text-muted-foreground">
+      <div className="grid sm:grid-cols-3 xl:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">
+        <article className="border-b border-border/55 bg-primary/[0.035] px-5 py-5 sm:col-span-3 sm:px-6 xl:col-span-1 xl:border-b-0 xl:border-r">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t("car.analyticsModern.periodSpend")}
           </div>
-          <div className="mt-3 text-4xl font-semibold tracking-[-0.04em] tabular-nums text-foreground sm:text-5xl">
+          <div className="mt-2 text-3xl font-semibold tracking-[-0.035em] tabular-nums text-foreground sm:text-4xl">
             {formatCurrency(analytics.period.totalSpend)}
           </div>
-          <div className="mt-5 flex flex-wrap items-center gap-3">
+          <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
             <ChangeBadge value={change} tone={changeTone} />
             <span className="text-xs text-muted-foreground">
               {analytics.period.previousTotalSpend === null
@@ -182,14 +185,12 @@ function AnalyticsSummary({
                   })}
             </span>
           </div>
-        </div>
-      </article>
-
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-1">
+        </article>
         <MetricCard
           label={t("car.avgCostPerVisit")}
           value={formatCurrency(analytics.period.averageVisitCost)}
           help={t("car.analyticsModern.avgVisitHelp")}
+          className="border-b border-border/55 sm:border-b-0 sm:border-r"
         />
         <MetricCard
           label={t("car.costPer1000km")}
@@ -203,6 +204,7 @@ function AnalyticsSummary({
               ? t("car.analyticsModern.mileageUnavailable")
               : t("car.analyticsModern.costPerKmHelp")
           }
+          className="border-b border-border/55 sm:border-b-0 sm:border-r"
         />
         <MetricCard
           label={t("car.totalVisits")}
@@ -238,9 +240,19 @@ function ChangeBadge({ value, tone }: { value: number | null; tone: "neutral" | 
   );
 }
 
-function MetricCard({ label, value, help }: { label: string; value: string; help: string }) {
+function MetricCard({
+  label,
+  value,
+  help,
+  className = "",
+}: {
+  label: string;
+  value: string;
+  help: string;
+  className?: string;
+}) {
   return (
-    <article className="rounded-2xl border border-border/60 bg-card/90 px-5 py-4 shadow-[0_18px_50px_-42px_rgba(0,0,0,0.8)]">
+    <article className={`flex min-h-28 flex-col justify-center px-5 py-5 ${className}`}>
       <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground">
         <span>{label}</span>
         <span
@@ -290,16 +302,14 @@ function EmptyAnalytics() {
 function AnalyticsLoadingSkeleton() {
   return (
     <div className="space-y-5" aria-busy="true" aria-label="Loading analytics">
-      <div className="grid gap-4 lg:grid-cols-[1.25fr_1fr]">
-        <div className="h-48 animate-pulse rounded-2xl border border-border/50 bg-card/70" />
-        <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-1">
-          {Array.from({ length: 3 }).map((_, index) => (
-            <div
-              key={index}
-              className="h-24 animate-pulse rounded-2xl border border-border/50 bg-card/70"
-            />
-          ))}
-        </div>
+      <div className="grid overflow-hidden rounded-2xl border border-border/50 bg-card/70 sm:grid-cols-3 xl:grid-cols-[1.4fr_repeat(3,minmax(0,1fr))]">
+        <div className="h-32 animate-pulse border-b border-border/50 sm:col-span-3 xl:col-span-1 xl:border-b-0 xl:border-r" />
+        {Array.from({ length: 3 }).map((_, index) => (
+          <div
+            key={index}
+            className={`h-28 animate-pulse ${index < 2 ? "border-b border-border/50 sm:border-b-0 sm:border-r" : ""}`}
+          />
+        ))}
       </div>
       <div className="h-96 animate-pulse rounded-2xl border border-border/50 bg-card/70" />
       <div className="grid gap-5 lg:grid-cols-2">
