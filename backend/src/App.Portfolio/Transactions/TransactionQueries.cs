@@ -11,7 +11,7 @@ public sealed class TransactionQueries(AppDataSource dataSource) : ITransactionQ
         Guid userId,
         TransactionListFilter filter,
         CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
+        dataSource.ExecuteAsUserReadOnlyAsync(
             userId,
             (connection, transaction, token) =>
                 ReadTransactionsAsync(connection, transaction, userId, filter, token),

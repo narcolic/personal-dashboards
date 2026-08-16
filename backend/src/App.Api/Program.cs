@@ -1,15 +1,20 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.Extensions.Options;
+using ModelContextProtocol.Protocol;
 using PortfolioTerminal.Api;
 using PortfolioTerminal.Api.Auth;
 using PortfolioTerminal.Api.Endpoints;
 using PortfolioTerminal.Api.Health;
+using PortfolioTerminal.Api.Mcp;
 using PortfolioTerminal.CarService.Analytics;
 using PortfolioTerminal.CarService.Reminders;
 using PortfolioTerminal.CarService.Visits;
 using PortfolioTerminal.CarService.Vehicles;
 using PortfolioTerminal.Data;
+using PortfolioTerminal.Portfolio.Analytics;
 using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.Holdings;
 using PortfolioTerminal.Portfolio.MarketData;
@@ -30,6 +35,24 @@ builder.Services.AddOpenApi("v1");
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUser, HttpCurrentUser>();
 builder.Services.AddSupabaseAuthentication(builder.Configuration);
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("Mcp", context =>
+        RateLimitPartition.GetTokenBucketLimiter(
+            context.User.FindFirst("client_id")?.Value ??
+            context.User.FindFirst("sub")?.Value ??
+            context.Connection.RemoteIpAddress?.ToString() ??
+            "anonymous",
+            _ => new TokenBucketRateLimiterOptions
+            {
+                TokenLimit = 10,
+                TokensPerPeriod = 10,
+                ReplenishmentPeriod = TimeSpan.FromSeconds(20),
+                QueueLimit = 0,
+                AutoReplenishment = true,
+            }));
+});
 
 var allowedOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
@@ -54,11 +77,13 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddHttpClient<IQuoteService, YahooQuoteService>(client =>
 {
     client.BaseAddress = new Uri("https://query1.finance.yahoo.com/");
+    client.Timeout = TimeSpan.FromSeconds(10);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
     client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 });
 builder.Services.AddHttpClient<IFxRateService, FxRateService>(client =>
 {
+    client.Timeout = TimeSpan.FromSeconds(10);
     client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
     client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
 });
@@ -81,6 +106,14 @@ builder.Services.AddScoped<IPortfolioHoldingQueries, PortfolioHoldingQueries>();
 builder.Services.AddScoped<IPortfolioSnapshotQueries, PortfolioSnapshotQueries>();
 builder.Services.AddScoped<IPortfolioSnapshotStore, PortfolioSnapshotStore>();
 builder.Services.AddScoped<IPortfolioSnapshotJob, PortfolioSnapshotJob>();
+builder.Services.AddScoped<IPortfolioAnalysisService>(services => new PortfolioAnalysisService(
+    services.GetRequiredService<IPortfolioQueries>(),
+    services.GetRequiredService<IPortfolioHoldingQueries>(),
+    services.GetRequiredService<IPortfolioSnapshotQueries>(),
+    services.GetRequiredService<IQuoteService>(),
+    services.GetRequiredService<IFxRateService>(),
+    services.GetRequiredService<TimeProvider>(),
+    services.GetRequiredService<IOptions<McpAuthOptions>>().Value.MaxHoldings));
 builder.Services.AddScoped<ITickerCatalogQueries, TickerCatalogQueries>();
 builder.Services.AddScoped<ITransactionQueries, TransactionQueries>();
 builder.Services.AddScoped<ITransactionCommands, TransactionCommands>();
@@ -92,6 +125,21 @@ builder.Services.AddScoped<ICarServiceAnalytics, CarServiceAnalyticsService>();
 builder.Services.AddScoped<IServiceReminderQueries, ServiceReminderQueries>();
 builder.Services.AddScoped<IServiceReminderService, ServiceReminderService>();
 builder.Services.AddScoped<IServiceReminderCommands, ServiceReminderCommands>();
+builder.Services.AddMcpServer(options =>
+    {
+        options.ServerInfo = new Implementation
+        {
+            Name = "portfolio-terminal",
+            Title = "Portfolio Terminal",
+            Version = "1.0.0",
+            Description = "Authenticated, read-only portfolio analysis tools.",
+        };
+        options.ServerInstructions =
+            "Read-only Portfolio Terminal data. Never claim realized P&L or cash-flow-adjusted returns. " +
+            "Use portfolio_list when a portfolio selector is unknown or ambiguous.";
+    })
+    .WithHttpTransport(options => options.Stateless = true)
+    .WithTools<PortfolioMcpTools>();
 
 builder.Services.AddHealthChecks()
     .AddCheck("self", () => Microsoft.Extensions.Diagnostics.HealthChecks.HealthCheckResult.Healthy(), ["live"])
@@ -101,6 +149,7 @@ var app = builder.Build();
 
 app.UseExceptionHandler();
 app.UseCors("Frontend");
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -126,6 +175,24 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapIdentityEndpoints();
 app.MapPortfolioEndpoints();
 app.MapCarServiceEndpoints();
+
+string[] oauthScopes = ["openid"];
+string[] bearerMethods = ["header"];
+IResult ProtectedResourceMetadata(IOptions<McpAuthOptions> options) => Results.Ok(new
+{
+    resource = options.Value.ResourceUri,
+    authorization_servers = new[] { options.Value.AuthorizationServer },
+    scopes_supported = oauthScopes,
+    bearer_methods_supported = bearerMethods,
+});
+
+app.MapGet("/.well-known/oauth-protected-resource", ProtectedResourceMetadata)
+    .AllowAnonymous();
+app.MapGet("/.well-known/oauth-protected-resource/mcp", ProtectedResourceMetadata)
+    .AllowAnonymous();
+app.MapMcp("/mcp")
+    .RequireAuthorization(McpAuthOptions.AuthorizationPolicy)
+    .RequireRateLimiting("Mcp");
 
 if (args.Any(argument => string.Equals(
         argument,
