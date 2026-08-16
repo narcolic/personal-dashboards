@@ -7,6 +7,7 @@
   --font-sans: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   --font-display: "JetBrains Mono", ui-monospace, monospace;
+  --font-analytics: "Inter", ui-sans-serif, system-ui, sans-serif;
 
   --radius-sm: 2px;
   --radius-md: 3px;
@@ -234,6 +235,14 @@
       color-mix(in oklch, var(--color-primary) 4%, transparent),
       transparent 42%
     );
+  }
+  .workspace-ambient-bg {
+    background-image: radial-gradient(
+      ellipse 28rem 20rem at 78% 11rem,
+      color-mix(in oklch, var(--color-primary) 6%, transparent),
+      transparent 100%
+    );
+    background-repeat: no-repeat;
   }
   .analytics-active-dot {
     animation: analytics-dot-pulse 1.25s ease-out infinite;

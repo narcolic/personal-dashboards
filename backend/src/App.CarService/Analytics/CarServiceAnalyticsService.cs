@@ -9,6 +9,7 @@ public sealed class CarServiceAnalyticsService(
     public async Task<CarServiceAnalyticsResult> GetAsync(
         Guid userId,
         Guid? vehicleId,
+        CarServiceAnalyticsPeriod period = CarServiceAnalyticsPeriod.All,
         CancellationToken cancellationToken = default)
     {
         var visits = await visitQueries.ListAsync(userId, vehicleId, cancellationToken)
@@ -16,6 +17,7 @@ public sealed class CarServiceAnalyticsService(
 
         return CarServiceAnalyticsCalculator.Calculate(
             visits,
-            timeProvider.GetUtcNow().Year);
+            DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime),
+            period);
     }
 }

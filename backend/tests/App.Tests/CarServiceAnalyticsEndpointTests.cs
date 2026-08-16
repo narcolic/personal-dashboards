@@ -38,7 +38,14 @@ public sealed class CarServiceAnalyticsEndpointTests(ApiFactory factory) : IClas
             new MostExpensiveVisitResult(Guid.NewGuid(), new DateOnly(2026, 6, 1), 200m),
             [new AnnualSpendResult("2026", 200m)],
             [new CategorySpendResult("SERVICE", 120m)],
-            [new TopJobResult("Oil change", 2, 120m)]));
+            [new TopJobResult("Oil change", 2, 120m)],
+            new AnalyticsPeriodResult(
+                "last12m", new DateOnly(2025, 6, 2), new DateOnly(2026, 6, 1),
+                2, 300m, 150m, 30m, 100m, 200m),
+            [new SpendTrendResult(new DateOnly(2026, 6, 1), 200m, 100m)],
+            [new ExpensiveVisitResult(
+                Guid.NewGuid(), vehicleId, new DateOnly(2026, 6, 1), "Garage", 200m)],
+            [new VehicleComparisonResult(vehicleId, 2, 300m, 150m, 30m)]));
 
         using var authenticatedFactory = factory.WithWebHostBuilder(builder =>
         {
@@ -58,11 +65,13 @@ public sealed class CarServiceAnalyticsEndpointTests(ApiFactory factory) : IClas
         });
         using var client = authenticatedFactory.CreateClient();
 
-        var response = await client.GetAsync($"/api/car-service/analytics?vehicleId={vehicleId}");
+        var response = await client.GetAsync(
+            $"/api/car-service/analytics?vehicleId={vehicleId}&period=last12m");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Equal(userId, analytics.RequestedUserId);
         Assert.Equal(vehicleId, analytics.RequestedVehicleId);
+        Assert.Equal(CarServiceAnalyticsPeriod.Last12Months, analytics.RequestedPeriod);
 
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(2, payload.GetProperty("visitCount").GetInt32());
@@ -73,6 +82,30 @@ public sealed class CarServiceAnalyticsEndpointTests(ApiFactory factory) : IClas
         Assert.False(payload.TryGetProperty("VisitCount", out _));
     }
 
+    [Fact]
+    public async Task AnalyticsRejectsUnknownPeriod()
+    {
+        using var authenticatedFactory = factory.WithWebHostBuilder(builder =>
+        {
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddAuthentication(options =>
+                    {
+                        options.DefaultAuthenticateScheme = TestAuthHandler.SchemeName;
+                        options.DefaultChallengeScheme = TestAuthHandler.SchemeName;
+                    })
+                    .AddScheme<AuthenticationSchemeOptions, TestAuthHandler>(
+                        TestAuthHandler.SchemeName,
+                        _ => { });
+            });
+        });
+        using var client = authenticatedFactory.CreateClient();
+
+        var response = await client.GetAsync("/api/car-service/analytics?period=quarter");
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
     private sealed class RecordingAnalytics(
         CarServiceAnalyticsResult result) : ICarServiceAnalytics
     {
@@ -80,13 +113,17 @@ public sealed class CarServiceAnalyticsEndpointTests(ApiFactory factory) : IClas
 
         public Guid? RequestedVehicleId { get; private set; }
 
+        public CarServiceAnalyticsPeriod? RequestedPeriod { get; private set; }
+
         public Task<CarServiceAnalyticsResult> GetAsync(
             Guid userId,
             Guid? vehicleId,
+            CarServiceAnalyticsPeriod period = CarServiceAnalyticsPeriod.All,
             CancellationToken cancellationToken = default)
         {
             RequestedUserId = userId;
             RequestedVehicleId = vehicleId;
+            RequestedPeriod = period;
             return Task.FromResult(result);
         }
     }

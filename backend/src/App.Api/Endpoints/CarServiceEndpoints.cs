@@ -73,15 +73,25 @@ public static class CarServiceEndpoints
         group.MapDelete("/visits/{visitId:guid}", DeleteServiceVisitAsync)
             .WithName("DeleteServiceVisit");
 
-        group.MapGet("/analytics", async (
+        group.MapGet("/analytics", async Task<IResult> (
                 Guid? vehicleId,
+                string? period,
                 ICarServiceAnalytics analytics,
                 ICurrentUser currentUser,
                 CancellationToken cancellationToken) =>
             {
+                if (!CarServiceAnalyticsPeriods.TryParse(period, out var parsedPeriod))
+                {
+                    return TypedResults.BadRequest(new
+                    {
+                        error = "Invalid analytics period. Use last12m, ytd, last3y, or all.",
+                    });
+                }
+
                 var result = await analytics.GetAsync(
                     currentUser.UserId,
                     vehicleId,
+                    parsedPeriod,
                     cancellationToken);
                 return TypedResults.Ok(result);
             })
