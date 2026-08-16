@@ -13,7 +13,7 @@ export const Route = createFileRoute("/_authenticated/portfolio")({
 function PortfolioLayout() {
   return (
     <PortfolioWorkspaceProvider>
-      <div className="relative isolate overflow-x-clip md:overflow-x-visible">
+      <div className="relative isolate overflow-x-clip">
         <div
           aria-hidden="true"
           className="pointer-events-none absolute -right-20 -top-28 -z-10 h-80 w-80 rounded-full bg-primary/[0.045] blur-3xl"

@@ -88,7 +88,7 @@ function AuthLayout() {
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopBar userEmail={user?.email} onLogout={logout} />
-      <header className="sticky top-10 z-[9] bg-background/55 px-4 py-2 backdrop-blur-xl md:px-2">
+      <header className="sticky top-10 z-[9] w-full bg-background/55 px-4 py-2 backdrop-blur-xl md:px-2">
         <div className="mx-auto hidden max-w-[1400px] px-2 md:block md:px-4">
           {desktopLinks.length > 0 ? (
             <nav
@@ -119,7 +119,7 @@ function AuthLayout() {
           </div>
         ) : null}
       </header>
-      <main className="mx-auto max-w-[1400px] p-4 pb-12 md:p-6 md:pb-14">
+      <main className="mx-auto w-full max-w-[1400px] p-4 pb-12 md:p-6 md:pb-14">
         <Outlet />
       </main>
       <BottomStatusBar />
