@@ -10,8 +10,31 @@
     "edit": "επεξ.",
     "deleteShort": "διαγρ."
   },
+  "brand": {
+    "name": "Terminal Hub",
+    "tagline": "Τα συστήματά σου, σε πλήρη εικόνα."
+  },
+  "pageTitles": {
+    "login": "Σύνδεση",
+    "authorize": "Εξουσιοδότηση",
+    "portfolio": "Χαρτοφυλάκιο",
+    "portfolioInsights": "Απόδοση Χαρτοφυλακίου",
+    "portfolioActivity": "Κινήσεις Χαρτοφυλακίου",
+    "holdings": "Θέσεις",
+    "holding": "Λεπτομέρειες Θέσης",
+    "transactions": "Συναλλαγές",
+    "performance": "Απόδοση",
+    "portfolioAnalytics": "Ανάλυση Χαρτοφυλακίου",
+    "carService": "Σέρβις Αυτοκινήτου",
+    "serviceHistory": "Ιστορικό Σέρβις",
+    "serviceAnalytics": "Ανάλυση Σέρβις",
+    "vehicles": "Οχήματα",
+    "addServiceVisit": "Προσθήκη Σέρβις",
+    "editServiceVisit": "Επεξεργασία Σέρβις",
+    "notFound": "Η Σελίδα Δεν Βρέθηκε"
+  },
   "shell": {
-    "hub": "Home",
+    "hub": "Terminal Hub",
     "dashboards": "Πίνακες Ελέγχου",
     "open": "> άνοιγμα",
     "comingSoon": "> σύντομα διαθέσιμο"
@@ -27,7 +50,7 @@
   "header": {
     "portfolioTerminal": "> Χαρτοφυλάκιο",
     "carService": "> Σέρβις Αυτοκινήτου",
-    "hub": "> Home",
+    "hub": "> Terminal Hub",
     "dashboard": "Συνοψη",
     "transactions": "Συναλλαγές",
     "pnl": "Απόδοση",

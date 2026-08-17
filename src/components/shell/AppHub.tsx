@@ -13,6 +13,7 @@ import {
 } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 
 const EMPTY_HOLDINGS: HoldingRow[] = [];
 
@@ -24,10 +25,8 @@ export function AppHub() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <div className="text-[10px] uppercase tracking-[0.3em] text-primary">
-              {t("shell.hub")}
-            </div>
-            <h1 className="mt-2 text-2xl font-bold uppercase tracking-[0.2em]">
+            <BrandLockup tagline={t("brand.tagline")} />
+            <h1 className="mt-6 text-2xl font-bold uppercase tracking-[0.2em]">
               {t("shell.dashboards")}
             </h1>
           </div>

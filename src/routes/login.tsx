@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 
 export const Route = createFileRoute("/login")({
   validateSearch: (search: Record<string, unknown>) => ({
@@ -12,6 +14,7 @@ export const Route = createFileRoute("/login")({
 });
 
 function LoginPage() {
+  const { t } = useTranslation();
   const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState("");
@@ -100,8 +103,8 @@ function LoginPage() {
     <div className="relative min-h-screen bg-background grid-bg flex items-center justify-center px-4">
       <div className="absolute inset-0 scanline pointer-events-none" />
       <div className="relative w-full max-w-md">
-        <div className="mb-6 flex items-center justify-between text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-          <span>TERMINAL v1.0</span>
+        <div className="mb-6 flex items-center justify-between gap-4 text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+          <BrandLockup tagline={t("brand.tagline")} />
           <span className="inline-flex items-center gap-2 text-green-500">
             <span
               className="inline-block h-2 w-2 rounded-full bg-green-500 animate-pulse"

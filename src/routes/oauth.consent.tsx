@@ -98,9 +98,9 @@ function OAuthConsentPage() {
               Connect {details?.client.name || "this application"}?
             </h1>
             <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              This connection can read and analyze your Portfolio Terminal portfolios. It cannot
-              create, edit, import, or delete portfolios or transactions, and it has no access to
-              Car Service data.
+              This connection can read and analyze your Terminal Hub portfolios. It cannot create,
+              edit, import, or delete portfolios or transactions, and it has no access to Car
+              Service data.
             </p>
           </div>
 

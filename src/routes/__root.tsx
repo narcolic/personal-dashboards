@@ -1,11 +1,21 @@
 import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
-import { Outlet, Link, createRootRouteWithContext, useRouter } from "@tanstack/react-router";
+import {
+  Outlet,
+  Link,
+  createRootRouteWithContext,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router";
 import { useEffect } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { Toaster } from "sonner";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "@/theme/theme-provider";
+import { getPageTitle } from "@/lib/page-title";
+
+const APP_DESCRIPTION =
+  "A private command center for your portfolio, vehicles, utilities, and more.";
 
 function NotFoundComponent() {
   const { t } = useTranslation();
@@ -59,18 +69,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "TERMINAL // Portfolio" },
-      { name: "description", content: "Live portfolio dashboard with real-time market data" },
-      { property: "og:title", content: "TERMINAL // Portfolio" },
-      { name: "twitter:title", content: "TERMINAL // Portfolio" },
-      {
-        property: "og:description",
-        content: "Live portfolio dashboard with real-time market data",
-      },
-      {
-        name: "twitter:description",
-        content: "Live portfolio dashboard with real-time market data",
-      },
+      { title: "Terminal Hub" },
+      { name: "description", content: APP_DESCRIPTION },
+      { property: "og:title", content: "Terminal Hub" },
+      { name: "twitter:title", content: "Terminal Hub" },
+      { property: "og:description", content: APP_DESCRIPTION },
+      { name: "twitter:description", content: APP_DESCRIPTION },
 
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
@@ -108,6 +112,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthBridge />
+      <DocumentTitle />
       <Outlet />
       <Toaster
         theme={resolvedTheme}
@@ -123,4 +128,15 @@ function RootComponent() {
       />
     </QueryClientProvider>
   );
+}
+
+function DocumentTitle() {
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const { t, i18n } = useTranslation();
+
+  useEffect(() => {
+    document.title = getPageTitle(pathname, t);
+  }, [pathname, t, i18n.resolvedLanguage]);
+
+  return null;
 }

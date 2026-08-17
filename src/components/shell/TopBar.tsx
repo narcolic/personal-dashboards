@@ -1,19 +1,9 @@
 import { Link } from "@tanstack/react-router";
 import { dashboards } from "@/components/shell/dashboards";
 import { useTranslation } from "react-i18next";
+import { BrandLockup } from "@/components/brand/BrandLockup";
 
 const navItems = dashboards.filter((item) => item.path);
-
-function GridIcon() {
-  return (
-    <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
-      <rect x="1" y="1" width="4" height="4" className="fill-current" />
-      <rect x="7" y="1" width="4" height="4" className="fill-current" />
-      <rect x="1" y="7" width="4" height="4" className="fill-current" />
-      <rect x="7" y="7" width="4" height="4" className="fill-current" />
-    </svg>
-  );
-}
 
 export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
   const { t } = useTranslation();
@@ -24,10 +14,10 @@ export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: 
         <div className="flex min-w-0 items-center gap-3">
           <Link
             to="/"
-            className="inline-flex h-7 shrink-0 items-center gap-2 rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            aria-label={t("brand.name")}
+            className="inline-flex h-7 shrink-0 items-center rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            <GridIcon />
-            <span className="hidden sm:inline">{t("shell.hub")}</span>
+            <BrandLockup compact />
           </Link>
 
           <nav

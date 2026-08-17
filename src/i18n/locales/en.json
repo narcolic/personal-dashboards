@@ -10,6 +10,29 @@
     "edit": "edit",
     "deleteShort": "del"
   },
+  "brand": {
+    "name": "Terminal Hub",
+    "tagline": "Your systems, in view."
+  },
+  "pageTitles": {
+    "login": "Login",
+    "authorize": "Authorize",
+    "portfolio": "Portfolio",
+    "portfolioInsights": "Portfolio Insights",
+    "portfolioActivity": "Portfolio Activity",
+    "holdings": "Holdings",
+    "holding": "Holding Details",
+    "transactions": "Transactions",
+    "performance": "Performance",
+    "portfolioAnalytics": "Portfolio Analytics",
+    "carService": "Car Service",
+    "serviceHistory": "Service History",
+    "serviceAnalytics": "Service Analytics",
+    "vehicles": "Vehicles",
+    "addServiceVisit": "Add Service Visit",
+    "editServiceVisit": "Edit Service Visit",
+    "notFound": "Not Found"
+  },
   "shell": {
     "hub": "Terminal Hub",
     "dashboards": "Dashboards",
@@ -25,7 +48,7 @@
     "energyDescription": "Bills, usage, and consumption trends"
   },
   "header": {
-    "portfolioTerminal": "> Portfolio Terminal",
+    "portfolioTerminal": "> Portfolio",
     "carService": "> Car Service",
     "hub": "> Terminal Hub",
     "dashboard": "Dashboard",
