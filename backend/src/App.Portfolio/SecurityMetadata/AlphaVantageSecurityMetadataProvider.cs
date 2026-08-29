@@ -6,8 +6,11 @@ namespace PortfolioTerminal.Portfolio.SecurityMetadata;
 
 public sealed class AlphaVantageSecurityMetadataProvider(
     HttpClient httpClient,
-    AlphaVantageOptions options) : ISecurityMetadataProvider
+    AlphaVantageOptions options) : ISecurityMetadataProvider, IDisposable
 {
+    private readonly SemaphoreSlim requestGate = new(1, 1);
+    private DateTimeOffset nextRequestAt = DateTimeOffset.MinValue;
+
     public async Task<ProviderSecurityMetadata> FetchAsync(
         SecurityMetadataRefreshClaim claim,
         CancellationToken cancellationToken = default)
@@ -150,6 +153,7 @@ public sealed class AlphaVantageSecurityMetadataProvider(
 
     private async Task<JsonDocument> GetAsync(string path, CancellationToken cancellationToken)
     {
+        await WaitForRequestSlotAsync(cancellationToken).ConfigureAwait(false);
         using var response = await httpClient.GetAsync(path, cancellationToken).ConfigureAwait(false);
         if (!response.IsSuccessStatusCode)
         {
@@ -160,6 +164,26 @@ public sealed class AlphaVantageSecurityMetadataProvider(
         return await response.Content.ReadFromJsonAsync<JsonDocument>(
                 cancellationToken: cancellationToken).ConfigureAwait(false)
             ?? throw new JsonException("Alpha Vantage returned an empty response body.");
+    }
+
+    private async Task WaitForRequestSlotAsync(CancellationToken cancellationToken)
+    {
+        await requestGate.WaitAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var delay = nextRequestAt - DateTimeOffset.UtcNow;
+            if (delay > TimeSpan.Zero)
+            {
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+            }
+
+            nextRequestAt = DateTimeOffset.UtcNow.AddMilliseconds(
+                Math.Max(0, options.RequestIntervalMilliseconds));
+        }
+        finally
+        {
+            requestGate.Release();
+        }
     }
 
     private static ProviderSecurityMetadata? FailureFromPayload(
@@ -280,6 +304,8 @@ public sealed class AlphaVantageSecurityMetadataProvider(
 
     private static string Bound(string value) =>
         value.Length <= 500 ? value : value[..500];
+
+    public void Dispose() => requestGate.Dispose();
 
     private readonly record struct SearchMatch(
         string Symbol,

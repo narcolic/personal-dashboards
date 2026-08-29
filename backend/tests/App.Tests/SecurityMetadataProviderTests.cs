@@ -90,6 +90,32 @@ public sealed class SecurityMetadataProviderTests
     }
 
     [Fact]
+    public async Task RequestsAreSpacedByConfiguredInterval()
+    {
+        var requestTimes = new List<DateTimeOffset>();
+        using var client = Client(request =>
+        {
+            requestTimes.Add(DateTimeOffset.UtcNow);
+            return Query(request, "function") == "SYMBOL_SEARCH"
+                ? JsonResponse("""
+                    {"bestMatches":[{"1. symbol":"MSFT","2. name":"Microsoft Corporation","3. type":"Equity","4. region":"United States","8. currency":"USD","9. matchScore":"1.0000"}]}
+                    """)
+                : JsonResponse("""
+                    {"Symbol":"MSFT","AssetType":"Common Stock","Name":"Microsoft Corporation","Exchange":"NASDAQ","Currency":"USD","Country":"USA","Sector":"TECHNOLOGY"}
+                    """);
+        });
+        var provider = new AlphaVantageSecurityMetadataProvider(
+            client,
+            new AlphaVantageOptions { ApiKey = "test", RequestIntervalMilliseconds = 100 });
+
+        var result = await provider.FetchAsync(Claim("MSFT", "stock"));
+
+        Assert.Equal(ProviderMetadataStatus.Succeeded, result.Status);
+        Assert.Equal(2, requestTimes.Count);
+        Assert.True(requestTimes[1] - requestTimes[0] >= TimeSpan.FromMilliseconds(80));
+    }
+
+    [Fact]
     public async Task RefreshJobStopsAfterRateLimitAndCompletesClaimedItem()
     {
         var claims = new[] { Claim("AAA", "stock"), Claim("BBB", "stock") };
@@ -114,7 +140,11 @@ public sealed class SecurityMetadataProviderTests
     }
 
     private static AlphaVantageSecurityMetadataProvider Provider(HttpClient client) =>
-        new(client, new AlphaVantageOptions { ApiKey = "test" });
+        new(client, new AlphaVantageOptions
+        {
+            ApiKey = "test",
+            RequestIntervalMilliseconds = 0,
+        });
 
     private static SecurityMetadataRefreshClaim Claim(string symbol, string type) =>
         new(Guid.NewGuid(), Guid.NewGuid(), type == "stock" ? Guid.NewGuid() : null,

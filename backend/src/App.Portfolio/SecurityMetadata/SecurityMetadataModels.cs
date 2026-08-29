@@ -128,4 +128,5 @@ public sealed class SecurityMetadataOptions
 public sealed class AlphaVantageOptions
 {
     public string? ApiKey { get; set; }
+    public int RequestIntervalMilliseconds { get; set; } = 1100;
 }
