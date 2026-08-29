@@ -81,7 +81,10 @@ var securityMetadataOptions = builder.Configuration
 var alphaVantageOptions = builder.Configuration
     .GetSection("AlphaVantage")
     .Get<AlphaVantageOptions>() ?? new AlphaVantageOptions();
-alphaVantageOptions.ApiKey ??= builder.Configuration["ALPHAVANTAGE_API_KEY"];
+if (string.IsNullOrWhiteSpace(alphaVantageOptions.ApiKey))
+{
+    alphaVantageOptions.ApiKey = builder.Configuration["ALPHAVANTAGE_API_KEY"];
+}
 builder.Services.AddSingleton(securityMetadataOptions);
 builder.Services.AddSingleton(alphaVantageOptions);
 builder.Services.AddHttpClient<IQuoteService, YahooQuoteService>(client =>
