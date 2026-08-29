@@ -6,6 +6,7 @@ using PortfolioTerminal.Portfolio;
 using PortfolioTerminal.Portfolio.Holdings;
 using PortfolioTerminal.Portfolio.MarketData;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
@@ -504,13 +505,15 @@ public sealed record PortfolioHoldingResponse(
     [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
     [property: JsonPropertyName("tx_count")] int TransactionCount,
     [property: JsonPropertyName("first_date")] DateOnly? FirstDate,
-    [property: JsonPropertyName("last_date")] DateOnly? LastDate)
+    [property: JsonPropertyName("last_date")] DateOnly? LastDate,
+    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId,
+    SecurityMetadataView? Security)
 {
     public static PortfolioHoldingResponse From(PortfolioHolding holding) =>
         new(holding.Id, holding.Ticker, holding.Name, holding.AssetType,
             holding.Market, holding.Currency, holding.Shares, holding.AvgCost,
             holding.Notes, holding.PortfolioId, holding.TransactionCount,
-            holding.FirstDate, holding.LastDate);
+            holding.FirstDate, holding.LastDate, holding.SecurityListingId, holding.Security);
 }
 
 public sealed record TickerCatalogResponse(
@@ -523,11 +526,14 @@ public sealed record TickerCatalogResponse(
     string? Currency,
     [property: JsonPropertyName("is_active")] bool IsActive,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
-    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt)
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
+    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId,
+    SecurityMetadataView? Security)
 {
     public static TickerCatalogResponse From(TickerCatalogListItem item) =>
         new(item.Id, item.UserId, item.Ticker, item.Name, item.AssetType, item.Market,
-            item.Currency, item.IsActive, item.CreatedAt, item.UpdatedAt);
+            item.Currency, item.IsActive, item.CreatedAt, item.UpdatedAt,
+            item.SecurityListingId, item.Security);
 }
 
 public sealed record PortfolioSnapshotResponse(
@@ -582,11 +588,12 @@ public sealed record TransactionMutationRequest(
     decimal Price,
     [property: JsonPropertyName("transaction_date")] DateOnly TransactionDate,
     string? Notes,
-    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId)
+    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
+    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId = null)
 {
     public TransactionMutation ToMutation() =>
         new(Ticker, Action, Name, AssetType, Market, Currency,
-            Shares, Price, TransactionDate, Notes, PortfolioId);
+            Shares, Price, TransactionDate, Notes, PortfolioId, SecurityListingId);
 }
 
 public sealed record TransactionBulkDeleteRequest(IReadOnlyList<Guid> Ids);
@@ -610,11 +617,12 @@ public sealed record ImportedTransactionRequest(
     decimal Price,
     [property: JsonPropertyName("transaction_date")] DateOnly TransactionDate,
     string? Notes,
-    [property: JsonPropertyName("portfolio_name")] string PortfolioName)
+    [property: JsonPropertyName("portfolio_name")] string PortfolioName,
+    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId = null)
 {
     public ImportedTransactionMutation ToMutation() =>
         new(Ticker, Name, AssetType, Currency, Shares, Price,
-            TransactionDate, Notes, PortfolioName);
+            TransactionDate, Notes, PortfolioName, SecurityListingId);
 }
 
 public sealed record TransactionListResponse(
@@ -637,7 +645,9 @@ public sealed record TransactionResponse(
     decimal? Price,
     [property: JsonPropertyName("transaction_date")] DateOnly? TransactionDate,
     string? Notes,
-    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId)
+    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
+    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId,
+    SecurityMetadataView? Security)
 {
     public static TransactionResponse From(TransactionListItem transaction) =>
         new(
@@ -652,5 +662,7 @@ public sealed record TransactionResponse(
             transaction.Price,
             transaction.TransactionDate,
             transaction.Notes,
-            transaction.PortfolioId);
+            transaction.PortfolioId,
+            transaction.SecurityListingId,
+            transaction.Security);
 }

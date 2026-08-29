@@ -5,7 +5,6 @@ import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import { fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
-import { classifyHolding } from "@/lib/portfolio/transactions/mappers";
 import { PortfolioChart } from "@/routes/_authenticated/portfolio/components/PortfolioChart";
 import { PortfolioHoldingsTable } from "@/routes/_authenticated/portfolio/components/PortfolioHoldingsTable";
 import {
@@ -47,7 +46,7 @@ function PortfolioPage() {
   const rowRegions = useMemo(
     () =>
       new Map(
-        rows.map((row) => [row.id, classifyHolding(row).regionCategory || t("portfolio.unknown")]),
+        rows.map((row) => [row.id, row.security?.effectiveGeography || t("portfolio.unknown")]),
       ),
     [rows, t],
   );

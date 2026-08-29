@@ -87,6 +87,7 @@ export function TransactionEditor({
     setV((state) => ({
       ...state,
       ticker: normalizeTicker(item.ticker),
+      security_listing_id: item.security_listing_id,
       name: item.name ?? state.name ?? "",
       asset_type:
         item.asset_type && ASSET_TYPES.includes(item.asset_type as (typeof ASSET_TYPES)[number])

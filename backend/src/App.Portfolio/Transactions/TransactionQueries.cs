@@ -2,20 +2,39 @@ using System.Text;
 using Npgsql;
 using NpgsqlTypes;
 using PortfolioTerminal.Data;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 
 namespace PortfolioTerminal.Portfolio.Transactions;
 
-public sealed class TransactionQueries(AppDataSource dataSource) : ITransactionQueries
+public sealed class TransactionQueries(
+    AppDataSource dataSource,
+    ISecurityMetadataQueries metadataQueries) : ITransactionQueries
 {
-    public Task<TransactionListResult> ListAsync(
+    public async Task<TransactionListResult> ListAsync(
         Guid userId,
         TransactionListFilter filter,
-        CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserReadOnlyAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dataSource.ExecuteAsUserReadOnlyAsync(
             userId,
             (connection, transaction, token) =>
                 ReadTransactionsAsync(connection, transaction, userId, filter, token),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+        var ids = result.Rows
+            .Where(row => row.SecurityListingId is not null)
+            .Select(row => row.SecurityListingId!.Value)
+            .Distinct()
+            .ToArray();
+        var metadata = await metadataQueries.GetByListingIdsAsync(
+            userId, ids, cancellationToken).ConfigureAwait(false);
+        return result with
+        {
+            Rows = result.Rows.Select(row => row.SecurityListingId is { } listingId
+                    && metadata.TryGetValue(listingId, out var security)
+                ? row with { Security = security }
+                : row).ToArray(),
+        };
+    }
 
     private static async Task<TransactionListResult> ReadTransactionsAsync(
         NpgsqlConnection connection,
@@ -40,7 +59,8 @@ public sealed class TransactionQueries(AppDataSource dataSource) : ITransactionQ
             : "limit @limit offset @offset";
         var rowsCommand = new NpgsqlBatchCommand($"""
             select id, ticker, action, name, asset_type, market, currency,
-                   shares::numeric, price::numeric, transaction_date, notes, portfolio_id
+                   shares::numeric, price::numeric, transaction_date, notes, portfolio_id,
+                   security_listing_id
             from public.transactions
             {whereClause}
             order by transaction_date desc, id
@@ -70,7 +90,8 @@ public sealed class TransactionQueries(AppDataSource dataSource) : ITransactionQ
                 reader.IsDBNull(8) ? null : reader.GetDecimal(8),
                 reader.IsDBNull(9) ? null : reader.GetFieldValue<DateOnly>(9),
                 reader.IsDBNull(10) ? null : reader.GetString(10),
-                reader.IsDBNull(11) ? null : reader.GetGuid(11)));
+                reader.IsDBNull(11) ? null : reader.GetGuid(11),
+                reader.IsDBNull(12) ? null : reader.GetGuid(12)));
         }
 
         return new TransactionListResult(rows, count);
@@ -82,7 +103,13 @@ public sealed class TransactionQueries(AppDataSource dataSource) : ITransactionQ
 
         if (!string.IsNullOrWhiteSpace(filter.Ticker))
         {
-            sql.AppendLine().Append("  and ticker ilike @ticker");
+            sql.AppendLine().Append("""
+                  and coalesce((
+                    select listing.symbol
+                    from public.security_listings listing
+                    where listing.id = security_listing_id
+                  ), ticker) ilike @ticker
+                """);
         }
 
         if (filter.UnassignedPortfolio)
@@ -96,7 +123,14 @@ public sealed class TransactionQueries(AppDataSource dataSource) : ITransactionQ
 
         if (!string.IsNullOrWhiteSpace(filter.AssetType))
         {
-            sql.AppendLine().Append("  and asset_type = @assetType");
+            sql.AppendLine().Append("""
+                  and coalesce((
+                    select security.security_type_code
+                    from public.security_listings listing
+                    join public.securities security on security.id = listing.security_id
+                    where listing.id = security_listing_id
+                  ), asset_type) = @assetType
+                """);
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Currency))

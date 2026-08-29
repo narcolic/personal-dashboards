@@ -1,3 +1,5 @@
+using PortfolioTerminal.Portfolio.SecurityMetadata;
+
 namespace PortfolioTerminal.Portfolio.Analytics;
 
 public sealed record PortfolioAnalysisScope(
@@ -23,7 +25,8 @@ public sealed record PortfolioAnalysisPosition(
     decimal UnrealizedReturnPct,
     decimal DayChange,
     decimal WeightPct,
-    IReadOnlyList<string> PortfolioRefs);
+    IReadOnlyList<string> PortfolioRefs,
+    SecurityMetadataView? Security = null);
 
 public sealed record PortfolioAnalysisTotals(
     decimal MarketValue,

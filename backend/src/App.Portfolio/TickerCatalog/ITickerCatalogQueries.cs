@@ -1,3 +1,5 @@
+using PortfolioTerminal.Portfolio.SecurityMetadata;
+
 namespace PortfolioTerminal.Portfolio.TickerCatalog;
 
 public interface ITickerCatalogQueries
@@ -17,4 +19,6 @@ public sealed record TickerCatalogListItem(
     string? Currency,
     bool IsActive,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    Guid? SecurityListingId = null,
+    SecurityMetadataView? Security = null);

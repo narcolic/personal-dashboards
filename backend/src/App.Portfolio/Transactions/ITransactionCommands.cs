@@ -42,7 +42,8 @@ public sealed record TransactionMutation(
     decimal Price,
     DateOnly TransactionDate,
     string? Notes,
-    Guid? PortfolioId);
+    Guid? PortfolioId,
+    Guid? SecurityListingId = null);
 
 public sealed record ImportedTransactionMutation(
     string Ticker,
@@ -53,7 +54,8 @@ public sealed record ImportedTransactionMutation(
     decimal Price,
     DateOnly TransactionDate,
     string? Notes,
-    string PortfolioName);
+    string PortfolioName,
+    Guid? SecurityListingId = null);
 
 public sealed record TransactionImportMutation(
     IReadOnlyList<ImportedTransactionMutation> Rows,

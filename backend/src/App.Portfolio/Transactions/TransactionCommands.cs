@@ -3,16 +3,21 @@ using System.Text.Json.Serialization;
 using Npgsql;
 using NpgsqlTypes;
 using PortfolioTerminal.Data;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 
 namespace PortfolioTerminal.Portfolio.Transactions;
 
-public sealed class TransactionCommands(AppDataSource dataSource) : ITransactionCommands
+public sealed class TransactionCommands(
+    AppDataSource dataSource,
+    ISecurityListingResolver listingResolver) : ITransactionCommands
 {
-    public Task<PortfolioMutationResult> CreateAsync(
+    public async Task<PortfolioMutationResult> CreateAsync(
         Guid userId,
         TransactionMutation mutation,
-        CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
+        CancellationToken cancellationToken = default)
+    {
+        mutation = await ResolveAsync(mutation, cancellationToken).ConfigureAwait(false);
+        return await dataSource.ExecuteAsUserAsync(
             userId,
             async (connection, transaction, token) =>
             {
@@ -40,14 +45,17 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
                     token).ConfigureAwait(false);
                 return PortfolioMutationResult.Succeeded(id);
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+    }
 
-    public Task<PortfolioMutationResult> UpdateAsync(
+    public async Task<PortfolioMutationResult> UpdateAsync(
         Guid userId,
         Guid transactionId,
         TransactionMutation mutation,
-        CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
+        CancellationToken cancellationToken = default)
+    {
+        mutation = await ResolveAsync(mutation, cancellationToken).ConfigureAwait(false);
+        return await dataSource.ExecuteAsUserAsync(
             userId,
             async (connection, transaction, token) =>
             {
@@ -78,7 +86,8 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
                         update public.transactions
                         set ticker = $3, action = $4, name = $5, asset_type = $6,
                             market = $7, currency = $8, shares = $9, price = $10,
-                            transaction_date = $11, notes = $12, portfolio_id = $13
+                            transaction_date = $11, notes = $12, portfolio_id = $13,
+                            security_listing_id = $14
                         where id = $1 and user_id = $2
                         returning id;
                         """;
@@ -96,7 +105,8 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
                     token).ConfigureAwait(false);
                 return PortfolioMutationResult.Succeeded(transactionId);
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+    }
 
     public Task<PortfolioMutationResult> DeleteAsync(
         Guid userId,
@@ -147,11 +157,25 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
             },
             cancellationToken);
 
-    public Task<PortfolioMutationResult> ImportAsync(
+    public async Task<PortfolioMutationResult> ImportAsync(
         Guid userId,
         TransactionImportMutation mutation,
-        CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var resolutions = await listingResolver.ResolveManyAsync(
+            mutation.Rows.Select(row => new SecurityListingResolutionRequest(
+                row.SecurityListingId, row.Ticker, row.Name, row.AssetType,
+                null, row.Currency)).ToArray(),
+            cancellationToken).ConfigureAwait(false);
+        var resolvedMutation = mutation with
+        {
+            Rows = mutation.Rows.Select(row => row with
+            {
+                SecurityListingId = resolutions[NormalizeTicker(row.Ticker)].ListingId,
+            }).ToArray(),
+        };
+
+        return await dataSource.ExecuteAsUserAsync(
             userId,
             async (connection, transaction, token) =>
             {
@@ -160,9 +184,9 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
                     transaction,
                     userId,
                     token).ConfigureAwait(false);
-                var rows = new List<TransactionJsonRow>(mutation.Rows.Count);
+                var rows = new List<TransactionJsonRow>(resolvedMutation.Rows.Count);
 
-                foreach (var row in mutation.Rows)
+                foreach (var row in resolvedMutation.Rows)
                 {
                     var portfolioName = row.PortfolioName.Trim();
                     if (!portfolios.TryGetValue(portfolioName, out var portfolioId))
@@ -172,7 +196,7 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
                             transaction,
                             userId,
                             portfolioName,
-                            mutation.ImportedPortfolioNotes,
+                            resolvedMutation.ImportedPortfolioNotes,
                             token).ConfigureAwait(false);
                         portfolios[portfolioName] = portfolioId;
                     }
@@ -194,7 +218,8 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
                     token).ConfigureAwait(false);
                 return PortfolioMutationResult.Succeeded(affectedCount: inserted);
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+    }
 
     private static async Task<Guid> InsertTransactionAsync(
         NpgsqlConnection connection,
@@ -208,8 +233,8 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
         command.CommandText = """
             insert into public.transactions (
                 user_id, ticker, action, name, asset_type, market, currency,
-                shares, price, transaction_date, notes, portfolio_id)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+                shares, price, transaction_date, notes, portfolio_id, security_listing_id)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
             returning id;
             """;
         AddUuid(command, userId);
@@ -228,13 +253,15 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
         command.Transaction = transaction;
         command.CommandText = """
             insert into public.ticker_catalog (
-                user_id, ticker, name, asset_type, market, currency, is_active)
-            values ($1, $2, $3, $4, $5, $6, true)
+                user_id, ticker, name, asset_type, market, currency,
+                security_listing_id, is_active)
+            values ($1, $2, $3, $4, $5, $6, $7, true)
             on conflict (user_id, ticker) do update
             set name = excluded.name,
                 asset_type = excluded.asset_type,
                 market = excluded.market,
                 currency = excluded.currency,
+                security_listing_id = excluded.security_listing_id,
                 is_active = true;
             """;
         AddUuid(command, userId);
@@ -243,6 +270,7 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
         command.Parameters.AddWithValue(mutation.AssetType.Trim().ToLowerInvariant());
         AddNullableText(command, mutation.Market);
         command.Parameters.AddWithValue(mutation.Currency.Trim().ToUpperInvariant());
+        AddNullableUuid(command, mutation.SecurityListingId);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -301,14 +329,15 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
         command.CommandText = """
             insert into public.transactions (
                 user_id, ticker, action, name, asset_type, market, currency,
-                shares, price, transaction_date, notes, portfolio_id)
+                shares, price, transaction_date, notes, portfolio_id, security_listing_id)
             select $1, x.ticker, x.action, x.name, x.asset_type, x.market,
                    x.currency, x.shares, x.price, x.transaction_date,
-                   x.notes, x.portfolio_id
+                   x.notes, x.portfolio_id, x.security_listing_id
             from jsonb_to_recordset($2) as x(
                 ticker text, action text, name text, asset_type text, market text,
                 currency text, shares numeric, price numeric,
-                transaction_date date, notes text, portfolio_id uuid);
+                transaction_date date, notes text, portfolio_id uuid,
+                security_listing_id uuid);
             """;
         AddUuid(command, userId);
         AddJson(command, rows);
@@ -330,15 +359,19 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
         command.Transaction = transaction;
         command.CommandText = """
             insert into public.ticker_catalog (
-                user_id, ticker, name, asset_type, market, currency, is_active)
-            select $1, x.ticker, x.name, x.asset_type, x.market, x.currency, true
+                user_id, ticker, name, asset_type, market, currency,
+                security_listing_id, is_active)
+            select $1, x.ticker, x.name, x.asset_type, x.market, x.currency,
+                   x.security_listing_id, true
             from jsonb_to_recordset($2) as x(
-                ticker text, name text, asset_type text, market text, currency text)
+                ticker text, name text, asset_type text, market text, currency text,
+                security_listing_id uuid)
             on conflict (user_id, ticker) do update
             set name = excluded.name,
                 asset_type = excluded.asset_type,
                 market = excluded.market,
                 currency = excluded.currency,
+                security_listing_id = excluded.security_listing_id,
                 is_active = true;
             """;
         AddUuid(command, userId);
@@ -412,6 +445,7 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
             NpgsqlDbType = NpgsqlDbType.Uuid,
             Value = (object?)mutation.PortfolioId ?? DBNull.Value,
         });
+        AddNullableUuid(command, mutation.SecurityListingId);
     }
 
     private static void AddJson<T>(NpgsqlCommand command, T value) =>
@@ -435,6 +469,13 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
             Value = value,
         });
 
+    private static void AddNullableUuid(NpgsqlCommand command, Guid? value) =>
+        command.Parameters.Add(new NpgsqlParameter
+        {
+            NpgsqlDbType = NpgsqlDbType.Uuid,
+            Value = (object?)value ?? DBNull.Value,
+        });
+
     private static string NormalizeTicker(string ticker) =>
         ticker.Trim().ToUpperInvariant();
 
@@ -449,7 +490,8 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
         [property: JsonPropertyName("price")] decimal Price,
         [property: JsonPropertyName("transaction_date")] DateOnly TransactionDate,
         [property: JsonPropertyName("notes")] string? Notes,
-        [property: JsonPropertyName("portfolio_id")] Guid PortfolioId)
+        [property: JsonPropertyName("portfolio_id")] Guid PortfolioId,
+        [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId)
     {
         public static TransactionJsonRow From(
             ImportedTransactionMutation row,
@@ -465,7 +507,29 @@ public sealed class TransactionCommands(AppDataSource dataSource) : ITransaction
                 row.Price,
                 row.TransactionDate,
                 TrimToNull(row.Notes),
-                portfolioId);
+                portfolioId,
+                row.SecurityListingId ?? throw new InvalidOperationException(
+                    "Imported transaction listing resolution was not completed."));
+    }
+
+    private async Task<TransactionMutation> ResolveAsync(
+        TransactionMutation mutation,
+        CancellationToken cancellationToken)
+    {
+        var resolution = await listingResolver.ResolveAsync(
+            new SecurityListingResolutionRequest(
+                mutation.SecurityListingId,
+                mutation.Ticker,
+                mutation.Name,
+                mutation.AssetType,
+                mutation.Market,
+                mutation.Currency),
+            cancellationToken).ConfigureAwait(false);
+        return mutation with
+        {
+            Ticker = resolution.Symbol,
+            SecurityListingId = resolution.ListingId,
+        };
     }
 
     private static string? TrimToNull(string? value) =>

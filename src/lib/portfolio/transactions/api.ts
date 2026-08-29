@@ -19,6 +19,7 @@ const TransactionInput = z.object({
   transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notes: z.string().trim().max(500).optional().nullable(),
   portfolio_id: z.string().uuid().optional().nullable(),
+  security_listing_id: z.string().uuid().optional().nullable(),
 });
 
 export type TransactionInputType = z.infer<typeof TransactionInput>;
@@ -49,6 +50,7 @@ export type ImportedTransactionInput = {
   transaction_date: string;
   notes: string | null;
   portfolio_name: string;
+  security_listing_id?: string | null;
 };
 
 export function listTransactions(options: TransactionListOptions, signal?: AbortSignal) {

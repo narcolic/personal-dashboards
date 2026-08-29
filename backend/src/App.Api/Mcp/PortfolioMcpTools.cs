@@ -121,14 +121,14 @@ public sealed partial class PortfolioMcpTools
         Idempotent = true,
         OpenWorld = false,
         UseStructuredContent = true)]
-    [Description("Returns allocation by assetType, currency, or portfolio. Sector and geography are unsupported because the backend has no trustworthy data for them.")]
+    [Description("Returns allocation by securityType, currency, portfolio, country, region, sector, or industry. Unknown persisted classifications are returned as Unknown.")]
     [McpMeta("securitySchemes", JsonValue = """[{"type":"oauth2","scopes":["openid"]}]""")]
     public static Task<PortfolioAllocationResult> GetAllocationAsync(
         IPortfolioAnalysisService analysis,
         ICurrentUser currentUser,
         ILogger<PortfolioMcpTools> logger,
         [Description("Portfolio selector: all, unassigned, portfolio:<id>, or a unique name.")] string portfolio = "all",
-        [Description("Allocation dimension: assetType, currency, or portfolio.")] string dimension = "assetType",
+        [Description("Allocation dimension: securityType, currency, portfolio, country, region, sector, or industry.")] string dimension = "securityType",
         [Description("Display currency: EUR or USD.")] string displayCurrency = "EUR",
         [Description("Maximum allocation groups from 1 to 20.")] int limit = 10,
         CancellationToken cancellationToken = default) =>
