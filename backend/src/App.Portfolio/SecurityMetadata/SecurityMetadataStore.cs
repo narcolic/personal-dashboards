@@ -226,9 +226,9 @@ public sealed class SecurityMetadataStore(
         var companyId = await ResolveCompanyAsync(
             connection, transaction, claim, provider, canonical, cancellationToken)
             .ConfigureAwait(false);
-        await using var command = connection.CreateCommand();
-        command.Transaction = transaction;
-        command.CommandText = """
+        await using var batch = new NpgsqlBatch(connection, transaction);
+
+        var updateIdentifier = new NpgsqlBatchCommand("""
             update public.security_listing_provider_identifiers identifier
             set provider_symbol = $2, last_verified_at = now(), updated_at = now()
             where identifier.listing_id = $1
@@ -239,89 +239,110 @@ public sealed class SecurityMetadataStore(
                   and other.provider_symbol = $2
                   and other.listing_id <> $1
               );
+            """);
+        AddUuid(updateIdentifier, claim.ListingId);
+        updateIdentifier.Parameters.AddWithValue(provider.ProviderSymbol.Trim().ToUpperInvariant());
+        batch.BatchCommands.Add(updateIdentifier);
 
+        var insertIdentifier = new NpgsqlBatchCommand("""
             insert into public.security_listing_provider_identifiers(
               listing_id, provider_code, provider_symbol, last_verified_at)
             values ($1, 'alpha_vantage', $2, now())
             on conflict do nothing;
+            """);
+        AddUuid(insertIdentifier, claim.ListingId);
+        insertIdentifier.Parameters.AddWithValue(provider.ProviderSymbol.Trim().ToUpperInvariant());
+        batch.BatchCommands.Add(insertIdentifier);
 
+        var updateListing = new NpgsqlBatchCommand("""
             update public.security_listings listing
             set exchange_id = case
-                  when $3::uuid is not null and not exists (
+                  when $2::uuid is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.listing_id = listing.id and lock.field_name = 'exchange_id'
-                  ) then $3::uuid else listing.exchange_id end,
+                  ) then $2::uuid else listing.exchange_id end,
                 trading_currency_code = case
-                  when $4::text is not null and not exists (
+                  when $3::text is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.listing_id = listing.id
                       and lock.field_name = 'trading_currency_code'
-                  ) then upper($4::text) else listing.trading_currency_code end,
+                  ) then upper($3::text) else listing.trading_currency_code end,
                 status = case when listing.status = 'provisional' then 'active' else listing.status end,
                 updated_at = now()
             where listing.id = $1;
+            """);
+        AddUuid(updateListing, claim.ListingId);
+        AddNullableUuid(updateListing, canonical?.ExchangeId);
+        AddNullableText(updateListing, NormalizeCurrency(provider.Currency));
+        batch.BatchCommands.Add(updateListing);
 
+        var updateSecurity = new NpgsqlBatchCommand("""
             update public.securities security
             set security_type_code = case
-                  when $5::text is not null and not exists (
+                  when $2::text is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.security_id = security.id
                       and lock.field_name = 'security_type_code'
-                  ) then $5::text else security.security_type_code end,
+                  ) then $2::text else security.security_type_code end,
                 name = case
-                  when $6::text is not null and not exists (
+                  when $3::text is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.security_id = security.id and lock.field_name = 'name'
-                  ) then $6::text else security.name end,
+                  ) then $3::text else security.name end,
                 updated_at = now()
-            where security.id = $7;
+            where security.id = $1;
+            """);
+        AddUuid(updateSecurity, claim.SecurityId);
+        AddNullableText(updateSecurity, canonical?.SecurityTypeCode);
+        AddNullableText(updateSecurity, TrimToNull(provider.Name));
+        batch.BatchCommands.Add(updateSecurity);
 
+        var updateCompany = new NpgsqlBatchCommand("""
             update public.companies company
             set legal_name = case
-                  when $8::text is not null and not exists (
+                  when $2::text is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.company_id = company.id and lock.field_name = 'legal_name'
-                  ) then $8::text else company.legal_name end,
+                  ) then $2::text else company.legal_name end,
                 country_code = case
-                  when $9::text is not null and not exists (
+                  when $3::text is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.company_id = company.id and lock.field_name = 'country_code'
-                  ) then $9::text else company.country_code end,
+                  ) then $3::text else company.country_code end,
                 sector_code = case
-                  when $10::text is not null and not exists (
+                  when $4::text is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.company_id = company.id and lock.field_name = 'sector_code'
-                  ) then $10::text else company.sector_code end,
+                  ) then $4::text else company.sector_code end,
                 industry_code = case
-                  when $11::text is not null and not exists (
+                  when $5::text is not null and not exists (
                     select 1 from private.metadata_field_locks lock
                     where lock.company_id = company.id and lock.field_name = 'industry_code'
-                  ) then $11::text else company.industry_code end,
+                  ) then $5::text else company.industry_code end,
                 updated_at = now()
-            where company.id = $12::uuid;
+            where company.id = $1::uuid;
+            """);
+        AddNullableUuid(updateCompany, companyId);
+        AddNullableText(updateCompany, TrimToNull(provider.CompanyName));
+        AddNullableText(updateCompany, canonical?.CountryCode);
+        AddNullableText(updateCompany, canonical?.SectorCode);
+        AddNullableText(updateCompany, canonical?.IndustryCode);
+        batch.BatchCommands.Add(updateCompany);
 
+        var upsertCompanyIdentifier = new NpgsqlBatchCommand("""
             insert into public.company_provider_identifiers(
               company_id, provider_code, provider_company_id)
-            select $12::uuid, 'alpha_vantage', $13::text
-            where $12::uuid is not null and $13::text is not null
+            select $1::uuid, 'alpha_vantage', $2::text
+            where $1::uuid is not null and $2::text is not null
             on conflict (company_id, provider_code) do update
             set provider_company_id = excluded.provider_company_id,
                 updated_at = now();
-            """;
-        AddUuid(command, claim.ListingId);
-        command.Parameters.AddWithValue(provider.ProviderSymbol.Trim().ToUpperInvariant());
-        AddNullableUuid(command, canonical?.ExchangeId);
-        AddNullableText(command, NormalizeCurrency(provider.Currency));
-        AddNullableText(command, canonical?.SecurityTypeCode);
-        AddNullableText(command, TrimToNull(provider.Name));
-        AddUuid(command, claim.SecurityId);
-        AddNullableText(command, TrimToNull(provider.CompanyName));
-        AddNullableText(command, canonical?.CountryCode);
-        AddNullableText(command, canonical?.SectorCode);
-        AddNullableText(command, canonical?.IndustryCode);
-        AddNullableUuid(command, companyId);
-        AddNullableText(command, TrimToNull(provider.ProviderCompanyId));
-        await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            """);
+        AddNullableUuid(upsertCompanyIdentifier, companyId);
+        AddNullableText(upsertCompanyIdentifier, TrimToNull(provider.ProviderCompanyId));
+        batch.BatchCommands.Add(upsertCompanyIdentifier);
+
+        await batch.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<Guid?> ResolveCompanyAsync(
@@ -480,6 +501,23 @@ public sealed class SecurityMetadataStore(
         });
 
     private static void AddNullableText(NpgsqlCommand command, string? value) =>
+        command.Parameters.Add(new NpgsqlParameter
+        {
+            NpgsqlDbType = NpgsqlDbType.Text,
+            Value = (object?)value ?? DBNull.Value,
+        });
+
+    private static void AddUuid(NpgsqlBatchCommand command, Guid value) =>
+        command.Parameters.Add(new NpgsqlParameter { NpgsqlDbType = NpgsqlDbType.Uuid, Value = value });
+
+    private static void AddNullableUuid(NpgsqlBatchCommand command, Guid? value) =>
+        command.Parameters.Add(new NpgsqlParameter
+        {
+            NpgsqlDbType = NpgsqlDbType.Uuid,
+            Value = (object?)value ?? DBNull.Value,
+        });
+
+    private static void AddNullableText(NpgsqlBatchCommand command, string? value) =>
         command.Parameters.Add(new NpgsqlParameter
         {
             NpgsqlDbType = NpgsqlDbType.Text,
