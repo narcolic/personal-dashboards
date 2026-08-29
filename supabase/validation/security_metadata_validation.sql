@@ -43,6 +43,18 @@ where provider_code = 'alpha_vantage'
 group by status
 order by status;
 
+-- Provider-discovered industries remain usable but must be visible for review.
+select industry.code, industry.name, industry.sector_code,
+       industry.source_provider_code, industry.review_status,
+       mapping.provider_value, mapping.review_status as mapping_review_status
+from public.industries industry
+left join private.metadata_provider_mappings mapping
+  on mapping.provider_code = industry.source_provider_code
+ and mapping.dimension = 'industry'
+ and mapping.canonical_code = industry.code
+where industry.review_status = 'discovered'
+order by industry.sector_code, industry.code, mapping.provider_value;
+
 with active_holdings as (
   select distinct transaction_row.security_listing_id
   from public.transactions transaction_row
