@@ -1,3 +1,5 @@
+using PortfolioTerminal.Portfolio.SecurityMetadata;
+
 namespace PortfolioTerminal.Portfolio.Holdings;
 
 public interface IPortfolioHoldingQueries
@@ -20,4 +22,6 @@ public sealed record PortfolioHolding(
     Guid? PortfolioId,
     int TransactionCount,
     DateOnly? FirstDate,
-    DateOnly? LastDate);
+    DateOnly? LastDate,
+    Guid? SecurityListingId = null,
+    SecurityMetadataView? Security = null);

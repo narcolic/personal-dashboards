@@ -1,4 +1,5 @@
 using PortfolioTerminal.Portfolio.Holdings;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Transactions;
 
 namespace PortfolioTerminal.Tests;
@@ -75,6 +76,32 @@ public sealed class PortfolioHoldingCalculatorTests
         var holdings = PortfolioHoldingCalculator.Aggregate(rows);
 
         Assert.Empty(holdings);
+    }
+
+    [Fact]
+    public void AggregateUsesCanonicalListingMetadataWhenLinked()
+    {
+        var listingId = Guid.NewGuid();
+        var security = new SecurityMetadataView(
+            listingId, Guid.NewGuid(), "MSFT", "Microsoft Corporation", "stock",
+            "XNAS", "Nasdaq", "USD", "Microsoft Corporation", "US",
+            "United States", "north_america", "North America",
+            "information_technology", "Information Technology", null, null,
+            null, null, null, null, null, null, "succeeded",
+            DateTimeOffset.UtcNow, false);
+        var row = Transaction("LEGACY", 2m, 100m, new DateOnly(2026, 1, 1)) with
+        {
+            SecurityListingId = listingId,
+            Security = security,
+        };
+
+        var holding = Assert.Single(PortfolioHoldingCalculator.Aggregate([row]));
+
+        Assert.Equal("MSFT", holding.Ticker);
+        Assert.Equal("Microsoft Corporation", holding.Name);
+        Assert.Equal("stock", holding.AssetType);
+        Assert.Equal(listingId, holding.SecurityListingId);
+        Assert.Same(security, holding.Security);
     }
 
     private static TransactionListItem Transaction(

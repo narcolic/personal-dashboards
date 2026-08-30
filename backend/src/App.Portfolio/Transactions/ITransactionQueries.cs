@@ -1,3 +1,5 @@
+using PortfolioTerminal.Portfolio.SecurityMetadata;
+
 namespace PortfolioTerminal.Portfolio.Transactions;
 
 public interface ITransactionQueries
@@ -35,4 +37,6 @@ public sealed record TransactionListItem(
     decimal? Price,
     DateOnly? TransactionDate,
     string? Notes,
-    Guid? PortfolioId);
+    Guid? PortfolioId,
+    Guid? SecurityListingId = null,
+    SecurityMetadataView? Security = null);

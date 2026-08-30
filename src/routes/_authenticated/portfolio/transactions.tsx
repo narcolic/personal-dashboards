@@ -62,6 +62,7 @@ type TransactionTableRow = {
   transaction_date: string;
   notes: string | null;
   portfolio_id: string | null;
+  security_listing_id: string | null;
 };
 
 type DeleteDialogState = {
@@ -111,7 +112,13 @@ export function ActivityPage({
     transactionPagination: { page, pageSize: TRANSACTIONS_PAGE_SIZE },
   });
   const { tickerCatalog } = useTickerCatalog();
-  const data = transactions as TransactionTableRow[];
+  const data = transactions.map((row) => ({
+    ...row,
+    ticker: row.security?.symbol ?? row.ticker,
+    name: row.security?.name ?? row.name,
+    asset_type: row.security?.securityType ?? row.asset_type,
+    market: row.security?.exchangeName ?? row.security?.exchangeMic ?? row.market,
+  })) as TransactionTableRow[];
   const isLoading = txQ.isLoading;
   const pageCount = Math.max(1, Math.ceil(transactionCount / TRANSACTIONS_PAGE_SIZE));
   const pageStart = transactionCount === 0 ? 0 : (page - 1) * TRANSACTIONS_PAGE_SIZE + 1;
@@ -128,6 +135,7 @@ export function ActivityPage({
         asset_type: row.asset_type ?? null,
         market: row.market ?? null,
         currency: row.currency ?? null,
+        security_listing_id: row.security_listing_id ?? null,
       });
     }
 
@@ -140,6 +148,8 @@ export function ActivityPage({
         asset_type: row.asset_type ?? map.get(ticker)?.asset_type ?? null,
         market: row.market ?? map.get(ticker)?.market ?? null,
         currency: row.currency ?? map.get(ticker)?.currency ?? null,
+        security_listing_id:
+          row.security_listing_id ?? map.get(ticker)?.security_listing_id ?? null,
       });
     }
 

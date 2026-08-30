@@ -1,19 +1,41 @@
 using Npgsql;
 using NpgsqlTypes;
 using PortfolioTerminal.Data;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 
 namespace PortfolioTerminal.Portfolio.TickerCatalog;
 
-public sealed class TickerCatalogQueries(AppDataSource dataSource) : ITickerCatalogQueries
+public sealed class TickerCatalogQueries(
+    AppDataSource dataSource,
+    ISecurityMetadataQueries metadataQueries) : ITickerCatalogQueries
 {
-    public Task<IReadOnlyList<TickerCatalogListItem>> ListAsync(
+    public async Task<IReadOnlyList<TickerCatalogListItem>> ListAsync(
         Guid userId,
-        CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserReadOnlyAsync(
+        CancellationToken cancellationToken = default)
+    {
+        var items = await dataSource.ExecuteAsUserReadOnlyAsync(
             userId,
             (connection, transaction, token) =>
                 ReadAsync(connection, transaction, userId, token),
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+        var metadata = await metadataQueries.GetByListingIdsAsync(
+            userId,
+            items.Where(item => item.SecurityListingId is not null)
+                .Select(item => item.SecurityListingId!.Value).Distinct().ToArray(),
+            cancellationToken).ConfigureAwait(false);
+        return items.Select(item => item.SecurityListingId is { } listingId
+                && metadata.TryGetValue(listingId, out var security)
+            ? item with
+            {
+                Ticker = security.Symbol,
+                Name = security.Name,
+                AssetType = security.SecurityType,
+                Market = security.ExchangeName ?? security.ExchangeMic,
+                Currency = security.TradingCurrency ?? item.Currency,
+                Security = security,
+            }
+            : item).ToArray();
+    }
 
     private static async Task<IReadOnlyList<TickerCatalogListItem>> ReadAsync(
         NpgsqlConnection connection,
@@ -25,7 +47,7 @@ public sealed class TickerCatalogQueries(AppDataSource dataSource) : ITickerCata
         command.Transaction = transaction;
         command.CommandText = """
             select id, user_id, ticker, name, asset_type, market, currency,
-                   is_active, created_at, updated_at
+                   is_active, created_at, updated_at, security_listing_id
             from public.ticker_catalog
             where user_id = $1
             order by ticker, id;
@@ -51,7 +73,8 @@ public sealed class TickerCatalogQueries(AppDataSource dataSource) : ITickerCata
                 reader.IsDBNull(6) ? null : reader.GetString(6),
                 reader.GetBoolean(7),
                 reader.GetFieldValue<DateTimeOffset>(8),
-                reader.GetFieldValue<DateTimeOffset>(9)));
+                reader.GetFieldValue<DateTimeOffset>(9),
+                reader.IsDBNull(10) ? null : reader.GetGuid(10)));
         }
 
         return items;

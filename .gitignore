@@ -40,3 +40,4 @@ dist-ssr
 
 # Supabase local temp/link metadata
 supabase/.temp/
+supabase/.branches/

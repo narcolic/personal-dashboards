@@ -18,6 +18,7 @@ using PortfolioTerminal.Portfolio.Analytics;
 using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.Holdings;
 using PortfolioTerminal.Portfolio.MarketData;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
@@ -74,6 +75,18 @@ builder.Services.AddCors(options =>
 builder.Services.AddSingleton(
     new AppDataSource(builder.Configuration.GetConnectionString("AppDatabase")));
 builder.Services.AddSingleton(TimeProvider.System);
+var securityMetadataOptions = builder.Configuration
+    .GetSection("SecurityMetadata")
+    .Get<SecurityMetadataOptions>() ?? new SecurityMetadataOptions();
+var alphaVantageOptions = builder.Configuration
+    .GetSection("AlphaVantage")
+    .Get<AlphaVantageOptions>() ?? new AlphaVantageOptions();
+if (string.IsNullOrWhiteSpace(alphaVantageOptions.ApiKey))
+{
+    alphaVantageOptions.ApiKey = builder.Configuration["ALPHAVANTAGE_API_KEY"];
+}
+builder.Services.AddSingleton(securityMetadataOptions);
+builder.Services.AddSingleton(alphaVantageOptions);
 builder.Services.AddHttpClient<IQuoteService, YahooQuoteService>(client =>
 {
     client.BaseAddress = new Uri("https://query1.finance.yahoo.com/");
@@ -100,6 +113,18 @@ builder.Services.AddHttpClient<IMarketStatusService, MarketStatusService>(client
             new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", apiKey);
     }
 });
+builder.Services.AddHttpClient<ISecurityMetadataProvider, AlphaVantageSecurityMetadataProvider>(client =>
+{
+    client.BaseAddress = new Uri("https://www.alphavantage.co/");
+    client.Timeout = TimeSpan.FromSeconds(20);
+    client.DefaultRequestHeaders.UserAgent.ParseAdd("portfolio-terminal/1.0");
+    client.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
+builder.Services.AddScoped<ISecurityMetadataQueries, SecurityMetadataQueries>();
+builder.Services.AddScoped<ISecurityListingResolver, SecurityListingResolver>();
+builder.Services.AddScoped<ISecurityMetadataCanonicalizer, SecurityMetadataCanonicalizer>();
+builder.Services.AddScoped<ISecurityMetadataStore, SecurityMetadataStore>();
+builder.Services.AddScoped<ISecurityMetadataRefreshJob, SecurityMetadataRefreshJob>();
 builder.Services.AddScoped<IPortfolioQueries, PortfolioQueries>();
 builder.Services.AddScoped<IPortfolioCommands, PortfolioCommands>();
 builder.Services.AddScoped<IPortfolioHoldingQueries, PortfolioHoldingQueries>();
@@ -193,6 +218,35 @@ app.MapGet("/.well-known/oauth-protected-resource/mcp", ProtectedResourceMetadat
 app.MapMcp("/mcp")
     .RequireAuthorization(McpAuthOptions.AuthorizationPolicy)
     .RequireRateLimiting("Mcp");
+
+if (args.Any(argument => string.Equals(
+        argument,
+        "--run-security-metadata-refresh=true",
+        StringComparison.OrdinalIgnoreCase)))
+{
+    var force = args.Any(argument => string.Equals(
+        argument,
+        "--metadata-force=true",
+        StringComparison.OrdinalIgnoreCase));
+    var limitArgument = args.FirstOrDefault(argument =>
+        argument.StartsWith("--metadata-limit=", StringComparison.OrdinalIgnoreCase));
+    int? limit = null;
+    if (limitArgument is not null)
+    {
+        var rawLimit = limitArgument[(limitArgument.IndexOf('=') + 1)..];
+        if (!int.TryParse(rawLimit, out var parsedLimit) || parsedLimit is < 1 or > 1000)
+        {
+            throw new InvalidOperationException("metadata-limit must be between 1 and 1000.");
+        }
+        limit = parsedLimit;
+    }
+
+    await using var scope = app.Services.CreateAsyncScope();
+    var job = scope.ServiceProvider.GetRequiredService<ISecurityMetadataRefreshJob>();
+    var result = await job.RunAsync(new SecurityMetadataRefreshRequest(force, limit));
+    Console.WriteLine(JsonSerializer.Serialize(result));
+    return;
+}
 
 if (args.Any(argument => string.Equals(
         argument,

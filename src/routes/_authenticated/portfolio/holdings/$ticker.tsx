@@ -151,6 +151,7 @@ function HoldingDetailsPage() {
         asset_type: string | null;
         market: string | null;
         currency: string | null;
+        security_listing_id: string | null;
       }
     >();
 
@@ -163,6 +164,7 @@ function HoldingDetailsPage() {
         asset_type: row.asset_type ?? null,
         market: row.market ?? null,
         currency: row.currency ?? null,
+        security_listing_id: row.security_listing_id ?? null,
       });
     }
 
@@ -174,6 +176,7 @@ function HoldingDetailsPage() {
         asset_type: row.asset_type ?? null,
         market: row.market ?? null,
         currency: row._nativeCurrency ?? null,
+        security_listing_id: row.security_listing_id ?? null,
       });
     }
 

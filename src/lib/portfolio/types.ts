@@ -1,35 +1,40 @@
-type AssetType = "Stock" | "ETF" | "Fund" | "Unknown";
-export type RegionCategory =
-  | "Greece"
-  | "United States"
-  | "Europe Developed"
-  | "Emerging Markets"
-  | "Global Developed"
-  | "Global Thematic"
-  | "Unknown";
-type ThemeCategory =
-  | "Broad Index"
-  | "Bank"
-  | "Semiconductor"
-  | "Software"
-  | "Europe Equity"
-  | "EM Equity"
-  | "Quantum/AI"
-  | "Unknown";
-
-export type HoldingRegionClassification = {
+export type SecurityMetadata = {
+  listingId: string;
+  securityId: string;
   symbol: string;
   name: string;
-  assetType: AssetType;
-  exchange: string | null;
-  currency: string | null;
-  country: string | null;
-  sector: string | null;
-  industry: string | null;
-  regionCategory: RegionCategory;
-  themeCategory: ThemeCategory;
-  sourceHints: string[];
-  confidence: "High" | "Medium" | "Low";
+  securityType: string;
+  exchangeMic: string | null;
+  exchangeName: string | null;
+  tradingCurrency: string | null;
+  companyName: string | null;
+  countryCode: string | null;
+  countryName: string | null;
+  regionCode: string | null;
+  regionName: string | null;
+  sectorCode: string | null;
+  sectorName: string | null;
+  industryCode: string | null;
+  industryName: string | null;
+  primaryMarketCountryCode: string | null;
+  primaryMarketCountryName: string | null;
+  geographicExposureCode: string | null;
+  geographicExposureName: string | null;
+  marketExposureCode: string | null;
+  marketExposureName: string | null;
+  metadataStatus:
+    | "pending"
+    | "processing"
+    | "succeeded"
+    | "incomplete"
+    | "not_found"
+    | "failed"
+    | "rate_limited";
+  metadataUpdatedAt: string | null;
+  isOverridden: boolean;
+  effectiveGeography: string | null;
+  geographySource: "company_country" | "company_region" | "etf_geographic_exposure" | null;
+  metadataSource: "provider" | "manual" | "mixed";
 };
 
 export type TransactionRow = {
@@ -45,6 +50,8 @@ export type TransactionRow = {
   transaction_date: string;
   notes: string | null;
   portfolio_id: string | null;
+  security_listing_id: string | null;
+  security: SecurityMetadata | null;
 };
 
 export type HoldingRow = {
@@ -61,6 +68,8 @@ export type HoldingRow = {
   tx_count: number;
   first_date: string | null;
   last_date: string | null;
+  security_listing_id: string | null;
+  security: SecurityMetadata | null;
 };
 
 export type Enriched = HoldingRow & {
@@ -73,16 +82,6 @@ export type Enriched = HoldingRow & {
   unrealized: number;
   unrealizedPct: number;
   quote?: Quote;
-};
-
-export type QuoteMeta = NonNullable<Enriched["quote"]> & {
-  quoteType?: string;
-  longName?: string;
-  assetProfile?: { country?: string; sector?: string; industry?: string };
-  fundProfile?: { category?: string; family?: string };
-  price?: { longName?: string };
-  quoteSummary?: { quoteType?: { quoteType?: string } };
-  topHoldings?: Array<{ symbol?: string; weight?: number }>;
 };
 
 export interface Quote {
@@ -98,22 +97,4 @@ export interface Quote {
   exchange?: string;
   marketState?: string;
   quoteType?: string;
-  assetProfile?: {
-    country?: string;
-    sector?: string;
-    industry?: string;
-  };
-  fundProfile?: {
-    category?: string;
-    family?: string;
-  };
-  price?: {
-    longName?: string;
-  };
-  quoteSummary?: {
-    quoteType?: {
-      quoteType?: string;
-    };
-  };
-  topHoldings?: Array<{ symbol?: string; weight?: number }>;
 }

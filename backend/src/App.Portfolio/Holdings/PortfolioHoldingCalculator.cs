@@ -12,6 +12,7 @@ public static class PortfolioHoldingCalculator
                 string.Equals(transaction.Action, "buy", StringComparison.OrdinalIgnoreCase) &&
                 !string.IsNullOrWhiteSpace(transaction.Ticker))
             .GroupBy(transaction => new HoldingKey(
+                transaction.SecurityListingId,
                 transaction.Ticker!.Trim().ToUpperInvariant(),
                 transaction.PortfolioId,
                 NormalizeCurrency(transaction.Currency)));
@@ -35,12 +36,14 @@ public static class PortfolioHoldingCalculator
                 continue;
             }
 
+            var security = last.Security;
+            var ticker = security?.Symbol ?? group.Key.Ticker;
             holdings.Add(new PortfolioHolding(
-                $"{group.Key.Ticker}|{group.Key.PortfolioId?.ToString() ?? string.Empty}|{group.Key.Currency}",
-                group.Key.Ticker,
-                last.Name,
-                last.AssetType ?? "Unknown",
-                last.Market,
+                $"{group.Key.ListingId?.ToString() ?? ticker}|{group.Key.PortfolioId?.ToString() ?? string.Empty}|{group.Key.Currency}",
+                ticker,
+                security?.Name ?? last.Name,
+                security?.SecurityType ?? last.AssetType ?? "Unknown",
+                security?.ExchangeName ?? security?.ExchangeMic ?? last.Market,
                 group.Key.Currency,
                 totalShares,
                 totalCost / totalShares,
@@ -48,7 +51,9 @@ public static class PortfolioHoldingCalculator
                 group.Key.PortfolioId,
                 rows.Length,
                 first.TransactionDate,
-                last.TransactionDate));
+                last.TransactionDate,
+                group.Key.ListingId,
+                security));
         }
 
         return [.. holdings
@@ -63,6 +68,7 @@ public static class PortfolioHoldingCalculator
             : currency.Trim().ToUpperInvariant();
 
     private sealed record HoldingKey(
+        Guid? ListingId,
         string Ticker,
         Guid? PortfolioId,
         string Currency);

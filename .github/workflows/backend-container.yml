@@ -30,6 +30,7 @@ env:
   AZURE_RESOURCE_GROUP: portfolio-terminal-rg
   AZURE_CONTAINER_APP: portfolio-terminal-api
   AZURE_SNAPSHOT_JOB: portfolio-snapshot-job
+  AZURE_METADATA_JOB: portfolio-security-metadata-job
   API_BASE_URL: https://portfolio-terminal-api.yellowforest-c9892f85.northeurope.azurecontainerapps.io
 
 jobs:
@@ -104,6 +105,23 @@ jobs:
             echo "Snapshot job image updated."
           else
             echo "Snapshot job is not configured yet; skipping its image update."
+          fi
+
+      - name: Update security metadata job image when configured
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          if az containerapp job show \
+            --name "${AZURE_METADATA_JOB}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            >/dev/null 2>&1; then
+            az containerapp job update \
+              --name "${AZURE_METADATA_JOB}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+            echo "Security metadata job image updated."
+          else
+            echo "Security metadata job is not configured yet; skipping its image update."
           fi
 
       - name: Verify production readiness

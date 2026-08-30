@@ -83,11 +83,12 @@ public sealed class PortfolioAnalysisService(
     {
         limit = RequireRange(limit, 1, 20, nameof(limit));
         var normalizedDimension = dimension.Trim().ToLowerInvariant();
-        if (normalizedDimension is not ("assettype" or "currency" or "portfolio"))
+        if (normalizedDimension is not ("assettype" or "securitytype" or "currency"
+            or "portfolio" or "country" or "region" or "sector" or "industry"))
         {
             throw new PortfolioAnalysisException(
                 "unsupported_dimension",
-                "Supported allocation dimensions are assetType, currency, and portfolio. Sector and geography data are not available.");
+                "Supported allocation dimensions are assetType, securityType, currency, portfolio, country, region, sector, and industry.");
         }
 
         var state = await LoadLiveStateAsync(userId, portfolio, displayCurrency, null, cancellationToken)
@@ -227,7 +228,8 @@ public sealed class PortfolioAnalysisService(
             amountInDisplay,
             0m,
             state.Scope.Selector,
-            state.Scope.DisplayName));
+            state.Scope.DisplayName,
+            null));
         var after = Consolidate(afterRows);
         var afterValue = after.Sum(position => position.CurrentValue);
         var beforePositionValue = before.Where(position => position.Ticker == symbol).Sum(position => position.CurrentValue);
@@ -339,7 +341,8 @@ public sealed class PortfolioAnalysisService(
                 portfolioRef,
                 holding.PortfolioId is null
                     ? "Unassigned"
-                    : portfolioNames.GetValueOrDefault(holding.PortfolioId.Value, "Unknown portfolio")));
+                    : portfolioNames.GetValueOrDefault(holding.PortfolioId.Value, "Unknown portfolio"),
+                holding.Security));
         }
 
         return new(timeProvider.GetUtcNow(), scope, currency, rows, quotes);
@@ -398,7 +401,8 @@ public sealed class PortfolioAnalysisService(
                 Percent(value - cost, cost),
                 Round(dayChange),
                 Percent(value, total),
-                [.. items.Select(item => item.PortfolioRef).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal)]);
+                [.. items.Select(item => item.PortfolioRef).Distinct(StringComparer.OrdinalIgnoreCase).Order(StringComparer.Ordinal)],
+                last.Security);
         }).OrderByDescending(position => position.CurrentValue)];
     }
 
@@ -425,9 +429,17 @@ public sealed class PortfolioAnalysisService(
         var total = rows.Sum(row => row.CurrentValue);
         return [.. rows.GroupBy(row => dimension switch
             {
-                "assettype" => string.IsNullOrWhiteSpace(row.AssetType) ? "Unknown" : row.AssetType,
+                "assettype" or "securitytype" =>
+                    string.IsNullOrWhiteSpace(row.Security?.SecurityType ?? row.AssetType)
+                        ? "Unknown" : row.Security?.SecurityType ?? row.AssetType,
                 "currency" => row.QuoteCurrency,
                 "portfolio" => row.PortfolioName,
+                "country" => row.Security?.CountryName ?? "Unknown",
+                "region" => row.Security?.SecurityType == "stock"
+                    ? row.Security.RegionName ?? "Unknown"
+                    : row.Security?.GeographicExposureName ?? "Unknown",
+                "sector" => row.Security?.SectorName ?? "Unknown",
+                "industry" => row.Security?.IndustryName ?? "Unknown",
                 _ => "Unknown",
             }, StringComparer.OrdinalIgnoreCase)
             .Select(group => new PortfolioAllocationItem(
@@ -550,5 +562,6 @@ public sealed class PortfolioAnalysisService(
         decimal CostBasis,
         decimal DayChange,
         string PortfolioRef,
-        string PortfolioName = "Unassigned");
+        string PortfolioName = "Unassigned",
+        SecurityMetadata.SecurityMetadataView? Security = null);
 }

@@ -6,4 +6,8 @@
   <ItemGroup>
     <ProjectReference Include="..\App.Data\App.Data.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="App.Tests" />
+  </ItemGroup>
 </Project>
