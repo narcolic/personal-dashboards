@@ -142,6 +142,8 @@ public sealed class SecurityMetadataStore(
               where state.provider_code = 'alpha_vantage'
                 and (state.status <> 'processing'
                      or state.last_attempt_at < now() - interval '1 hour')
+                -- A provider-level not_found is terminal unless an operator forces a retry.
+                and ($2 or state.status <> 'not_found')
                 and ($2 or state.next_attempt_at <= now()
                      or (state.stale_after is not null and state.stale_after <= now()))
               order by state.next_attempt_at, state.listing_id
