@@ -227,6 +227,22 @@ report as (
   union all
 
   select
+    65,
+    'gate',
+    'active_incomplete_without_manual_lock',
+    case when count(*) = 0 then 'pass' else 'fail' end,
+    count(*)::bigint,
+    '0',
+    jsonb_build_object(
+      'symbols', coalesce(jsonb_agg(symbol order by symbol), '[]'::jsonb)
+    )
+  from effective_metadata
+  where metadata_status = 'incomplete'
+    and not has_manual_lock
+
+  union all
+
+  select
     70,
     'gate',
     'active_not_found_without_manual_lock',
@@ -267,13 +283,19 @@ report as (
 
   select
     100,
-    'review',
-    'active_incomplete_metadata',
-    case when count(*) = 0 then 'pass' else 'review' end,
+    'info',
+    'active_incomplete_metadata_inventory',
+    'info',
     count(*)::bigint,
-    'operator review',
+    'inventory',
     jsonb_build_object(
-      'symbols', coalesce(jsonb_agg(symbol order by symbol), '[]'::jsonb)
+      'listings', coalesce(
+        jsonb_agg(jsonb_build_object(
+          'symbol', symbol,
+          'has_manual_lock', has_manual_lock
+        ) order by symbol),
+        '[]'::jsonb
+      )
     )
   from effective_metadata
   where metadata_status = 'incomplete'
