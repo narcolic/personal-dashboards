@@ -1,0 +1,41 @@
+name: Run security metadata refresh
+
+on:
+  schedule:
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AZURE_RESOURCE_GROUP: portfolio-terminal-rg
+  AZURE_METADATA_JOB: portfolio-security-metadata-job
+
+jobs:
+  start-refresh:
+    name: Start security metadata refresh
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Log in to Azure with GitHub OIDC
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Install Azure Container Apps CLI extension
+        shell: bash
+        run: |
+          az extension add --name containerapp --upgrade --yes
+
+      - name: Start metadata refresh job
+        shell: bash
+        run: |
+          az containerapp job start \
+            --name "${AZURE_METADATA_JOB}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            --no-wait
