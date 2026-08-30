@@ -100,6 +100,14 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
+          if ! az containerapp job show \
+            --name "${AZURE_SNAPSHOT_JOB}" \
+            --resource-group "${AZURE_RESOURCE_GROUP}" \
+            >/dev/null 2>&1; then
+            echo "::warning::Snapshot job '${AZURE_SNAPSHOT_JOB}' does not exist in resource group '${AZURE_RESOURCE_GROUP}'; skipping its image update."
+            exit 0
+          fi
+
           az containerapp job update \
             --name "${AZURE_SNAPSHOT_JOB}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
