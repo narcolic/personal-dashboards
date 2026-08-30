@@ -72,6 +72,144 @@ public sealed class SecurityMetadataProviderTests
     }
 
     [Fact]
+    public async Task MissingSuffixedSymbolRetriesWithBareSymbol()
+    {
+        var searchedSymbols = new List<string?>();
+        using var client = Client(request =>
+        {
+            var function = Query(request, "function");
+            if (function == "SYMBOL_SEARCH")
+            {
+                var symbol = Uri.UnescapeDataString(Query(request, "keywords") ?? string.Empty);
+                searchedSymbols.Add(symbol);
+                return symbol == "TPEIR.AT"
+                    ? JsonResponse("""{"bestMatches":[]}""")
+                    : JsonResponse("""
+                        {"bestMatches":[{"1. symbol":"TPEIR","2. name":"Piraeus Financial Holdings S.A.","3. type":"Equity","4. region":"Greece","8. currency":"EUR","9. matchScore":"1.0000"}]}
+                        """);
+            }
+
+            return JsonResponse("""
+                {"Symbol":"TPEIR","AssetType":"Common Stock","Name":"Piraeus Financial Holdings S.A.","Exchange":"ATHENS","Currency":"EUR","Country":"Greece","Sector":"FINANCIAL SERVICES"}
+                """);
+        });
+        var provider = Provider(client);
+
+        var claim = Claim("TPEIR.AT", "stock") with { TradingCurrency = "EUR" };
+        var result = await provider.FetchAsync(claim);
+
+        Assert.Equal(ProviderMetadataStatus.Succeeded, result.Status);
+        Assert.Equal("TPEIR", result.ProviderSymbol);
+        Assert.Equal(3, result.RequestsConsumed);
+        Assert.Equal(["TPEIR.AT", "TPEIR"], searchedSymbols);
+        Assert.Equal("TPEIR.AT", result.SanitizedAttributes.GetProperty("requested_symbol").GetString());
+        Assert.Equal("TPEIR", result.SanitizedAttributes.GetProperty("searched_symbol").GetString());
+    }
+
+    [Fact]
+    public async Task MissingBareSymbolDoesNotRepeatSearch()
+    {
+        var requests = 0;
+        using var client = Client(_ =>
+        {
+            requests++;
+            return JsonResponse("""{"bestMatches":[]}""");
+        });
+        var provider = Provider(client);
+
+        var result = await provider.FetchAsync(Claim("AETF", "etf"));
+
+        Assert.Equal(ProviderMetadataStatus.NotFound, result.Status);
+        Assert.Equal(1, result.RequestsConsumed);
+        Assert.Equal(1, requests);
+    }
+
+    [Fact]
+    public async Task FallbackRejectsUnrelatedOrWrongCurrencyMatch()
+    {
+        using var client = Client(request =>
+        {
+            var symbol = Uri.UnescapeDataString(Query(request, "keywords") ?? string.Empty);
+            return symbol == "AETF.AT"
+                ? JsonResponse("""{"bestMatches":[]}""")
+                : JsonResponse("""
+                    {"bestMatches":[
+                      {"1. symbol":"AETF","2. name":"Unrelated ETF","3. type":"ETF","4. region":"United States","8. currency":"USD","9. matchScore":"1.0000"},
+                      {"1. symbol":"AETFX","2. name":"Unrelated Fund","3. type":"Mutual Fund","4. region":"United States","8. currency":"USD","9. matchScore":"0.9000"}
+                    ]}
+                    """);
+        });
+        var provider = Provider(client);
+        var claim = Claim("AETF.AT", "etf") with { TradingCurrency = "EUR" };
+
+        var result = await provider.FetchAsync(claim);
+
+        Assert.Equal(ProviderMetadataStatus.NotFound, result.Status);
+        Assert.Equal(2, result.RequestsConsumed);
+    }
+
+    [Fact]
+    public async Task NotFoundPayloadAlsoRetriesWithBareSymbol()
+    {
+        using var client = Client(request =>
+        {
+            if (Query(request, "function") == "SYMBOL_SEARCH")
+            {
+                var symbol = Uri.UnescapeDataString(Query(request, "keywords") ?? string.Empty);
+                return symbol == "TPEIR.AT"
+                    ? JsonResponse("""{"Error Message":"Invalid API call."}""")
+                    : JsonResponse("""
+                        {"bestMatches":[{"1. symbol":"TPEIR","2. name":"Piraeus Financial Holdings S.A.","3. type":"Equity","4. region":"Greece","8. currency":"EUR","9. matchScore":"1.0000"}]}
+                        """);
+            }
+
+            return JsonResponse("""
+                {"Symbol":"TPEIR","AssetType":"Common Stock","Name":"Piraeus Financial Holdings S.A.","Exchange":"ATHENS","Currency":"EUR","Country":"Greece","Sector":"FINANCIAL SERVICES"}
+                """);
+        });
+        var provider = Provider(client);
+        var claim = Claim("TPEIR.AT", "stock") with { TradingCurrency = "EUR" };
+
+        var result = await provider.FetchAsync(claim);
+
+        Assert.Equal(ProviderMetadataStatus.Succeeded, result.Status);
+        Assert.Equal("TPEIR", result.ProviderSymbol);
+        Assert.Equal(3, result.RequestsConsumed);
+    }
+
+    [Fact]
+    public async Task ExistingProviderSymbolIsUsedBeforeListingSymbol()
+    {
+        var searchedSymbols = new List<string?>();
+        using var client = Client(request =>
+        {
+            if (Query(request, "function") == "SYMBOL_SEARCH")
+            {
+                searchedSymbols.Add(Uri.UnescapeDataString(Query(request, "keywords") ?? string.Empty));
+                return JsonResponse("""
+                    {"bestMatches":[{"1. symbol":"TPEIR","2. name":"Piraeus Financial Holdings S.A.","3. type":"Equity","4. region":"Greece","8. currency":"EUR","9. matchScore":"1.0000"}]}
+                    """);
+            }
+
+            return JsonResponse("""
+                {"Symbol":"TPEIR","AssetType":"Common Stock","Name":"Piraeus Financial Holdings S.A.","Exchange":"ATHENS","Currency":"EUR","Country":"Greece","Sector":"FINANCIAL SERVICES"}
+                """);
+        });
+        var provider = Provider(client);
+        var claim = Claim("TPEIR.AT", "stock") with
+        {
+            TradingCurrency = "EUR",
+            ProviderSymbol = "TPEIR",
+        };
+
+        var result = await provider.FetchAsync(claim);
+
+        Assert.Equal(ProviderMetadataStatus.Succeeded, result.Status);
+        Assert.Equal(["TPEIR"], searchedSymbols);
+        Assert.Equal(2, result.RequestsConsumed);
+    }
+
+    [Fact]
     public async Task MissingApiKeyDoesNotMakeARequest()
     {
         var requests = 0;

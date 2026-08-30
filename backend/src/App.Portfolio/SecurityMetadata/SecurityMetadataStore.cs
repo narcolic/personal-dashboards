@@ -156,10 +156,14 @@ public sealed class SecurityMetadataStore(
               returning state.listing_id
             )
             select l.id, s.id, s.company_id, l.symbol, s.name,
-                   s.security_type_code, l.trading_currency_code
+                   s.security_type_code, l.trading_currency_code,
+                   identifier.provider_symbol
             from claimed
             join public.security_listings l on l.id = claimed.listing_id
             join public.securities s on s.id = l.security_id
+            left join public.security_listing_provider_identifiers identifier
+              on identifier.listing_id = l.id
+             and identifier.provider_code = 'alpha_vantage'
             order by l.symbol, l.id;
             """;
         command.Parameters.AddWithValue(limit);
@@ -177,7 +181,8 @@ public sealed class SecurityMetadataStore(
                 reader.GetString(3),
                 reader.GetString(4),
                 reader.GetString(5),
-                reader.IsDBNull(6) ? null : reader.GetString(6)));
+                reader.IsDBNull(6) ? null : reader.GetString(6),
+                reader.IsDBNull(7) ? null : reader.GetString(7)));
         }
 
         return claims;

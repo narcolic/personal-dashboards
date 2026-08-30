@@ -24,22 +24,48 @@ public sealed class AlphaVantageSecurityMetadataProvider(
         var requests = 0;
         try
         {
+            var requestedSymbol = string.IsNullOrWhiteSpace(claim.ProviderSymbol)
+                ? claim.Symbol
+                : claim.ProviderSymbol.Trim();
+            var searchedSymbol = requestedSymbol;
             requests++;
             using var search = await GetAsync(
-                $"query?function=SYMBOL_SEARCH&keywords={Uri.EscapeDataString(claim.Symbol)}&apikey={Uri.EscapeDataString(apiKey)}",
+                $"query?function=SYMBOL_SEARCH&keywords={Uri.EscapeDataString(searchedSymbol)}&apikey={Uri.EscapeDataString(apiKey)}",
                 cancellationToken).ConfigureAwait(false);
-            if (FailureFromPayload(search.RootElement, claim.Symbol, requests) is { } searchFailure)
+            var searchFailure = FailureFromPayload(search.RootElement, searchedSymbol, requests);
+            if (searchFailure is not null && searchFailure.Status != ProviderMetadataStatus.NotFound)
             {
                 return searchFailure;
             }
 
-            var match = BestMatch(search.RootElement, claim.Symbol);
+            var match = searchFailure is null
+                ? BestMatch(search.RootElement, searchedSymbol, claim)
+                : null;
+            if (match is null && TryRemoveExchangeSuffix(searchedSymbol, out var bareSymbol))
+            {
+                searchedSymbol = bareSymbol;
+                requests++;
+                using var fallbackSearch = await GetAsync(
+                    $"query?function=SYMBOL_SEARCH&keywords={Uri.EscapeDataString(searchedSymbol)}&apikey={Uri.EscapeDataString(apiKey)}",
+                    cancellationToken).ConfigureAwait(false);
+                if (FailureFromPayload(fallbackSearch.RootElement, searchedSymbol, requests) is { } fallbackFailure)
+                {
+                    return fallbackFailure;
+                }
+
+                match = BestMatch(fallbackSearch.RootElement, searchedSymbol, claim);
+            }
+
             if (match is null)
             {
                 return new ProviderSecurityMetadata(
-                    ProviderMetadataStatus.NotFound, claim.Symbol, null, null, null, null,
+                    ProviderMetadataStatus.NotFound, requestedSymbol, null, null, null, null,
                     null, null, null, null, null,
-                    JsonSerializer.SerializeToElement(new { searchedSymbol = claim.Symbol }),
+                    JsonSerializer.SerializeToElement(new
+                    {
+                        requested_symbol = requestedSymbol,
+                        searched_symbol = searchedSymbol,
+                    }),
                     requests, "not_found", "Alpha Vantage returned no matching symbol.");
             }
 
@@ -62,7 +88,7 @@ public sealed class AlphaVantageSecurityMetadataProvider(
                     return new ProviderSecurityMetadata(
                         ProviderMetadataStatus.NotFound, providerSymbol, match.Value.Name, type,
                         null, match.Value.Currency, null, null, null, null, null,
-                        SearchAttributes(claim.Symbol, match.Value), requests,
+                        SearchAttributes(requestedSymbol, searchedSymbol, match.Value), requests,
                         "not_found", "Alpha Vantage returned an empty company overview.");
                 }
 
@@ -76,7 +102,8 @@ public sealed class AlphaVantageSecurityMetadataProvider(
                 var assetType = NormalizeType(String(root, "AssetType"), type);
                 var attributes = JsonSerializer.SerializeToElement(new Dictionary<string, object?>
                 {
-                    ["searched_symbol"] = claim.Symbol,
+                    ["requested_symbol"] = requestedSymbol,
+                    ["searched_symbol"] = searchedSymbol,
                     ["provider_symbol"] = providerSymbol,
                     ["name"] = name,
                     ["asset_type"] = assetType,
@@ -110,7 +137,8 @@ public sealed class AlphaVantageSecurityMetadataProvider(
                     profile.RootElement.EnumerateObject().Any();
                 var attributes = JsonSerializer.SerializeToElement(new Dictionary<string, object?>
                 {
-                    ["searched_symbol"] = claim.Symbol,
+                    ["requested_symbol"] = requestedSymbol,
+                    ["searched_symbol"] = searchedSymbol,
                     ["provider_symbol"] = providerSymbol,
                     ["name"] = match.Value.Name,
                     ["asset_type"] = "etf",
@@ -132,7 +160,7 @@ public sealed class AlphaVantageSecurityMetadataProvider(
                 ProviderMetadataStatus.Incomplete,
                 providerSymbol, match.Value.Name, type, null,
                 match.Value.Currency, null, null, null, null, null,
-                SearchAttributes(claim.Symbol, match.Value), requests,
+                SearchAttributes(requestedSymbol, searchedSymbol, match.Value), requests,
                 "unsupported_type", $"No metadata profile is configured for security type '{type}'.");
         }
         catch (HttpRequestException exception) when (
@@ -225,7 +253,10 @@ public sealed class AlphaVantageSecurityMetadataProvider(
         return null;
     }
 
-    private static SearchMatch? BestMatch(JsonElement root, string requestedSymbol)
+    private static SearchMatch? BestMatch(
+        JsonElement root,
+        string requestedSymbol,
+        SecurityMetadataRefreshClaim claim)
     {
         if (!root.TryGetProperty("bestMatches", out var matches) ||
             matches.ValueKind != JsonValueKind.Array)
@@ -242,6 +273,7 @@ public sealed class AlphaVantageSecurityMetadataProvider(
                 String(item, "8. currency"),
                 Decimal(item, "9. matchScore")))
             .Where(item => item.Symbol.Length > 0)
+            .Where(item => IsCompatibleMatch(item, requestedSymbol, claim))
             .ToArray();
         foreach (var candidate in candidates)
         {
@@ -256,9 +288,44 @@ public sealed class AlphaVantageSecurityMetadataProvider(
             : candidates.OrderByDescending(item => item.Score).First();
     }
 
-    private static JsonElement SearchAttributes(string searchedSymbol, SearchMatch match) =>
+    private static bool IsCompatibleMatch(
+        SearchMatch candidate,
+        string requestedSymbol,
+        SecurityMetadataRefreshClaim claim)
+    {
+        if (!string.Equals(SymbolStem(candidate.Symbol), SymbolStem(requestedSymbol),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var expectedType = NormalizeType(claim.SecurityType, claim.SecurityType);
+        if (!string.IsNullOrWhiteSpace(candidate.Type) &&
+            !string.Equals(NormalizeType(candidate.Type, candidate.Type), expectedType,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return string.IsNullOrWhiteSpace(claim.TradingCurrency)
+            || string.IsNullOrWhiteSpace(candidate.Currency)
+            || string.Equals(candidate.Currency, claim.TradingCurrency,
+                StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static string SymbolStem(string symbol)
+    {
+        var separator = symbol.IndexOf('.');
+        return separator > 0 ? symbol[..separator] : symbol;
+    }
+
+    private static JsonElement SearchAttributes(
+        string requestedSymbol,
+        string searchedSymbol,
+        SearchMatch match) =>
         JsonSerializer.SerializeToElement(new Dictionary<string, object?>
         {
+            ["requested_symbol"] = requestedSymbol,
             ["searched_symbol"] = searchedSymbol,
             ["provider_symbol"] = match.Symbol,
             ["name"] = match.Name,
@@ -266,6 +333,19 @@ public sealed class AlphaVantageSecurityMetadataProvider(
             ["region"] = match.Region,
             ["currency"] = match.Currency,
         });
+
+    private static bool TryRemoveExchangeSuffix(string symbol, out string bareSymbol)
+    {
+        var separator = symbol.LastIndexOf('.');
+        if (separator > 0 && separator < symbol.Length - 1)
+        {
+            bareSymbol = symbol[..separator];
+            return true;
+        }
+
+        bareSymbol = symbol;
+        return false;
+    }
 
     private static ProviderSecurityMetadata Failed(
         string symbol,

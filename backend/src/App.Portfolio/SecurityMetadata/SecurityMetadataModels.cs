@@ -66,7 +66,8 @@ public sealed record SecurityMetadataRefreshClaim(
     string Symbol,
     string Name,
     string SecurityType,
-    string? TradingCurrency);
+    string? TradingCurrency,
+    string? ProviderSymbol = null);
 
 public enum ProviderMetadataStatus
 {

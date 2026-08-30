@@ -19,8 +19,8 @@ public sealed class SecurityMetadataRefreshJob(
 
         var requestBudget = Math.Max(1, options.MaxRequestsPerRun);
         var requestedItems = Math.Max(1, request.Limit ?? options.MaxItemsPerRun);
-        // SYMBOL_SEARCH plus one profile call is the maximum for one listing.
-        var claimLimit = Math.Min(requestedItems, Math.Max(1, requestBudget / 2));
+        // An unresolved suffixed symbol can consume two searches plus one profile call.
+        var claimLimit = Math.Min(requestedItems, Math.Max(1, requestBudget / 3));
         var claims = await store.ClaimAsync(claimLimit, request.Force, cancellationToken)
             .ConfigureAwait(false);
 
