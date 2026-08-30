@@ -90,39 +90,29 @@ jobs:
           imageToDeploy: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:sha-${{ github.sha }}
           registryUrl: ${{ env.REGISTRY }}
 
-      - name: Update snapshot job image when configured
+      - name: Install Azure Container Apps CLI extension
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
-          if az containerapp job show \
+          az extension add --name containerapp --upgrade --yes
+
+      - name: Update snapshot job image
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        shell: bash
+        run: |
+          az containerapp job update \
             --name "${AZURE_SNAPSHOT_JOB}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
-            >/dev/null 2>&1; then
-            az containerapp job update \
-              --name "${AZURE_SNAPSHOT_JOB}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
-            echo "Snapshot job image updated."
-          else
-            echo "Snapshot job is not configured yet; skipping its image update."
-          fi
+            --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
 
-      - name: Update security metadata job image when configured
+      - name: Update security metadata job image
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
-          if az containerapp job show \
+          az containerapp job update \
             --name "${AZURE_METADATA_JOB}" \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
-            >/dev/null 2>&1; then
-            az containerapp job update \
-              --name "${AZURE_METADATA_JOB}" \
-              --resource-group "${AZURE_RESOURCE_GROUP}" \
-              --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
-            echo "Security metadata job image updated."
-          else
-            echo "Security metadata job is not configured yet; skipping its image update."
-          fi
+            --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
 
       - name: Verify production readiness
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
@@ -154,7 +144,15 @@ jobs:
             exit 1
           fi
 
-          status="$(curl --silent --output /dev/null --write-out '%{http_code}' "${API_BASE_URL}/mcp")"
+          status="$(curl \
+            --silent \
+            --output /dev/null \
+            --write-out '%{http_code}' \
+            --request POST \
+            --header 'Content-Type: application/json' \
+            --header 'Accept: application/json, text/event-stream' \
+            --data '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{},"clientInfo":{"name":"deployment-check","version":"1.0"}}}' \
+            "${API_BASE_URL}/mcp")"
           if [[ "${status}" != "401" ]]; then
             echo "Expected unauthenticated /mcp to return 401, got ${status}."
             exit 1
