@@ -22,6 +22,7 @@ legacy_holdings as (
     ) as cost
   from public.transactions transaction_row
   where lower(transaction_row.action) = 'buy'
+    and transaction_row.ticker is not null
   group by
     transaction_row.user_id,
     coalesce(transaction_row.portfolio_id::text, 'unassigned'),
@@ -43,6 +44,7 @@ canonical_holdings as (
   join public.security_listings listing
     on listing.id = transaction_row.security_listing_id
   where lower(transaction_row.action) = 'buy'
+    and transaction_row.ticker is not null
   group by
     transaction_row.user_id,
     coalesce(transaction_row.portfolio_id::text, 'unassigned'),
@@ -387,6 +389,47 @@ report as (
   join public.security_listings listing on listing.id = state.listing_id
   where state.provider_code = 'alpha_vantage'
     and state.status in ('failed', 'rate_limited')
+
+  union all
+
+  select
+    190,
+    'info',
+    'canonical_only_transaction_writes',
+    'info',
+    count(*)::bigint,
+    'observation counter',
+    jsonb_build_object(
+      'first_created_at', min(created_at),
+      'last_created_at', max(created_at)
+    )
+  from public.transactions
+  where security_listing_id is not null
+    and ticker is null
+    and name is null
+    and asset_type is null
+    and market is null
+
+  union all
+
+  select
+    195,
+    'info',
+    'canonical_only_catalog_writes',
+    'info',
+    count(*)::bigint,
+    'observation counter',
+    jsonb_build_object(
+      'first_created_at', min(created_at),
+      'last_created_at', max(created_at)
+    )
+  from public.ticker_catalog
+  where security_listing_id is not null
+    and ticker is null
+    and name is null
+    and asset_type is null
+    and market is null
+    and currency is null
 
   union all
 

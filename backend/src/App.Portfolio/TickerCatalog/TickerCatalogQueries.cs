@@ -31,10 +31,12 @@ public sealed class TickerCatalogQueries(
                 Name = security.Name,
                 AssetType = security.SecurityType,
                 Market = security.ExchangeName ?? security.ExchangeMic,
-                Currency = security.TradingCurrency ?? item.Currency,
+                Currency = security.TradingCurrency,
                 Security = security,
             }
-            : item).ToArray();
+            : throw new InvalidOperationException(
+                $"Canonical security metadata is missing for catalog row {item.Id}."))
+            .ToArray();
     }
 
     private static async Task<IReadOnlyList<TickerCatalogListItem>> ReadAsync(
@@ -46,11 +48,16 @@ public sealed class TickerCatalogQueries(
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            select id, user_id, ticker, name, asset_type, market, currency,
-                   is_active, created_at, updated_at, security_listing_id
-            from public.ticker_catalog
-            where user_id = $1
-            order by ticker, id;
+            select catalog.id, catalog.user_id, listing.symbol, security.name,
+                   security.security_type_code, coalesce(exchange.name, exchange.mic),
+                   listing.trading_currency_code, catalog.is_active,
+                   catalog.created_at, catalog.updated_at, catalog.security_listing_id
+            from public.ticker_catalog catalog
+            left join public.security_listings listing on listing.id = catalog.security_listing_id
+            left join public.securities security on security.id = listing.security_id
+            left join public.exchanges exchange on exchange.id = listing.exchange_id
+            where catalog.user_id = $1
+            order by listing.symbol, catalog.id;
             """;
         command.Parameters.Add(new NpgsqlParameter
         {

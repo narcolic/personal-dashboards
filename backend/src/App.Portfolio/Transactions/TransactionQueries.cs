@@ -32,7 +32,9 @@ public sealed class TransactionQueries(
             Rows = result.Rows.Select(row => row.SecurityListingId is { } listingId
                     && metadata.TryGetValue(listingId, out var security)
                 ? row with { Security = security }
-                : row).ToArray(),
+                : throw new InvalidOperationException(
+                    $"Canonical security metadata is missing for transaction {row.Id}."))
+                .ToArray(),
         };
     }
 
@@ -48,7 +50,9 @@ public sealed class TransactionQueries(
 
         var countCommand = new NpgsqlBatchCommand($"""
             select count(*)::bigint
-            from public.transactions
+            from public.transactions t
+            left join public.security_listings listing on listing.id = t.security_listing_id
+            left join public.securities security on security.id = listing.security_id
             {whereClause};
             """);
         AddFilterParameters(countCommand, userId, filter, includePagination: false);
@@ -58,12 +62,16 @@ public sealed class TransactionQueries(
             ? string.Empty
             : "limit @limit offset @offset";
         var rowsCommand = new NpgsqlBatchCommand($"""
-            select id, ticker, action, name, asset_type, market, currency,
-                   shares::numeric, price::numeric, transaction_date, notes, portfolio_id,
-                   security_listing_id
-            from public.transactions
+            select t.id, listing.symbol, t.action, security.name,
+                   security.security_type_code, coalesce(exchange.name, exchange.mic), t.currency,
+                   t.shares::numeric, t.price::numeric, t.transaction_date, t.notes, t.portfolio_id,
+                   t.security_listing_id
+            from public.transactions t
+            left join public.security_listings listing on listing.id = t.security_listing_id
+            left join public.securities security on security.id = listing.security_id
+            left join public.exchanges exchange on exchange.id = listing.exchange_id
             {whereClause}
-            order by transaction_date desc, id
+            order by t.transaction_date desc, t.id
             {paginationClause};
             """);
         AddFilterParameters(rowsCommand, userId, filter, includePagination: true);
@@ -99,53 +107,40 @@ public sealed class TransactionQueries(
 
     private static string BuildWhereClause(TransactionListFilter filter)
     {
-        var sql = new StringBuilder("where user_id = @userId");
+        var sql = new StringBuilder("where t.user_id = @userId");
 
         if (!string.IsNullOrWhiteSpace(filter.Ticker))
         {
-            sql.AppendLine().Append("""
-                  and coalesce((
-                    select listing.symbol
-                    from public.security_listings listing
-                    where listing.id = security_listing_id
-                  ), ticker) ilike @ticker
-                """);
+            sql.AppendLine().Append("  and listing.symbol ilike @ticker");
         }
 
         if (filter.UnassignedPortfolio)
         {
-            sql.AppendLine().Append("  and portfolio_id is null");
+            sql.AppendLine().Append("  and t.portfolio_id is null");
         }
         else if (filter.PortfolioId is not null)
         {
-            sql.AppendLine().Append("  and portfolio_id = @portfolioId");
+            sql.AppendLine().Append("  and t.portfolio_id = @portfolioId");
         }
 
         if (!string.IsNullOrWhiteSpace(filter.AssetType))
         {
-            sql.AppendLine().Append("""
-                  and coalesce((
-                    select security.security_type_code
-                    from public.security_listings listing
-                    join public.securities security on security.id = listing.security_id
-                    where listing.id = security_listing_id
-                  ), asset_type) = @assetType
-                """);
+            sql.AppendLine().Append("  and security.security_type_code = @assetType");
         }
 
         if (!string.IsNullOrWhiteSpace(filter.Currency))
         {
-            sql.AppendLine().Append("  and currency = @currency");
+            sql.AppendLine().Append("  and t.currency = @currency");
         }
 
         if (filter.DateFrom is not null)
         {
-            sql.AppendLine().Append("  and transaction_date >= @dateFrom");
+            sql.AppendLine().Append("  and t.transaction_date >= @dateFrom");
         }
 
         if (filter.DateTo is not null)
         {
-            sql.AppendLine().Append("  and transaction_date <= @dateTo");
+            sql.AppendLine().Append("  and t.transaction_date <= @dateTo");
         }
 
         return sql.ToString();

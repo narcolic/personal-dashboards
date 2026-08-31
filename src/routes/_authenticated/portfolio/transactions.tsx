@@ -112,13 +112,18 @@ export function ActivityPage({
     transactionPagination: { page, pageSize: TRANSACTIONS_PAGE_SIZE },
   });
   const { tickerCatalog } = useTickerCatalog();
-  const data = transactions.map((row) => ({
-    ...row,
-    ticker: row.security?.symbol ?? row.ticker,
-    name: row.security?.name ?? row.name,
-    asset_type: row.security?.securityType ?? row.asset_type,
-    market: row.security?.exchangeName ?? row.security?.exchangeMic ?? row.market,
-  })) as TransactionTableRow[];
+  const data = transactions.map((row) => {
+    if (!row.security) {
+      throw new Error(`Canonical security metadata is missing for transaction ${row.id}.`);
+    }
+    return {
+      ...row,
+      ticker: row.security.symbol,
+      name: row.security.name,
+      asset_type: row.security.securityType,
+      market: row.security.exchangeName ?? row.security.exchangeMic,
+    };
+  }) as TransactionTableRow[];
   const isLoading = txQ.isLoading;
   const pageCount = Math.max(1, Math.ceil(transactionCount / TRANSACTIONS_PAGE_SIZE));
   const pageStart = transactionCount === 0 ? 0 : (page - 1) * TRANSACTIONS_PAGE_SIZE + 1;
@@ -140,16 +145,18 @@ export function ActivityPage({
     }
 
     for (const row of tickerCatalog) {
-      const ticker = normalizeTicker(row.ticker);
+      if (!row.security) {
+        throw new Error(`Canonical security metadata is missing for catalog row ${row.id}.`);
+      }
+      const ticker = normalizeTicker(row.security.symbol);
       if (!ticker) continue;
       map.set(ticker, {
         ticker,
-        name: row.name ?? map.get(ticker)?.name ?? null,
-        asset_type: row.asset_type ?? map.get(ticker)?.asset_type ?? null,
-        market: row.market ?? map.get(ticker)?.market ?? null,
-        currency: row.currency ?? map.get(ticker)?.currency ?? null,
-        security_listing_id:
-          row.security_listing_id ?? map.get(ticker)?.security_listing_id ?? null,
+        name: row.security.name,
+        asset_type: row.security.securityType,
+        market: row.security.exchangeName ?? row.security.exchangeMic,
+        currency: row.security.tradingCurrency,
+        security_listing_id: row.security.listingId,
       });
     }
 

@@ -10,7 +10,10 @@ export function enrich(
     if (q.inputSymbol) map.set(q.inputSymbol.toUpperCase(), q);
   }
   return positions.map((p) => {
-    const q = map.get(p.ticker.toUpperCase());
+    if (!p.security) {
+      throw new Error(`Canonical security metadata is missing for holding ${p.id}.`);
+    }
+    const q = map.get(p.security.symbol.toUpperCase());
     const price = q?.regularMarketPrice ?? Number(p.avg_cost);
     const prev = q?.regularMarketPreviousClose ?? price;
     const marketValue = price * Number(p.shares);

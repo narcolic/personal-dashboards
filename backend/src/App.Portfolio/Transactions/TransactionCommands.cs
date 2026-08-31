@@ -84,16 +84,15 @@ public sealed class TransactionCommands(
                     command.Transaction = transaction;
                     command.CommandText = """
                         update public.transactions
-                        set ticker = $3, action = $4, name = $5, asset_type = $6,
-                            market = $7, currency = $8, shares = $9, price = $10,
-                            transaction_date = $11, notes = $12, portfolio_id = $13,
-                            security_listing_id = $14
+                        set action = $3, currency = $4, shares = $5, price = $6,
+                            transaction_date = $7, notes = $8, portfolio_id = $9,
+                            security_listing_id = $10
                         where id = $1 and user_id = $2
                         returning id;
                         """;
                     AddUuid(command, transactionId);
                     AddUuid(command, userId);
-                    AddTransactionParameters(command, mutation);
+                    AddCanonicalTransactionParameters(command, mutation);
                     await command.ExecuteScalarAsync(token).ConfigureAwait(false);
                 }
 
@@ -232,13 +231,13 @@ public sealed class TransactionCommands(
         command.Transaction = transaction;
         command.CommandText = """
             insert into public.transactions (
-                user_id, ticker, action, name, asset_type, market, currency,
-                shares, price, transaction_date, notes, portfolio_id, security_listing_id)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
+                user_id, action, currency, shares, price, transaction_date,
+                notes, portfolio_id, security_listing_id)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             returning id;
             """;
         AddUuid(command, userId);
-        AddTransactionParameters(command, mutation);
+        AddCanonicalTransactionParameters(command, mutation);
         return (Guid)(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false))!;
     }
 
@@ -252,24 +251,13 @@ public sealed class TransactionCommands(
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            insert into public.ticker_catalog (
-                user_id, ticker, name, asset_type, market, currency,
-                security_listing_id, is_active)
-            values ($1, $2, $3, $4, $5, $6, $7, true)
-            on conflict (user_id, ticker) do update
-            set name = excluded.name,
-                asset_type = excluded.asset_type,
-                market = excluded.market,
-                currency = excluded.currency,
-                security_listing_id = excluded.security_listing_id,
-                is_active = true;
+            insert into public.ticker_catalog (user_id, security_listing_id, is_active)
+            values ($1, $2, true)
+            on conflict (user_id, security_listing_id)
+              where security_listing_id is not null
+            do update set is_active = true;
             """;
         AddUuid(command, userId);
-        command.Parameters.AddWithValue(NormalizeTicker(mutation.Ticker));
-        AddNullableText(command, mutation.Name);
-        command.Parameters.AddWithValue(mutation.AssetType.Trim().ToLowerInvariant());
-        AddNullableText(command, mutation.Market);
-        command.Parameters.AddWithValue(mutation.Currency.Trim().ToUpperInvariant());
         AddNullableUuid(command, mutation.SecurityListingId);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
@@ -328,14 +316,12 @@ public sealed class TransactionCommands(
         command.Transaction = transaction;
         command.CommandText = """
             insert into public.transactions (
-                user_id, ticker, action, name, asset_type, market, currency,
-                shares, price, transaction_date, notes, portfolio_id, security_listing_id)
-            select $1, x.ticker, x.action, x.name, x.asset_type, x.market,
-                   x.currency, x.shares, x.price, x.transaction_date,
+                user_id, action, currency, shares, price, transaction_date,
+                notes, portfolio_id, security_listing_id)
+            select $1, x.action, x.currency, x.shares, x.price, x.transaction_date,
                    x.notes, x.portfolio_id, x.security_listing_id
             from jsonb_to_recordset($2) as x(
-                ticker text, action text, name text, asset_type text, market text,
-                currency text, shares numeric, price numeric,
+                action text, currency text, shares numeric, price numeric,
                 transaction_date date, notes text, portfolio_id uuid,
                 security_listing_id uuid);
             """;
@@ -351,31 +337,23 @@ public sealed class TransactionCommands(
         IReadOnlyList<TransactionJsonRow> rows,
         CancellationToken cancellationToken)
     {
-        var tickers = rows
-            .GroupBy(row => row.Ticker, StringComparer.OrdinalIgnoreCase)
+        var listings = rows
+            .GroupBy(row => row.SecurityListingId)
             .Select(group => group.Last())
             .ToArray();
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            insert into public.ticker_catalog (
-                user_id, ticker, name, asset_type, market, currency,
-                security_listing_id, is_active)
-            select $1, x.ticker, x.name, x.asset_type, x.market, x.currency,
-                   x.security_listing_id, true
+            insert into public.ticker_catalog (user_id, security_listing_id, is_active)
+            select $1, x.security_listing_id, true
             from jsonb_to_recordset($2) as x(
-                ticker text, name text, asset_type text, market text, currency text,
                 security_listing_id uuid)
-            on conflict (user_id, ticker) do update
-            set name = excluded.name,
-                asset_type = excluded.asset_type,
-                market = excluded.market,
-                currency = excluded.currency,
-                security_listing_id = excluded.security_listing_id,
-                is_active = true;
+            on conflict (user_id, security_listing_id)
+              where security_listing_id is not null
+            do update set is_active = true;
             """;
         AddUuid(command, userId);
-        AddJson(command, tickers);
+        AddJson(command, listings);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -422,15 +400,11 @@ public sealed class TransactionCommands(
         return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) is Guid;
     }
 
-    private static void AddTransactionParameters(
+    private static void AddCanonicalTransactionParameters(
         NpgsqlCommand command,
         TransactionMutation mutation)
     {
-        command.Parameters.AddWithValue(NormalizeTicker(mutation.Ticker));
         command.Parameters.AddWithValue(mutation.Action.Trim().ToLowerInvariant());
-        AddNullableText(command, mutation.Name);
-        command.Parameters.AddWithValue(mutation.AssetType.Trim().ToLowerInvariant());
-        AddNullableText(command, mutation.Market);
         command.Parameters.AddWithValue(mutation.Currency.Trim().ToUpperInvariant());
         command.Parameters.AddWithValue(mutation.Shares);
         command.Parameters.AddWithValue(mutation.Price);
@@ -480,11 +454,7 @@ public sealed class TransactionCommands(
         ticker.Trim().ToUpperInvariant();
 
     private sealed record TransactionJsonRow(
-        [property: JsonPropertyName("ticker")] string Ticker,
         [property: JsonPropertyName("action")] string Action,
-        [property: JsonPropertyName("name")] string? Name,
-        [property: JsonPropertyName("asset_type")] string AssetType,
-        [property: JsonPropertyName("market")] string? Market,
         [property: JsonPropertyName("currency")] string Currency,
         [property: JsonPropertyName("shares")] decimal Shares,
         [property: JsonPropertyName("price")] decimal Price,
@@ -497,11 +467,7 @@ public sealed class TransactionCommands(
             ImportedTransactionMutation row,
             Guid portfolioId) =>
             new(
-                NormalizeTicker(row.Ticker),
                 "buy",
-                TrimToNull(row.Name),
-                row.AssetType.Trim().ToLowerInvariant(),
-                null,
                 row.Currency.Trim().ToUpperInvariant(),
                 row.Shares,
                 row.Price,

@@ -14,7 +14,17 @@ export function useQuotes(
   } = {},
 ) {
   const tickers = useMemo(
-    () => Array.from(new Set(positions.map((p) => p.ticker.toUpperCase()))),
+    () =>
+      Array.from(
+        new Set(
+          positions.map((position) => {
+            if (!position.security) {
+              throw new Error(`Canonical security metadata is missing for holding ${position.id}.`);
+            }
+            return position.security.symbol.toUpperCase();
+          }),
+        ),
+      ),
     [positions],
   );
 

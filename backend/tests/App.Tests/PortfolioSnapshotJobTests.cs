@@ -101,10 +101,8 @@ public sealed class PortfolioSnapshotJobTests
         new(
             Guid.NewGuid(),
             userId,
+            Guid.Parse("4484e031-9d31-4cd5-83f8-a699f52a803e"),
             "ABC",
-            "ABC Fund",
-            "etf",
-            "XETRA",
             "EUR",
             shares,
             price,

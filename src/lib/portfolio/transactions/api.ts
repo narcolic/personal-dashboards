@@ -53,7 +53,7 @@ export type ImportedTransactionInput = {
   security_listing_id?: string | null;
 };
 
-export function listTransactions(options: TransactionListOptions, signal?: AbortSignal) {
+export async function listTransactions(options: TransactionListOptions, signal?: AbortSignal) {
   const query = new URLSearchParams();
 
   if (options.page != null) query.set("page", String(options.page));
@@ -70,7 +70,25 @@ export function listTransactions(options: TransactionListOptions, signal?: Abort
   if (options.dateTo) query.set("dateTo", options.dateTo);
 
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  return apiFetch<TransactionListResult>(`/api/portfolio/transactions${suffix}`, { signal });
+  const result = await apiFetch<TransactionListResult>(`/api/portfolio/transactions${suffix}`, {
+    signal,
+  });
+  return {
+    ...result,
+    rows: result.rows.map((row) => {
+      if (!row.security) {
+        throw new Error(`Canonical security metadata is missing for transaction ${row.id}.`);
+      }
+      return {
+        ...row,
+        ticker: row.security.symbol,
+        name: row.security.name,
+        asset_type: row.security.securityType,
+        market: row.security.exchangeName ?? row.security.exchangeMic,
+        security_listing_id: row.security.listingId,
+      };
+    }),
+  };
 }
 
 export function createTransaction(value: TransactionInputType) {

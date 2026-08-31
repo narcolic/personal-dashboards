@@ -151,7 +151,13 @@ export function TransactionEditor({
                 value={v.ticker}
                 onFocus={() => setTickerMenuOpen(true)}
                 onBlur={() => setTimeout(() => setTickerMenuOpen(false), 120)}
-                onChange={(e) => set("ticker", normalizeTicker(e.target.value))}
+                onChange={(e) =>
+                  setV((state) => ({
+                    ...state,
+                    ticker: normalizeTicker(e.target.value),
+                    security_listing_id: null,
+                  }))
+                }
                 placeholder="AAPL"
                 className="w-full border border-border bg-input px-2 py-1.5 text-sm focus:border-primary focus:outline-none"
               />

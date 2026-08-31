@@ -20,6 +20,10 @@ only the final result set from a SQL file.
 - An `info` row records inventory or a check that must run at another layer.
 - Quantity and cost-basis parity are proven in SQL. Live quote market value and
   allocation parity remain API-level cutover checks.
+- After consumer cutover, legacy/canonical parity covers the historical rows
+  that still contain legacy symbols. The canonical-only transaction and
+  catalog counters show new writes that intentionally leave duplicated legacy
+  metadata null during the observation window.
 
 The report is safe to rerun: it contains only `SELECT` statements and creates
 no persistent database objects.
