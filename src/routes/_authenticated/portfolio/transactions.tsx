@@ -47,6 +47,7 @@ const empty = (): TransactionInputType => ({
   transaction_date: today(),
   notes: "",
   portfolio_id: null,
+  security_listing_id: null,
 });
 
 type TransactionTableRow = {
@@ -62,7 +63,7 @@ type TransactionTableRow = {
   transaction_date: string;
   notes: string | null;
   portfolio_id: string | null;
-  security_listing_id: string | null;
+  security_listing_id: string;
 };
 
 type DeleteDialogState = {
@@ -140,7 +141,7 @@ export function ActivityPage({
         asset_type: row.asset_type ?? null,
         market: row.market ?? null,
         currency: row.currency ?? null,
-        security_listing_id: row.security_listing_id ?? null,
+        security_listing_id: row.security_listing_id,
       });
     }
 

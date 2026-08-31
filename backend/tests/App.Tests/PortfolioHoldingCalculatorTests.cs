@@ -108,8 +108,8 @@ public sealed class PortfolioHoldingCalculatorTests
     public void AggregateFailsClosedWhenBuyTransactionHasNoCanonicalMetadata()
     {
         var row = new TransactionListItem(
-            Guid.NewGuid(), "LEGACY", "buy", "Legacy name", "stock", "Legacy market",
-            "USD", 1m, 10m, new DateOnly(2026, 1, 1), null, null);
+            Guid.NewGuid(), "buy", "USD", 1m, 10m,
+            new DateOnly(2026, 1, 1), null, null, Guid.NewGuid());
 
         var exception = Assert.Throws<InvalidOperationException>(() =>
             PortfolioHoldingCalculator.Aggregate([row]));
@@ -136,11 +136,7 @@ public sealed class PortfolioHoldingCalculatorTests
             null, null, null, "succeeded", DateTimeOffset.UtcNow, false);
         return new(
             Guid.NewGuid(),
-            ticker,
             action,
-            name,
-            "etf",
-            "Example Market",
             currency,
             shares,
             price,

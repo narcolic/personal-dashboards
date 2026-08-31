@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PortfolioTerminal.Portfolio.Transactions;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 
 namespace PortfolioTerminal.Tests;
 
@@ -28,21 +29,21 @@ public sealed class TransactionEndpointTests(ApiFactory factory) : IClassFixture
         var userId = Guid.Parse(TestAuthHandler.UserId);
         var portfolioId = Guid.NewGuid();
         var transactionId = Guid.NewGuid();
+        var listingId = Guid.NewGuid();
+        var security = Security(listingId, "AAPL", "Apple", "stock");
         var queries = new RecordingTransactionQueries(new TransactionListResult(
         [
             new TransactionListItem(
                 transactionId,
-                "AAPL",
                 "buy",
-                "Apple",
-                "stock",
-                "NASDAQ",
                 "USD",
                 2.5m,
                 181.25m,
                 new DateOnly(2026, 7, 8),
                 null,
-                portfolioId),
+                portfolioId,
+                listingId,
+                security),
         ],
         31));
         using var authenticatedFactory = CreateAuthenticatedFactory(queries);
@@ -68,12 +69,19 @@ public sealed class TransactionEndpointTests(ApiFactory factory) : IClassFixture
         Assert.Equal(31, payload.GetProperty("count").GetInt64());
         var transaction = Assert.Single(payload.GetProperty("rows").EnumerateArray());
         Assert.Equal(transactionId.ToString(), transaction.GetProperty("id").GetString());
-        Assert.Equal("stock", transaction.GetProperty("asset_type").GetString());
+        Assert.False(transaction.TryGetProperty("asset_type", out _));
+        Assert.Equal("stock", transaction.GetProperty("security").GetProperty("securityType").GetString());
+        Assert.Equal("USD", transaction.GetProperty("transaction_currency").GetString());
         Assert.Equal("2026-07-08", transaction.GetProperty("transaction_date").GetString());
         Assert.Equal(portfolioId.ToString(), transaction.GetProperty("portfolio_id").GetString());
         Assert.Equal(2.5m, transaction.GetProperty("shares").GetDecimal());
         Assert.Equal(181.25m, transaction.GetProperty("price").GetDecimal());
     }
+
+    private static SecurityMetadataView Security(Guid listingId, string symbol, string name, string type) =>
+        new(listingId, Guid.NewGuid(), symbol, name, type, "XNAS", "Nasdaq", "USD",
+            null, null, null, null, null, null, null, null, null, null, null, null,
+            null, null, null, "succeeded", DateTimeOffset.UtcNow, false);
 
     [Fact]
     public async Task TransactionListSupportsUnassignedPortfolioFilter()

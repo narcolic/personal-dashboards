@@ -10,6 +10,7 @@ using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.Holdings;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 
 namespace PortfolioTerminal.Tests;
 
@@ -73,19 +74,18 @@ public sealed class PortfolioEndpointTests(ApiFactory factory) : IClassFixture<A
     public async Task TickerCatalogListUsesAuthenticatedSubjectAndPreservesClientContract()
     {
         var now = new DateTimeOffset(2026, 8, 11, 12, 0, 0, TimeSpan.Zero);
+        var listingId = Guid.NewGuid();
+        var security = Security(listingId, "VWCE.DE", "Vanguard FTSE All-World", "etf");
         var queries = new RecordingTickerCatalogQueries(
         [
             new TickerCatalogListItem(
                 Guid.Parse("36fd25a9-923c-45b4-a327-1375bc3979a9"),
                 Guid.Parse(TestAuthHandler.UserId),
-                "VWCE.DE",
-                "Vanguard FTSE All-World",
-                "etf",
-                "XETRA",
-                "EUR",
                 true,
                 now,
-                now),
+                now,
+                listingId,
+                security),
         ]);
 
         using var authenticatedFactory = CreateAuthenticatedFactory(services =>
@@ -101,8 +101,8 @@ public sealed class PortfolioEndpointTests(ApiFactory factory) : IClassFixture<A
         Assert.Equal(Guid.Parse(TestAuthHandler.UserId), queries.RequestedUserId);
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
         var item = Assert.Single(payload.EnumerateArray());
-        Assert.Equal("VWCE.DE", item.GetProperty("ticker").GetString());
-        Assert.Equal("etf", item.GetProperty("asset_type").GetString());
+        Assert.False(item.TryGetProperty("ticker", out _));
+        Assert.Equal("VWCE.DE", item.GetProperty("security").GetProperty("symbol").GetString());
         Assert.True(item.GetProperty("is_active").GetBoolean());
     }
 
@@ -172,6 +172,8 @@ public sealed class PortfolioEndpointTests(ApiFactory factory) : IClassFixture<A
     {
         var userId = Guid.Parse(TestAuthHandler.UserId);
         var portfolioId = Guid.Parse("7fe18546-82e6-46b4-a6ce-8967cb7541ea");
+        var listingId = Guid.NewGuid();
+        var security = Security(listingId, "ABC", "Example holding", "stock");
         var queries = new RecordingPortfolioHoldingQueries(
         [
             new PortfolioHolding(
@@ -187,7 +189,9 @@ public sealed class PortfolioEndpointTests(ApiFactory factory) : IClassFixture<A
                 portfolioId,
                 2,
                 new DateOnly(2026, 1, 2),
-                new DateOnly(2026, 2, 3)),
+                new DateOnly(2026, 2, 3),
+                listingId,
+                security),
         ]);
 
         using var authenticatedFactory = CreateAuthenticatedFactory(services =>
@@ -203,11 +207,18 @@ public sealed class PortfolioEndpointTests(ApiFactory factory) : IClassFixture<A
         Assert.Equal(userId, queries.RequestedUserId);
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
         var item = Assert.Single(payload.EnumerateArray());
-        Assert.Equal("ABC", item.GetProperty("ticker").GetString());
+        Assert.False(item.TryGetProperty("ticker", out _));
+        Assert.Equal("ABC", item.GetProperty("security").GetProperty("symbol").GetString());
+        Assert.Equal("USD", item.GetProperty("transaction_currency").GetString());
         Assert.Equal(12.5m, item.GetProperty("avg_cost").GetDecimal());
         Assert.Equal(2, item.GetProperty("tx_count").GetInt32());
         Assert.Equal(portfolioId.ToString(), item.GetProperty("portfolio_id").GetString());
     }
+
+    private static SecurityMetadataView Security(Guid listingId, string symbol, string name, string type) =>
+        new(listingId, Guid.NewGuid(), symbol, name, type, null, "Example Exchange", "USD",
+            null, null, null, null, null, null, null, null, null, null, null, null,
+            null, null, null, "succeeded", DateTimeOffset.UtcNow, false);
 
     private WebApplicationFactory<Program> CreateAuthenticatedFactory(
         Action<IServiceCollection> configureServices) =>

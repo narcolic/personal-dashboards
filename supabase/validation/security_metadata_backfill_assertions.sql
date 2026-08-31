@@ -50,30 +50,8 @@ begin
   if actual <> 4 then raise exception 'expected 4 exact field locks, found %', actual; end if;
 end $$;
 
-with legacy as (
-  select user_id, coalesce(portfolio_id::text, 'unassigned') as portfolio_key,
-         upper(btrim(ticker)) as identity,
-         upper(coalesce(currency, 'USD')) as currency,
-         sum(shares::numeric) as shares,
-         sum(shares::numeric * price::numeric) as cost
-  from public.transactions where action = 'buy'
-  group by user_id, coalesce(portfolio_id::text, 'unassigned'),
-           upper(btrim(ticker)), upper(coalesce(currency, 'USD'))
-), canonical as (
-  select transaction_row.user_id,
-         coalesce(transaction_row.portfolio_id::text, 'unassigned') as portfolio_key,
-         listing.symbol as identity,
-         upper(coalesce(transaction_row.currency, 'USD')) as currency,
-         sum(transaction_row.shares::numeric) as shares,
-         sum(transaction_row.shares::numeric * transaction_row.price::numeric) as cost
-  from public.transactions transaction_row
-  join public.security_listings listing on listing.id = transaction_row.security_listing_id
-  where transaction_row.action = 'buy'
-  group by transaction_row.user_id,
-           coalesce(transaction_row.portfolio_id::text, 'unassigned'), listing.symbol,
-           upper(coalesce(transaction_row.currency, 'USD'))
-)
-select 1 / case when count(*) = 0 then 1 else 0 end as parity_passed
-from legacy full join canonical using (user_id, portfolio_key, identity, currency)
-where legacy.shares is distinct from canonical.shares
-   or legacy.cost is distinct from canonical.cost;
+select 1 / case when count(*) = 0 then 1 else 0 end as canonical_links_valid
+from public.transactions transaction_row
+left join public.security_listings listing
+  on listing.id = transaction_row.security_listing_id
+where listing.id is null;

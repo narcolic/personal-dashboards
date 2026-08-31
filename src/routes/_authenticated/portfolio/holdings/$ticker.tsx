@@ -98,6 +98,7 @@ function HoldingDetailsPage() {
       positionReturnPct: costBasis ? (unrealized / costBasis) * 100 : 0,
       currency: holdingCurrency,
       market: first?.market ?? null,
+      securityListingId: first?.security_listing_id ?? null,
     };
   }, [convertTo, holdingCurrency, holdingRows, normalizedTicker, portfolioTotalMarketValue]);
   const breakdownRows = useMemo(() => {
@@ -151,7 +152,7 @@ function HoldingDetailsPage() {
         asset_type: string | null;
         market: string | null;
         currency: string | null;
-        security_listing_id: string | null;
+        security_listing_id: string;
       }
     >();
 
@@ -528,6 +529,7 @@ function makeTransactionDraft(
     assetType: string;
     currency: string;
     market: string | null;
+    securityListingId: string | null;
   },
   breakdownRows: Array<{ portfolioId: string | null }>,
   portfolios: Array<{ id: string; name: string }>,
@@ -552,6 +554,7 @@ function makeTransactionDraft(
     transaction_date: today,
     notes: "",
     portfolio_id: uniquePortfolioId,
+    security_listing_id: summary.securityListingId,
   };
 }
 

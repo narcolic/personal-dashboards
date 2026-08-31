@@ -39,7 +39,7 @@ public sealed class PortfolioSnapshotStore(AppDataSource dataSource) : IPortfoli
         command.Transaction = transaction;
         command.CommandText = """
             select t.id, t.user_id, t.security_listing_id, listing.symbol,
-                   t.currency, t.shares::numeric, t.price::numeric,
+                   t.transaction_currency, t.shares::numeric, t.price::numeric,
                    t.transaction_date, t.portfolio_id, p.name
             from public.transactions t
             left join public.security_listings listing on listing.id = t.security_listing_id

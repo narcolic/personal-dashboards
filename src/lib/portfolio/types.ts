@@ -50,8 +50,8 @@ export type TransactionRow = {
   transaction_date: string;
   notes: string | null;
   portfolio_id: string | null;
-  security_listing_id: string | null;
-  security: SecurityMetadata | null;
+  security_listing_id: string;
+  security: SecurityMetadata;
 };
 
 export type HoldingRow = {
@@ -68,8 +68,8 @@ export type HoldingRow = {
   tx_count: number;
   first_date: string | null;
   last_date: string | null;
-  security_listing_id: string | null;
-  security: SecurityMetadata | null;
+  security_listing_id: string;
+  security: SecurityMetadata;
 };
 
 export type Enriched = HoldingRow & {

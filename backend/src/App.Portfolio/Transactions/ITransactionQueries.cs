@@ -27,16 +27,12 @@ public sealed record TransactionListResult(
 
 public sealed record TransactionListItem(
     Guid Id,
-    string? Ticker,
     string Action,
-    string? Name,
-    string? AssetType,
-    string? Market,
-    string? Currency,
-    decimal? Shares,
-    decimal? Price,
-    DateOnly? TransactionDate,
+    string TransactionCurrency,
+    decimal Shares,
+    decimal Price,
+    DateOnly TransactionDate,
     string? Notes,
     Guid? PortfolioId,
-    Guid? SecurityListingId = null,
+    Guid SecurityListingId,
     SecurityMetadataView? Security = null);

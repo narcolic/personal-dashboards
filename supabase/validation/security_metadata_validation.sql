@@ -81,23 +81,12 @@ where status not in ('succeeded', 'incomplete')
    or (security_type_code = 'etf' and geographic_exposure_code is null)
 order by id;
 
--- Financial parity: this must return no rows. It compares the legacy ticker grouping
--- with listing-based grouping without changing the existing buy-only semantics.
-with legacy as (
-  select user_id, coalesce(portfolio_id::text, 'unassigned') as portfolio_key,
-         upper(btrim(ticker)) as identity,
-         upper(coalesce(currency, 'USD')) as currency,
-         sum(coalesce(shares, 0)::numeric) as shares,
-         sum(coalesce(shares, 0)::numeric * coalesce(price, 0)::numeric) as cost
-  from public.transactions
-  where lower(action) = 'buy'
-  group by user_id, coalesce(portfolio_id::text, 'unassigned'),
-           upper(btrim(ticker)), upper(coalesce(currency, 'USD'))
-), canonical as (
+-- Canonical financial aggregation after removal of the legacy identity columns.
+with canonical as (
   select transaction_row.user_id,
          coalesce(transaction_row.portfolio_id::text, 'unassigned') as portfolio_key,
          listing.symbol as identity,
-         upper(coalesce(transaction_row.currency, 'USD')) as currency,
+         upper(coalesce(transaction_row.transaction_currency, 'USD')) as currency,
          sum(coalesce(transaction_row.shares, 0)::numeric) as shares,
          sum(coalesce(transaction_row.shares, 0)::numeric
              * coalesce(transaction_row.price, 0)::numeric) as cost
@@ -106,16 +95,10 @@ with legacy as (
   where lower(transaction_row.action) = 'buy'
   group by transaction_row.user_id,
            coalesce(transaction_row.portfolio_id::text, 'unassigned'), listing.symbol,
-           upper(coalesce(transaction_row.currency, 'USD'))
+           upper(coalesce(transaction_row.transaction_currency, 'USD'))
 )
-select coalesce(legacy.user_id, canonical.user_id) as user_id,
-       coalesce(legacy.identity, canonical.identity) as identity,
-       legacy.shares as legacy_shares, canonical.shares as canonical_shares,
-       legacy.cost as legacy_cost, canonical.cost as canonical_cost
-from legacy
-full join canonical using (user_id, portfolio_key, identity, currency)
-where legacy.shares is distinct from canonical.shares
-   or legacy.cost is distinct from canonical.cost;
+select * from canonical
+order by user_id, portfolio_key, identity, currency;
 
 select schemaname, tablename, policyname, roles, cmd, qual, with_check
 from pg_policies

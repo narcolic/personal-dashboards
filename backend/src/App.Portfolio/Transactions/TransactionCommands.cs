@@ -16,7 +16,6 @@ public sealed class TransactionCommands(
         TransactionMutation mutation,
         CancellationToken cancellationToken = default)
     {
-        mutation = await ResolveAsync(mutation, cancellationToken).ConfigureAwait(false);
         return await dataSource.ExecuteAsUserAsync(
             userId,
             async (connection, transaction, token) =>
@@ -54,7 +53,6 @@ public sealed class TransactionCommands(
         TransactionMutation mutation,
         CancellationToken cancellationToken = default)
     {
-        mutation = await ResolveAsync(mutation, cancellationToken).ConfigureAwait(false);
         return await dataSource.ExecuteAsUserAsync(
             userId,
             async (connection, transaction, token) =>
@@ -84,7 +82,7 @@ public sealed class TransactionCommands(
                     command.Transaction = transaction;
                     command.CommandText = """
                         update public.transactions
-                        set action = $3, currency = $4, shares = $5, price = $6,
+                        set action = $3, transaction_currency = $4, shares = $5, price = $6,
                             transaction_date = $7, notes = $8, portfolio_id = $9,
                             security_listing_id = $10
                         where id = $1 and user_id = $2
@@ -231,7 +229,7 @@ public sealed class TransactionCommands(
         command.Transaction = transaction;
         command.CommandText = """
             insert into public.transactions (
-                user_id, action, currency, shares, price, transaction_date,
+                user_id, action, transaction_currency, shares, price, transaction_date,
                 notes, portfolio_id, security_listing_id)
             values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
             returning id;
@@ -254,11 +252,10 @@ public sealed class TransactionCommands(
             insert into public.ticker_catalog (user_id, security_listing_id, is_active)
             values ($1, $2, true)
             on conflict (user_id, security_listing_id)
-              where security_listing_id is not null
             do update set is_active = true;
             """;
         AddUuid(command, userId);
-        AddNullableUuid(command, mutation.SecurityListingId);
+        AddUuid(command, mutation.SecurityListingId);
         await command.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
     }
 
@@ -316,7 +313,7 @@ public sealed class TransactionCommands(
         command.Transaction = transaction;
         command.CommandText = """
             insert into public.transactions (
-                user_id, action, currency, shares, price, transaction_date,
+                user_id, action, transaction_currency, shares, price, transaction_date,
                 notes, portfolio_id, security_listing_id)
             select $1, x.action, x.currency, x.shares, x.price, x.transaction_date,
                    x.notes, x.portfolio_id, x.security_listing_id
@@ -349,7 +346,6 @@ public sealed class TransactionCommands(
             from jsonb_to_recordset($2) as x(
                 security_listing_id uuid)
             on conflict (user_id, security_listing_id)
-              where security_listing_id is not null
             do update set is_active = true;
             """;
         AddUuid(command, userId);
@@ -405,7 +401,7 @@ public sealed class TransactionCommands(
         TransactionMutation mutation)
     {
         command.Parameters.AddWithValue(mutation.Action.Trim().ToLowerInvariant());
-        command.Parameters.AddWithValue(mutation.Currency.Trim().ToUpperInvariant());
+        command.Parameters.AddWithValue(mutation.TransactionCurrency.Trim().ToUpperInvariant());
         command.Parameters.AddWithValue(mutation.Shares);
         command.Parameters.AddWithValue(mutation.Price);
         command.Parameters.Add(new NpgsqlParameter
@@ -419,7 +415,7 @@ public sealed class TransactionCommands(
             NpgsqlDbType = NpgsqlDbType.Uuid,
             Value = (object?)mutation.PortfolioId ?? DBNull.Value,
         });
-        AddNullableUuid(command, mutation.SecurityListingId);
+        AddUuid(command, mutation.SecurityListingId);
     }
 
     private static void AddJson<T>(NpgsqlCommand command, T value) =>
@@ -476,26 +472,6 @@ public sealed class TransactionCommands(
                 portfolioId,
                 row.SecurityListingId ?? throw new InvalidOperationException(
                     "Imported transaction listing resolution was not completed."));
-    }
-
-    private async Task<TransactionMutation> ResolveAsync(
-        TransactionMutation mutation,
-        CancellationToken cancellationToken)
-    {
-        var resolution = await listingResolver.ResolveAsync(
-            new SecurityListingResolutionRequest(
-                mutation.SecurityListingId,
-                mutation.Ticker,
-                mutation.Name,
-                mutation.AssetType,
-                mutation.Market,
-                mutation.Currency),
-            cancellationToken).ConfigureAwait(false);
-        return mutation with
-        {
-            Ticker = resolution.Symbol,
-            SecurityListingId = resolution.ListingId,
-        };
     }
 
     private static string? TrimToNull(string? value) =>

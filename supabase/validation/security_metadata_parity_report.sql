@@ -1,4 +1,4 @@
--- Security metadata coexistence report.
+-- Canonical security metadata validation report.
 --
 -- Run with:
 --   npx --yes supabase@2.116.0 db query --linked \
@@ -9,32 +9,12 @@
 -- operator decision; they are not silently treated as successful metadata.
 
 with
-legacy_holdings as (
-  select
-    transaction_row.user_id,
-    coalesce(transaction_row.portfolio_id::text, 'unassigned') as portfolio_key,
-    upper(btrim(transaction_row.ticker)) as symbol,
-    upper(coalesce(nullif(btrim(transaction_row.currency), ''), 'USD')) as currency,
-    sum(coalesce(transaction_row.shares, 0)::numeric) as shares,
-    sum(
-      coalesce(transaction_row.shares, 0)::numeric
-      * coalesce(transaction_row.price, 0)::numeric
-    ) as cost
-  from public.transactions transaction_row
-  where lower(transaction_row.action) = 'buy'
-    and transaction_row.ticker is not null
-  group by
-    transaction_row.user_id,
-    coalesce(transaction_row.portfolio_id::text, 'unassigned'),
-    upper(btrim(transaction_row.ticker)),
-    upper(coalesce(nullif(btrim(transaction_row.currency), ''), 'USD'))
-),
 canonical_holdings as (
   select
     transaction_row.user_id,
     coalesce(transaction_row.portfolio_id::text, 'unassigned') as portfolio_key,
     listing.symbol,
-    upper(coalesce(nullif(btrim(transaction_row.currency), ''), 'USD')) as currency,
+    upper(coalesce(nullif(btrim(transaction_row.transaction_currency), ''), 'USD')) as currency,
     sum(coalesce(transaction_row.shares, 0)::numeric) as shares,
     sum(
       coalesce(transaction_row.shares, 0)::numeric
@@ -44,28 +24,11 @@ canonical_holdings as (
   join public.security_listings listing
     on listing.id = transaction_row.security_listing_id
   where lower(transaction_row.action) = 'buy'
-    and transaction_row.ticker is not null
   group by
     transaction_row.user_id,
     coalesce(transaction_row.portfolio_id::text, 'unassigned'),
     listing.symbol,
-    upper(coalesce(nullif(btrim(transaction_row.currency), ''), 'USD'))
-),
-parity_differences as (
-  select
-    coalesce(legacy.user_id, canonical.user_id) as user_id,
-    coalesce(legacy.portfolio_key, canonical.portfolio_key) as portfolio_key,
-    coalesce(legacy.symbol, canonical.symbol) as symbol,
-    coalesce(legacy.currency, canonical.currency) as currency,
-    legacy.shares as legacy_shares,
-    canonical.shares as canonical_shares,
-    legacy.cost as legacy_cost,
-    canonical.cost as canonical_cost
-  from legacy_holdings legacy
-  full join canonical_holdings canonical
-    using (user_id, portfolio_key, symbol, currency)
-  where legacy.shares is distinct from canonical.shares
-     or legacy.cost is distinct from canonical.cost
+    upper(coalesce(nullif(btrim(transaction_row.transaction_currency), ''), 'USD'))
 ),
 active_listings as (
   -- This intentionally matches the application's current buy-only holding
@@ -138,7 +101,7 @@ report as (
     count(*)::bigint as actual,
     '0'::text as expected,
     jsonb_build_object(
-      'symbols', coalesce(jsonb_agg(distinct upper(btrim(ticker))), '[]'::jsonb)
+      'transaction_ids', coalesce(jsonb_agg(id order by id), '[]'::jsonb)
     ) as details
   from public.transactions
   where security_listing_id is null
@@ -153,7 +116,7 @@ report as (
     count(*)::bigint,
     '0',
     jsonb_build_object(
-      'symbols', coalesce(jsonb_agg(distinct upper(btrim(ticker))), '[]'::jsonb)
+      'catalog_ids', coalesce(jsonb_agg(id order by id), '[]'::jsonb)
     )
   from public.ticker_catalog
   where security_listing_id is null
@@ -185,22 +148,6 @@ report as (
       'observations', coalesce(jsonb_agg(to_jsonb(forbidden_observations)), '[]'::jsonb)
     )
   from forbidden_observations
-
-  union all
-
-  select
-    50,
-    'gate',
-    'holding_quantity_or_cost_differences',
-    case when count(*) = 0 then 'pass' else 'fail' end,
-    count(*)::bigint,
-    '0',
-    jsonb_build_object(
-      'legacy_holding_count', (select count(*) from legacy_holdings),
-      'canonical_holding_count', (select count(*) from canonical_holdings),
-      'differences', coalesce(jsonb_agg(to_jsonb(parity_differences)), '[]'::jsonb)
-    )
-  from parity_differences
 
   union all
 
@@ -395,27 +342,23 @@ report as (
   select
     190,
     'info',
-    'canonical_only_transaction_writes',
+    'canonical_holdings',
     'info',
     count(*)::bigint,
     'observation counter',
     jsonb_build_object(
-      'first_created_at', min(created_at),
-      'last_created_at', max(created_at)
+      'holding_count', count(*),
+      'total_shares', coalesce(sum(shares), 0),
+      'total_cost', coalesce(sum(cost), 0)
     )
-  from public.transactions
-  where security_listing_id is not null
-    and ticker is null
-    and name is null
-    and asset_type is null
-    and market is null
+  from canonical_holdings
 
   union all
 
   select
     195,
     'info',
-    'canonical_only_catalog_writes',
+    'canonical_catalog_rows',
     'info',
     count(*)::bigint,
     'observation counter',
@@ -424,12 +367,6 @@ report as (
       'last_created_at', max(created_at)
     )
   from public.ticker_catalog
-  where security_listing_id is not null
-    and ticker is null
-    and name is null
-    and asset_type is null
-    and market is null
-    and currency is null
 
   union all
 
