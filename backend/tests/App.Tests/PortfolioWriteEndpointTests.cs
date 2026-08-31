@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using PortfolioTerminal.Portfolio;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Transactions;
 
 namespace PortfolioTerminal.Tests;
@@ -83,6 +84,7 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
     public async Task TransactionCreateForwardsFinancialValuesAndReturnsCreatedId()
     {
         var portfolioId = Guid.NewGuid();
+        var listingId = Guid.NewGuid();
         var transactionId = Guid.NewGuid();
         var commands = new RecordingTransactionCommands(
             PortfolioMutationResult.Succeeded(transactionId));
@@ -95,11 +97,12 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
 
         var response = await client.PostAsJsonAsync(
             "/api/portfolio/transactions",
-            TransactionBody(portfolioId));
+            TransactionBody(portfolioId, listingId));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(UserId, commands.RequestedUserId);
-        Assert.Equal("AAPL", commands.Mutation!.Ticker);
+        Assert.Equal(listingId, commands.Mutation!.SecurityListingId);
+        Assert.Equal("USD", commands.Mutation.TransactionCurrency);
         Assert.Equal(2.125m, commands.Mutation.Shares);
         Assert.Equal(181.2575m, commands.Mutation.Price);
         Assert.Equal(portfolioId, commands.Mutation.PortfolioId);
@@ -149,11 +152,43 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
 
         var response = await client.PutAsJsonAsync(
             $"/api/portfolio/transactions/{transactionId}",
-            TransactionBody(null));
+            TransactionBody(null, Guid.NewGuid()));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal(UserId, commands.RequestedUserId);
         Assert.Equal(transactionId, commands.RequestedId);
+    }
+
+    [Fact]
+    public async Task NewSymbolResolutionCreatesAProvisionalListing()
+    {
+        var listingId = Guid.NewGuid();
+        var resolver = new RecordingListingResolver(
+            new SecurityListingResolution(listingId, "NEW.DE", true));
+        using var authenticatedFactory = CreateAuthenticatedFactory(services =>
+        {
+            services.RemoveAll<ISecurityListingResolver>();
+            services.AddSingleton<ISecurityListingResolver>(resolver);
+        });
+        using var client = authenticatedFactory.CreateClient();
+
+        var response = await client.PostAsJsonAsync(
+            "/api/portfolio/security-listings/resolve",
+            new
+            {
+                symbol = "new.de",
+                name = "New Security",
+                security_type = "stock",
+                market = "XETRA",
+                trading_currency = "EUR",
+            });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal("new.de", resolver.Request!.Symbol);
+        Assert.Equal("stock", resolver.Request.SecurityType);
+        var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(listingId.ToString(), payload.GetProperty("listing_id").GetString());
+        Assert.True(payload.GetProperty("created").GetBoolean());
     }
 
     [Fact]
@@ -253,19 +288,16 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
             });
         });
 
-    private static object TransactionBody(Guid? portfolioId) => new
+    private static object TransactionBody(Guid? portfolioId, Guid listingId) => new
     {
-        ticker = "AAPL",
         action = "buy",
-        name = "Apple",
-        asset_type = "stock",
-        market = "NASDAQ",
-        currency = "USD",
+        transaction_currency = "USD",
         shares = 2.125m,
         price = 181.2575m,
         transaction_date = "2026-08-11",
         notes = "Example",
         portfolio_id = portfolioId,
+        security_listing_id = listingId,
     };
 
     private sealed class RecordingPortfolioCommands(
@@ -354,5 +386,24 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
             Mutation = mutation;
             return Task.FromResult(result);
         }
+    }
+
+    private sealed class RecordingListingResolver(SecurityListingResolution result)
+        : ISecurityListingResolver
+    {
+        public SecurityListingResolutionRequest? Request { get; private set; }
+
+        public Task<SecurityListingResolution> ResolveAsync(
+            SecurityListingResolutionRequest request,
+            CancellationToken cancellationToken = default)
+        {
+            Request = request;
+            return Task.FromResult(result);
+        }
+
+        public Task<IReadOnlyDictionary<string, SecurityListingResolution>> ResolveManyAsync(
+            IReadOnlyCollection<SecurityListingResolutionRequest> requests,
+            CancellationToken cancellationToken = default) =>
+            throw new NotSupportedException();
     }
 }

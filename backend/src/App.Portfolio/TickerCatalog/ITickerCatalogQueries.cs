@@ -12,13 +12,8 @@ public interface ITickerCatalogQueries
 public sealed record TickerCatalogListItem(
     Guid Id,
     Guid UserId,
-    string Ticker,
-    string? Name,
-    string? AssetType,
-    string? Market,
-    string? Currency,
     bool IsActive,
     DateTimeOffset CreatedAt,
     DateTimeOffset UpdatedAt,
-    Guid? SecurityListingId = null,
+    Guid SecurityListingId,
     SecurityMetadataView? Security = null);

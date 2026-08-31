@@ -49,6 +49,9 @@ public static class PortfolioEndpoints
             })
             .WithName("ListTickerCatalog");
 
+        group.MapPost("/security-listings/resolve", ResolveSecurityListingAsync)
+            .WithName("ResolveSecurityListing");
+
         group.MapGet("/snapshots", async Task<IResult> (
                 int? limit,
                 IPortfolioSnapshotQueries queries,
@@ -386,21 +389,52 @@ public static class PortfolioEndpoints
     private static Dictionary<string, string[]> Validate(TransactionMutationRequest request)
     {
         var errors = new Dictionary<string, string[]>();
-        ValidateTransaction(
-            request.Ticker,
-            request.Action,
-            request.Name,
-            request.AssetType,
-            request.Market,
-            request.Currency,
-            request.Shares,
-            request.Price,
-            request.TransactionDate,
-            request.Notes,
-            string.Empty,
-            errors,
-            allowZeroShares: true);
+        if (request.SecurityListingId == Guid.Empty)
+            errors["security_listing_id"] = ["Security listing is required."];
+        if (!TransactionActions.Contains(request.Action?.Trim() ?? string.Empty))
+            errors["action"] = ["Action is invalid."];
+        if (string.IsNullOrWhiteSpace(request.TransactionCurrency) ||
+            request.TransactionCurrency.Trim().Length is < 3 or > 5)
+            errors["transaction_currency"] = ["Transaction currency must contain 3 to 5 characters."];
+        if (request.Shares is < 0 or > 1_000_000_000m)
+            errors["shares"] = ["Shares are outside the allowed range."];
+        if (request.Price is < 0 or > 1_000_000_000m)
+            errors["price"] = ["Price is outside the allowed range."];
+        if (request.TransactionDate == default)
+            errors["transaction_date"] = ["Transaction date is required."];
+        if (request.Notes?.Trim().Length > 500)
+            errors["notes"] = ["Notes must not exceed 500 characters."];
         return errors;
+    }
+
+    private static async Task<IResult> ResolveSecurityListingAsync(
+        SecurityListingResolutionRequestBody request,
+        ISecurityListingResolver resolver,
+        CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+        var symbol = request.Symbol?.Trim() ?? string.Empty;
+        var securityType = request.SecurityType?.Trim() ?? string.Empty;
+        if (symbol.Length is < 1 or > 32 ||
+            !Regex.IsMatch(symbol, @"^[A-Za-z0-9.\-^=:_]+$"))
+            errors["symbol"] = ["Symbol is invalid."];
+        if (!AssetTypes.Contains(securityType))
+            errors["security_type"] = ["Security type is invalid."];
+        if (request.Name?.Trim().Length > 120)
+            errors["name"] = ["Name must not exceed 120 characters."];
+        if (request.Market?.Trim().Length > 40)
+            errors["market"] = ["Market must not exceed 40 characters."];
+        if (request.TradingCurrency?.Trim().Length is > 5)
+            errors["trading_currency"] = ["Trading currency must not exceed 5 characters."];
+        if (errors.Count > 0) return Results.ValidationProblem(errors);
+
+        var resolution = await resolver.ResolveAsync(
+            new SecurityListingResolutionRequest(
+                null, symbol, request.Name, securityType,
+                request.Market, request.TradingCurrency),
+            cancellationToken);
+        return TypedResults.Ok(new SecurityListingResolutionResponse(
+            resolution.ListingId, resolution.Symbol, resolution.Created));
     }
 
     private static Dictionary<string, string[]> Validate(TransactionImportRequest request)
@@ -476,7 +510,8 @@ public static class PortfolioEndpoints
         if (!AssetTypes.Contains(assetType?.Trim() ?? string.Empty)) errors[$"{prefix}asset_type"] = ["Asset type is invalid."];
         if (name?.Trim().Length > 120) errors[$"{prefix}name"] = ["Name must not exceed 120 characters."];
         if (market?.Trim().Length > 40) errors[$"{prefix}market"] = ["Market must not exceed 40 characters."];
-        if (currency?.Trim().Length is < 3 or > 5) errors[$"{prefix}currency"] = ["Currency must contain 3 to 5 characters."];
+        if (string.IsNullOrWhiteSpace(currency) || currency.Trim().Length is < 3 or > 5)
+            errors[$"{prefix}currency"] = ["Currency must contain 3 to 5 characters."];
         if (shares < 0 || (!allowZeroShares && shares == 0) || shares > 1_000_000_000m) errors[$"{prefix}shares"] = ["Shares are outside the allowed range."];
         if (price is < 0 or > 1_000_000_000m) errors[$"{prefix}price"] = ["Price is outside the allowed range."];
         if (transactionDate == default) errors[$"{prefix}transaction_date"] = ["Transaction date is required."];
@@ -492,13 +527,21 @@ public static class PortfolioEndpoints
 
 public sealed record PortfolioMutationResponse(Guid Id);
 
+public sealed record SecurityListingResolutionRequestBody(
+    string Symbol,
+    string? Name,
+    [property: JsonPropertyName("security_type")] string SecurityType,
+    string? Market,
+    [property: JsonPropertyName("trading_currency")] string? TradingCurrency);
+
+public sealed record SecurityListingResolutionResponse(
+    [property: JsonPropertyName("listing_id")] Guid ListingId,
+    string Symbol,
+    bool Created);
+
 public sealed record PortfolioHoldingResponse(
     string Id,
-    string Ticker,
-    string? Name,
-    [property: JsonPropertyName("asset_type")] string AssetType,
-    string? Market,
-    string Currency,
+    [property: JsonPropertyName("transaction_currency")] string TransactionCurrency,
     decimal Shares,
     [property: JsonPropertyName("avg_cost")] decimal AvgCost,
     string? Notes,
@@ -506,34 +549,30 @@ public sealed record PortfolioHoldingResponse(
     [property: JsonPropertyName("tx_count")] int TransactionCount,
     [property: JsonPropertyName("first_date")] DateOnly? FirstDate,
     [property: JsonPropertyName("last_date")] DateOnly? LastDate,
-    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId,
-    SecurityMetadataView? Security)
+    [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId,
+    SecurityMetadataView Security)
 {
     public static PortfolioHoldingResponse From(PortfolioHolding holding) =>
-        new(holding.Id, holding.Ticker, holding.Name, holding.AssetType,
-            holding.Market, holding.Currency, holding.Shares, holding.AvgCost,
+        new(holding.Id, holding.Currency, holding.Shares, holding.AvgCost,
             holding.Notes, holding.PortfolioId, holding.TransactionCount,
-            holding.FirstDate, holding.LastDate, holding.SecurityListingId, holding.Security);
+            holding.FirstDate, holding.LastDate,
+            holding.SecurityListingId ?? throw new InvalidOperationException("Holding listing is required."),
+            holding.Security ?? throw new InvalidOperationException("Holding security metadata is required."));
 }
 
 public sealed record TickerCatalogResponse(
     Guid Id,
     [property: JsonPropertyName("user_id")] Guid UserId,
-    string Ticker,
-    string? Name,
-    [property: JsonPropertyName("asset_type")] string? AssetType,
-    string? Market,
-    string? Currency,
     [property: JsonPropertyName("is_active")] bool IsActive,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
     [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
-    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId,
-    SecurityMetadataView? Security)
+    [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId,
+    SecurityMetadataView Security)
 {
     public static TickerCatalogResponse From(TickerCatalogListItem item) =>
-        new(item.Id, item.UserId, item.Ticker, item.Name, item.AssetType, item.Market,
-            item.Currency, item.IsActive, item.CreatedAt, item.UpdatedAt,
-            item.SecurityListingId, item.Security);
+        new(item.Id, item.UserId, item.IsActive, item.CreatedAt, item.UpdatedAt,
+            item.SecurityListingId,
+            item.Security ?? throw new InvalidOperationException("Catalog security metadata is required."));
 }
 
 public sealed record PortfolioSnapshotResponse(
@@ -578,22 +617,18 @@ public sealed record PortfolioMutationRequest(
 }
 
 public sealed record TransactionMutationRequest(
-    string Ticker,
     string Action,
-    string? Name,
-    [property: JsonPropertyName("asset_type")] string AssetType,
-    string? Market,
-    string Currency,
+    [property: JsonPropertyName("transaction_currency")] string TransactionCurrency,
     decimal Shares,
     decimal Price,
     [property: JsonPropertyName("transaction_date")] DateOnly TransactionDate,
     string? Notes,
     [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
-    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId = null)
+    [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId)
 {
     public TransactionMutation ToMutation() =>
-        new(Ticker, Action, Name, AssetType, Market, Currency,
-            Shares, Price, TransactionDate, Notes, PortfolioId, SecurityListingId);
+        new(Action, TransactionCurrency, Shares, Price, TransactionDate,
+            Notes, PortfolioId, SecurityListingId);
 }
 
 public sealed record TransactionBulkDeleteRequest(IReadOnlyList<Guid> Ids);
@@ -635,34 +670,27 @@ public sealed record TransactionListResponse(
 
 public sealed record TransactionResponse(
     Guid Id,
-    string? Ticker,
     string Action,
-    string? Name,
-    [property: JsonPropertyName("asset_type")] string? AssetType,
-    string? Market,
-    string? Currency,
-    decimal? Shares,
-    decimal? Price,
-    [property: JsonPropertyName("transaction_date")] DateOnly? TransactionDate,
+    [property: JsonPropertyName("transaction_currency")] string TransactionCurrency,
+    decimal Shares,
+    decimal Price,
+    [property: JsonPropertyName("transaction_date")] DateOnly TransactionDate,
     string? Notes,
     [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
-    [property: JsonPropertyName("security_listing_id")] Guid? SecurityListingId,
-    SecurityMetadataView? Security)
+    [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId,
+    SecurityMetadataView Security)
 {
     public static TransactionResponse From(TransactionListItem transaction) =>
         new(
             transaction.Id,
-            transaction.Ticker,
             transaction.Action,
-            transaction.Name,
-            transaction.AssetType,
-            transaction.Market,
-            transaction.Currency,
+            transaction.TransactionCurrency,
             transaction.Shares,
             transaction.Price,
             transaction.TransactionDate,
             transaction.Notes,
             transaction.PortfolioId,
             transaction.SecurityListingId,
-            transaction.Security);
+            transaction.Security ?? throw new InvalidOperationException(
+                "Transaction security metadata is required."));
 }

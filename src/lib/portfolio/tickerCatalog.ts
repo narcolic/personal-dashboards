@@ -11,8 +11,8 @@ export type TickerCatalogRow = {
   is_active: boolean;
   created_at: string;
   updated_at: string;
-  security_listing_id: string | null;
-  security: SecurityMetadata | null;
+  security_listing_id: string;
+  security: SecurityMetadata;
 };
 
 export type TickerSuggestion = Pick<

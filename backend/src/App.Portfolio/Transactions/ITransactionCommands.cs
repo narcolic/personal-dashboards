@@ -32,18 +32,14 @@ public interface ITransactionCommands
 }
 
 public sealed record TransactionMutation(
-    string Ticker,
     string Action,
-    string? Name,
-    string AssetType,
-    string? Market,
-    string Currency,
+    string TransactionCurrency,
     decimal Shares,
     decimal Price,
     DateOnly TransactionDate,
     string? Notes,
     Guid? PortfolioId,
-    Guid? SecurityListingId = null);
+    Guid SecurityListingId);
 
 public sealed record ImportedTransactionMutation(
     string Ticker,

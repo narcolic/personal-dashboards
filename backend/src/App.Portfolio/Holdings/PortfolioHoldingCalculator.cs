@@ -10,29 +10,28 @@ public static class PortfolioHoldingCalculator
         var canonicalTransactions = transactions
             .Where(transaction =>
                 string.Equals(transaction.Action, "buy", StringComparison.OrdinalIgnoreCase))
-            .Select(transaction => transaction.SecurityListingId is { } listingId
-                && transaction.Security is { } security
-                ? new { Transaction = transaction, ListingId = listingId, Security = security }
+            .Select(transaction => transaction.Security is { } security
+                ? new { Transaction = transaction, ListingId = transaction.SecurityListingId, Security = security }
                 : throw new InvalidOperationException(
                     $"Transaction {transaction.Id} has no canonical security metadata."));
         var groups = canonicalTransactions
             .GroupBy(transaction => new HoldingKey(
                 transaction.ListingId,
                 transaction.Transaction.PortfolioId,
-                NormalizeCurrency(transaction.Transaction.Currency)));
+                NormalizeCurrency(transaction.Transaction.TransactionCurrency)));
 
         var holdings = new List<PortfolioHolding>();
         foreach (var group in groups)
         {
             var rows = group.ToArray();
-            var totalShares = rows.Sum(row => row.Transaction.Shares ?? 0m);
+            var totalShares = rows.Sum(row => row.Transaction.Shares);
             if (totalShares <= 0m)
             {
                 continue;
             }
 
             var totalCost = rows.Sum(row =>
-                (row.Transaction.Shares ?? 0m) * (row.Transaction.Price ?? 0m));
+                row.Transaction.Shares * row.Transaction.Price);
             var first = rows.MinBy(row => row.Transaction.TransactionDate);
             var last = rows.MaxBy(row => row.Transaction.TransactionDate);
             if (first is null || last is null)

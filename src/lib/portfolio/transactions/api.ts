@@ -19,7 +19,7 @@ const TransactionInput = z.object({
   transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   notes: z.string().trim().max(500).optional().nullable(),
   portfolio_id: z.string().uuid().optional().nullable(),
-  security_listing_id: z.string().uuid().optional().nullable(),
+  security_listing_id: z.string().uuid().nullable(),
 });
 
 export type TransactionInputType = z.infer<typeof TransactionInput>;
@@ -37,6 +37,24 @@ export type TransactionListOptions = {
 
 export type TransactionListResult = {
   rows: TransactionRow[];
+  count: number;
+};
+
+type TransactionApiRow = {
+  id: string;
+  action: TransactionRow["action"];
+  transaction_currency: string;
+  shares: number;
+  price: number;
+  transaction_date: string;
+  notes: string | null;
+  portfolio_id: string | null;
+  security_listing_id: string;
+  security: NonNullable<TransactionRow["security"]>;
+};
+
+type TransactionApiListResult = {
+  rows: TransactionApiRow[];
   count: number;
 };
 
@@ -70,39 +88,70 @@ export async function listTransactions(options: TransactionListOptions, signal?:
   if (options.dateTo) query.set("dateTo", options.dateTo);
 
   const suffix = query.size > 0 ? `?${query.toString()}` : "";
-  const result = await apiFetch<TransactionListResult>(`/api/portfolio/transactions${suffix}`, {
+  const result = await apiFetch<TransactionApiListResult>(`/api/portfolio/transactions${suffix}`, {
     signal,
   });
   return {
     ...result,
     rows: result.rows.map((row) => {
-      if (!row.security) {
-        throw new Error(`Canonical security metadata is missing for transaction ${row.id}.`);
-      }
       return {
         ...row,
         ticker: row.security.symbol,
         name: row.security.name,
         asset_type: row.security.securityType,
         market: row.security.exchangeName ?? row.security.exchangeMic,
+        currency: row.transaction_currency,
         security_listing_id: row.security.listingId,
       };
     }),
   };
 }
 
-export function createTransaction(value: TransactionInputType) {
+export async function createTransaction(value: TransactionInputType) {
+  const listingId = await resolveListingId(value);
   return apiFetch<{ id: string }>("/api/portfolio/transactions", {
     method: "POST",
-    body: JSON.stringify(value),
+    body: JSON.stringify(toTransactionMutation(value, listingId)),
   });
 }
 
-export function updateTransaction(id: string, value: TransactionInputType) {
+export async function updateTransaction(id: string, value: TransactionInputType) {
+  const listingId = await resolveListingId(value);
   return apiFetch<{ id: string }>(`/api/portfolio/transactions/${encodeURIComponent(id)}`, {
     method: "PUT",
-    body: JSON.stringify(value),
+    body: JSON.stringify(toTransactionMutation(value, listingId)),
   });
+}
+
+async function resolveListingId(value: TransactionInputType) {
+  if (value.security_listing_id) return value.security_listing_id;
+  const resolution = await apiFetch<{ listing_id: string }>(
+    "/api/portfolio/security-listings/resolve",
+    {
+      method: "POST",
+      body: JSON.stringify({
+        symbol: value.ticker,
+        name: value.name,
+        security_type: value.asset_type,
+        market: value.market,
+        trading_currency: value.currency,
+      }),
+    },
+  );
+  return resolution.listing_id;
+}
+
+function toTransactionMutation(value: TransactionInputType, listingId: string) {
+  return {
+    action: value.action,
+    transaction_currency: value.currency,
+    shares: value.shares,
+    price: value.price,
+    transaction_date: value.transaction_date,
+    notes: value.notes,
+    portfolio_id: value.portfolio_id,
+    security_listing_id: listingId,
+  };
 }
 
 export async function deleteTransaction(id: string) {

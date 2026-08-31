@@ -20,17 +20,12 @@ public sealed class TransactionQueries(
             (connection, transaction, token) =>
                 ReadTransactionsAsync(connection, transaction, userId, filter, token),
             cancellationToken).ConfigureAwait(false);
-        var ids = result.Rows
-            .Where(row => row.SecurityListingId is not null)
-            .Select(row => row.SecurityListingId!.Value)
-            .Distinct()
-            .ToArray();
+        var ids = result.Rows.Select(row => row.SecurityListingId).Distinct().ToArray();
         var metadata = await metadataQueries.GetByListingIdsAsync(
             userId, ids, cancellationToken).ConfigureAwait(false);
         return result with
         {
-            Rows = result.Rows.Select(row => row.SecurityListingId is { } listingId
-                    && metadata.TryGetValue(listingId, out var security)
+            Rows = result.Rows.Select(row => metadata.TryGetValue(row.SecurityListingId, out var security)
                 ? row with { Security = security }
                 : throw new InvalidOperationException(
                     $"Canonical security metadata is missing for transaction {row.Id}."))
@@ -62,14 +57,12 @@ public sealed class TransactionQueries(
             ? string.Empty
             : "limit @limit offset @offset";
         var rowsCommand = new NpgsqlBatchCommand($"""
-            select t.id, listing.symbol, t.action, security.name,
-                   security.security_type_code, coalesce(exchange.name, exchange.mic), t.currency,
+            select t.id, t.action, t.transaction_currency,
                    t.shares::numeric, t.price::numeric, t.transaction_date, t.notes, t.portfolio_id,
                    t.security_listing_id
             from public.transactions t
-            left join public.security_listings listing on listing.id = t.security_listing_id
-            left join public.securities security on security.id = listing.security_id
-            left join public.exchanges exchange on exchange.id = listing.exchange_id
+            join public.security_listings listing on listing.id = t.security_listing_id
+            join public.securities security on security.id = listing.security_id
             {whereClause}
             order by t.transaction_date desc, t.id
             {paginationClause};
@@ -88,18 +81,14 @@ public sealed class TransactionQueries(
         {
             rows.Add(new TransactionListItem(
                 reader.GetGuid(0),
-                reader.IsDBNull(1) ? null : reader.GetString(1),
+                reader.GetString(1),
                 reader.GetString(2),
-                reader.IsDBNull(3) ? null : reader.GetString(3),
-                reader.IsDBNull(4) ? null : reader.GetString(4),
-                reader.IsDBNull(5) ? null : reader.GetString(5),
+                reader.GetDecimal(3),
+                reader.GetDecimal(4),
+                reader.GetFieldValue<DateOnly>(5),
                 reader.IsDBNull(6) ? null : reader.GetString(6),
-                reader.IsDBNull(7) ? null : reader.GetDecimal(7),
-                reader.IsDBNull(8) ? null : reader.GetDecimal(8),
-                reader.IsDBNull(9) ? null : reader.GetFieldValue<DateOnly>(9),
-                reader.IsDBNull(10) ? null : reader.GetString(10),
-                reader.IsDBNull(11) ? null : reader.GetGuid(11),
-                reader.IsDBNull(12) ? null : reader.GetGuid(12)));
+                reader.IsDBNull(7) ? null : reader.GetGuid(7),
+                reader.GetGuid(8)));
         }
 
         return new TransactionListResult(rows, count);
@@ -130,7 +119,7 @@ public sealed class TransactionQueries(
 
         if (!string.IsNullOrWhiteSpace(filter.Currency))
         {
-            sql.AppendLine().Append("  and t.currency = @currency");
+            sql.AppendLine().Append("  and t.transaction_currency = @currency");
         }
 
         if (filter.DateFrom is not null)

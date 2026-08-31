@@ -18,6 +18,7 @@ type TransactionTableRow = {
   transaction_date: string;
   notes: string | null;
   portfolio_id: string | null;
+  security_listing_id: string;
 };
 
 type SortKey =
@@ -105,6 +106,7 @@ export function TransactionsTable({
       transaction_date: position.transaction_date,
       notes: position.notes ?? "",
       portfolio_id: position.portfolio_id ?? null,
+      security_listing_id: position.security_listing_id,
     });
   };
 
