@@ -156,27 +156,33 @@ function HoldingDetailsPage() {
     >();
 
     for (const row of tickerCatalog) {
-      const key = row.ticker.trim().toUpperCase();
+      if (!row.security) {
+        throw new Error(`Canonical security metadata is missing for catalog row ${row.id}.`);
+      }
+      const key = row.security.symbol.trim().toUpperCase();
       if (!key) continue;
       map.set(key, {
         ticker: key,
-        name: row.name ?? null,
-        asset_type: row.asset_type ?? null,
-        market: row.market ?? null,
-        currency: row.currency ?? null,
-        security_listing_id: row.security_listing_id ?? null,
+        name: row.security.name,
+        asset_type: row.security.securityType,
+        market: row.security.exchangeName ?? row.security.exchangeMic,
+        currency: row.security.tradingCurrency,
+        security_listing_id: row.security.listingId,
       });
     }
 
     for (const row of holdingRows) {
-      const key = row.ticker.trim().toUpperCase();
+      if (!row.security) {
+        throw new Error(`Canonical security metadata is missing for holding ${row.id}.`);
+      }
+      const key = row.security.symbol.trim().toUpperCase();
       map.set(key, {
         ticker: key,
-        name: row.quote?.shortName || row.name || null,
-        asset_type: row.asset_type ?? null,
-        market: row.market ?? null,
+        name: row.security.name,
+        asset_type: row.security.securityType,
+        market: row.security.exchangeName ?? row.security.exchangeMic,
         currency: row._nativeCurrency ?? null,
-        security_listing_id: row.security_listing_id ?? null,
+        security_listing_id: row.security.listingId,
       });
     }
 

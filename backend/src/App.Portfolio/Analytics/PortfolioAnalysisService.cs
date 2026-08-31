@@ -305,6 +305,8 @@ public sealed class PortfolioAnalysisService(
         var rows = new List<EnrichedHolding>();
         foreach (var holding in holdings)
         {
+            var security = holding.Security ?? throw new InvalidOperationException(
+                $"Holding {holding.Id} has no canonical security metadata.");
             var quote = quotes[NormalizeTicker(holding.Ticker)];
             var quoteCurrency = NormalizeCurrency(quote.Currency);
             var marketValue = await ConvertAsync(
@@ -330,8 +332,8 @@ public sealed class PortfolioAnalysisService(
                 : $"portfolio:{holding.PortfolioId}";
             rows.Add(new(
                 NormalizeTicker(holding.Ticker),
-                quote.LongName ?? quote.ShortName ?? holding.Name,
-                holding.AssetType,
+                quote.LongName ?? quote.ShortName ?? security.Name,
+                security.SecurityType,
                 holding.Shares,
                 quoteCurrency,
                 quote.RegularMarketPrice,
@@ -342,7 +344,7 @@ public sealed class PortfolioAnalysisService(
                 holding.PortfolioId is null
                     ? "Unassigned"
                     : portfolioNames.GetValueOrDefault(holding.PortfolioId.Value, "Unknown portfolio"),
-                holding.Security));
+                security));
         }
 
         return new(timeProvider.GetUtcNow(), scope, currency, rows, quotes);
@@ -430,8 +432,8 @@ public sealed class PortfolioAnalysisService(
         return [.. rows.GroupBy(row => dimension switch
             {
                 "assettype" or "securitytype" =>
-                    string.IsNullOrWhiteSpace(row.Security?.SecurityType ?? row.AssetType)
-                        ? "Unknown" : row.Security?.SecurityType ?? row.AssetType,
+                    string.IsNullOrWhiteSpace(row.Security?.SecurityType)
+                        ? "Unknown" : row.Security.SecurityType,
                 "currency" => row.QuoteCurrency,
                 "portfolio" => row.PortfolioName,
                 "country" => row.Security?.CountryName ?? "Unknown",

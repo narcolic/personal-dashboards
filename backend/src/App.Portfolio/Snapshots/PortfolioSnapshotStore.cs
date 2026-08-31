@@ -38,13 +38,14 @@ public sealed class PortfolioSnapshotStore(AppDataSource dataSource) : IPortfoli
         await using var command = connection.CreateCommand();
         command.Transaction = transaction;
         command.CommandText = """
-            select t.id, t.user_id, t.ticker, t.name, t.asset_type, t.market,
+            select t.id, t.user_id, t.security_listing_id, listing.symbol,
                    t.currency, t.shares::numeric, t.price::numeric,
                    t.transaction_date, t.portfolio_id, p.name
             from public.transactions t
+            left join public.security_listings listing on listing.id = t.security_listing_id
             left join public.portfolios p
               on p.id = t.portfolio_id and p.user_id = t.user_id
-            where t.user_id is not null and t.ticker is not null
+            where t.user_id is not null
             order by t.transaction_date, t.id;
             """;
 
@@ -56,16 +57,14 @@ public sealed class PortfolioSnapshotStore(AppDataSource dataSource) : IPortfoli
             rows.Add(new SnapshotTransaction(
                 reader.GetGuid(0),
                 reader.GetGuid(1),
-                reader.GetString(2),
-                reader.IsDBNull(3) ? null : reader.GetString(3),
+                reader.GetGuid(2),
+                reader.GetString(3),
                 reader.IsDBNull(4) ? null : reader.GetString(4),
-                reader.IsDBNull(5) ? null : reader.GetString(5),
-                reader.IsDBNull(6) ? null : reader.GetString(6),
-                reader.IsDBNull(7) ? 0m : reader.GetDecimal(7),
-                reader.IsDBNull(8) ? 0m : reader.GetDecimal(8),
-                reader.GetFieldValue<DateOnly>(9),
-                reader.IsDBNull(10) ? null : reader.GetGuid(10),
-                reader.IsDBNull(11) ? null : reader.GetString(11)));
+                reader.IsDBNull(5) ? 0m : reader.GetDecimal(5),
+                reader.IsDBNull(6) ? 0m : reader.GetDecimal(6),
+                reader.GetFieldValue<DateOnly>(7),
+                reader.IsDBNull(8) ? null : reader.GetGuid(8),
+                reader.IsDBNull(9) ? null : reader.GetString(9)));
         }
         return rows;
     }

@@ -104,6 +104,19 @@ public sealed class PortfolioHoldingCalculatorTests
         Assert.Same(security, holding.Security);
     }
 
+    [Fact]
+    public void AggregateFailsClosedWhenBuyTransactionHasNoCanonicalMetadata()
+    {
+        var row = new TransactionListItem(
+            Guid.NewGuid(), "LEGACY", "buy", "Legacy name", "stock", "Legacy market",
+            "USD", 1m, 10m, new DateOnly(2026, 1, 1), null, null);
+
+        var exception = Assert.Throws<InvalidOperationException>(() =>
+            PortfolioHoldingCalculator.Aggregate([row]));
+
+        Assert.Contains(row.Id.ToString(), exception.Message, StringComparison.Ordinal);
+    }
+
     private static TransactionListItem Transaction(
         string ticker,
         decimal shares,
@@ -112,8 +125,16 @@ public sealed class PortfolioHoldingCalculatorTests
         Guid? portfolioId = null,
         string action = "buy",
         string currency = "USD",
-        string? name = "Example") =>
-        new(
+        string? name = "Example")
+    {
+        var listingId = Guid.Parse("12b5f14b-611c-4707-ab1e-e194116f16f8");
+        var symbol = ticker.Trim().ToUpperInvariant();
+        var security = new SecurityMetadataView(
+            listingId, Guid.NewGuid(), symbol, name ?? symbol, "etf",
+            null, "Example Market", currency.ToUpperInvariant(), null, null,
+            null, null, null, null, null, null, null, null, null, null,
+            null, null, null, "succeeded", DateTimeOffset.UtcNow, false);
+        return new(
             Guid.NewGuid(),
             ticker,
             action,
@@ -125,5 +146,8 @@ public sealed class PortfolioHoldingCalculatorTests
             price,
             date,
             null,
-            portfolioId);
+            portfolioId,
+            listingId,
+            security);
+    }
 }

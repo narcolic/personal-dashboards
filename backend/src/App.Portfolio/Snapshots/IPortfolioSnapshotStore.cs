@@ -15,10 +15,8 @@ public interface IPortfolioSnapshotStore
 public sealed record SnapshotTransaction(
     Guid Id,
     Guid UserId,
+    Guid SecurityListingId,
     string Ticker,
-    string? Name,
-    string? AssetType,
-    string? Market,
     string? Currency,
     decimal Shares,
     decimal Price,

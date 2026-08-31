@@ -98,10 +98,9 @@ public sealed class PortfolioSnapshotJob(
     private static SnapshotHolding[] Aggregate(
         IReadOnlyList<SnapshotTransaction> transactions) =>
         [.. transactions
-            .Where(transaction => !string.IsNullOrWhiteSpace(transaction.Ticker))
             .GroupBy(transaction => new HoldingKey(
                 transaction.UserId,
-                transaction.Ticker.Trim().ToUpperInvariant(),
+                transaction.SecurityListingId,
                 transaction.PortfolioId,
                 NormalizeCurrency(transaction.Currency)))
             .Select(group =>
@@ -116,10 +115,7 @@ public sealed class PortfolioSnapshotJob(
                 var last = rows.MaxBy(row => row.TransactionDate)!;
                 return new SnapshotHolding(
                     group.Key.UserId,
-                    group.Key.Ticker,
-                    last.Name,
-                    last.AssetType ?? "Unknown",
-                    last.Market,
+                    last.Ticker,
                     group.Key.Currency,
                     shares,
                     rows.Sum(row => row.Shares * row.Price) / shares,
@@ -292,16 +288,13 @@ public sealed class PortfolioSnapshotJob(
 
     private sealed record HoldingKey(
         Guid UserId,
-        string Ticker,
+        Guid SecurityListingId,
         Guid? PortfolioId,
         string Currency);
 
     private sealed record SnapshotHolding(
         Guid UserId,
         string Ticker,
-        string? Name,
-        string AssetType,
-        string? Market,
         string Currency,
         decimal Shares,
         decimal AvgCost,

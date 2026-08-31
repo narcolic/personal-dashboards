@@ -3,6 +3,7 @@ using PortfolioTerminal.Portfolio.Analytics;
 using PortfolioTerminal.Portfolio.Holdings;
 using PortfolioTerminal.Portfolio.MarketData;
 using PortfolioTerminal.Portfolio.Portfolios;
+using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Snapshots;
 
 namespace PortfolioTerminal.Tests;
@@ -143,8 +144,19 @@ public sealed class PortfolioAnalysisServiceTests
         public Task<IReadOnlyList<PortfolioHolding>> ListAsync(Guid userId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<PortfolioHolding>>(
             [
-                new("MSFT", "MSFT", "Microsoft", "Stock", "NASDAQ", "USD", 10m, 100m, null, PortfolioId, 1, new(2025, 1, 1), new(2025, 1, 1)),
+                new("MSFT", "MSFT", "Microsoft", "stock", "NASDAQ", "USD", 10m, 100m,
+                    null, PortfolioId, 1, new(2025, 1, 1), new(2025, 1, 1),
+                    Security.ListingId, Security),
             ]);
+
+        private static readonly SecurityMetadataView Security = new(
+            Guid.Parse("cccccccc-cccc-cccc-cccc-cccccccccccc"),
+            Guid.Parse("dddddddd-dddd-dddd-dddd-dddddddddddd"),
+            "MSFT", "Microsoft Corporation", "stock", "XNAS", "Nasdaq", "USD",
+            "Microsoft Corporation", "US", "United States", "north_america",
+            "North America", "information_technology", "Information Technology",
+            "software_infrastructure", "Software - Infrastructure", null, null,
+            null, null, null, null, "succeeded", Now, false);
     }
 
     private sealed class FakeQuoteService(QuoteLookupResult result) : IQuoteService
