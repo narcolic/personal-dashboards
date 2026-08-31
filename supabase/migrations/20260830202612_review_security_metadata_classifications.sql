@@ -102,10 +102,25 @@ where provider_code = 'alpha_vantage'
     'software_infrastructure'
   );
 
+-- A clean migration replay has no user-derived listings or discovered industries.
+-- Accept the empty case, retain the exact production assertions for a complete
+-- reviewed set, and reject partial sets so missing backfill data cannot pass.
 do $$
 declare
   actual integer;
+  reviewed_industry_count integer;
+  reviewed_listing_count integer;
 begin
+  select count(distinct reviewed.symbol) into reviewed_listing_count
+  from reviewed_etf_classifications reviewed
+  join public.security_listings listing on listing.symbol = reviewed.symbol;
+
+  if reviewed_listing_count not in (0, 6) then
+    raise exception
+      'expected either no reviewed ETF listings or all 6, found %',
+      reviewed_listing_count;
+  end if;
+
   select count(*) into actual
   from reviewed_etf_classifications reviewed
   join public.security_listings listing on listing.symbol = reviewed.symbol
@@ -113,7 +128,7 @@ begin
   where security.geographic_exposure_code = reviewed.geographic_exposure_code
     and security.market_exposure_category_code = reviewed.market_exposure_category_code;
 
-  if actual <> 6 then
+  if reviewed_listing_count = 6 and actual <> 6 then
     raise exception 'expected 6 reviewed ETF classifications, found %', actual;
   end if;
 
@@ -127,8 +142,22 @@ begin
     'market_exposure_category_code'
   );
 
-  if actual <> 12 then
+  if reviewed_listing_count = 6 and actual <> 12 then
     raise exception 'expected 12 reviewed ETF field locks, found %', actual;
+  end if;
+
+  select count(*) into reviewed_industry_count
+  from public.industries
+  where code in (
+    'internet_content_information',
+    'semiconductors',
+    'software_infrastructure'
+  );
+
+  if reviewed_industry_count not in (0, 3) then
+    raise exception
+      'expected either no reviewed provider industries or all 3, found %',
+      reviewed_industry_count;
   end if;
 
   select count(*) into actual
@@ -141,7 +170,7 @@ begin
     and review_status = 'approved'
     and reviewed_at is not null;
 
-  if actual <> 3 then
+  if reviewed_industry_count = 3 and actual <> 3 then
     raise exception 'expected 3 approved provider-discovered industries, found %', actual;
   end if;
 end $$;
