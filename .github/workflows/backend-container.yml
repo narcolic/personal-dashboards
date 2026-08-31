@@ -100,18 +100,26 @@ jobs:
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         shell: bash
         run: |
-          if ! az containerapp job show \
-            --name "${AZURE_SNAPSHOT_JOB}" \
-            --resource-group "${AZURE_RESOURCE_GROUP}" \
-            >/dev/null 2>&1; then
-            echo "::warning::Snapshot job '${AZURE_SNAPSHOT_JOB}' does not exist in resource group '${AZURE_RESOURCE_GROUP}'; skipping its image update."
-            exit 0
-          fi
+          for attempt in 1 2 3; do
+            if az containerapp job update \
+              --name "${AZURE_SNAPSHOT_JOB}" \
+              --resource-group "${AZURE_RESOURCE_GROUP}" \
+              --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"; then
+              exit 0
+            fi
 
-          az containerapp job update \
-            --name "${AZURE_SNAPSHOT_JOB}" \
+            echo "Snapshot job update failed (${attempt}/3)."
+            if [[ "${attempt}" -lt 3 ]]; then
+              sleep 10
+            fi
+          done
+
+          echo "::error::Unable to update snapshot job '${AZURE_SNAPSHOT_JOB}' in resource group '${AZURE_RESOURCE_GROUP}'."
+          az containerapp job list \
             --resource-group "${AZURE_RESOURCE_GROUP}" \
-            --image "${REGISTRY}/${IMAGE_NAME}:sha-${GITHUB_SHA}"
+            --query "[].{name:name,provisioningState:properties.provisioningState}" \
+            --output table || true
+          exit 1
 
       - name: Update security metadata job image
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
