@@ -8,6 +8,11 @@ import { fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
 import { PortfolioChart } from "@/routes/_authenticated/portfolio/components/PortfolioChart";
 import { PortfolioHoldingsTable } from "@/routes/_authenticated/portfolio/components/PortfolioHoldingsTable";
 import {
+  isCompletePortfolioSnapshot,
+  usePortfolioSnapshots,
+} from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
+import type { PortfolioSnapshotRow } from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
+import {
   type RowWithNative,
   usePortfolioHoldingsView,
 } from "@/routes/_authenticated/portfolio/hooks/usePortfolioHoldingsView";
@@ -41,8 +46,16 @@ function PortfolioPage() {
   const [allocationKind, setAllocationKind] = useState<AllocationKind>("assetType");
   const { txQ, holdingsQ, quotesQ, transactions, rows, display, selected, portfolioMap, convert } =
     usePortfolioHoldingsView();
+  const snapshotsQ = usePortfolioSnapshots();
 
-  const totals = useMemo(() => computeTotals(rows, convert), [convert, rows]);
+  const closingSnapshotValue = useMemo(
+    () => findClosingSnapshotValue(snapshotsQ.data ?? [], selected, display, convert),
+    [convert, display, selected, snapshotsQ.data],
+  );
+  const totals = useMemo(
+    () => computeTotals(rows, convert, closingSnapshotValue),
+    [closingSnapshotValue, convert, rows],
+  );
   const rowRegions = useMemo(
     () =>
       new Map(
@@ -120,7 +133,9 @@ function PortfolioPage() {
     Number(regionFilter !== "__all__") +
     Number(Boolean(activeAllocation));
 
-  if (txQ.isLoading || holdingsQ.isLoading || quotesQ.isLoading) return <PortfolioSkeleton />;
+  if (txQ.isLoading || holdingsQ.isLoading || quotesQ.isLoading || snapshotsQ.isLoading) {
+    return <PortfolioSkeleton />;
+  }
   if (transactions.length === 0) return <PortfolioEmptyState />;
 
   const clearFilters = () => {
@@ -451,24 +466,57 @@ function FilterSelect({
   );
 }
 
-function computeTotals(rows: RowWithNative[], convert: ConvFn) {
+function computeTotals(
+  rows: RowWithNative[],
+  convert: ConvFn,
+  closingSnapshotValue: number | null,
+) {
   let marketValue = 0;
   let costBasis = 0;
-  let dayChange = 0;
+  let quoteDayChange = 0;
   for (const row of rows) {
     marketValue += convert(row.marketValue, row._nativeCurrency);
     costBasis += convert(row.costBasis, row._nativeCurrency);
-    dayChange += convert(row.dayChange, row._nativeCurrency);
+    quoteDayChange += convert(row.dayChange, row._nativeCurrency);
   }
+  const dayChange =
+    closingSnapshotValue === null ? quoteDayChange : marketValue - closingSnapshotValue;
+  const dayBaseline = closingSnapshotValue ?? marketValue - quoteDayChange;
   const unrealized = marketValue - costBasis;
   return {
     marketValue,
     costBasis,
     dayChange,
     unrealized,
-    dayPct: marketValue - dayChange ? (dayChange / (marketValue - dayChange)) * 100 : 0,
+    dayPct: dayBaseline ? (dayChange / dayBaseline) * 100 : 0,
     unrealizedPct: costBasis ? (unrealized / costBasis) * 100 : 0,
   };
+}
+
+function findClosingSnapshotValue(
+  snapshots: PortfolioSnapshotRow[],
+  selectedPortfolioId: string,
+  displayCurrency: string,
+  convert: ConvFn,
+) {
+  const scopeKey =
+    selectedPortfolioId === "__all__"
+      ? "total"
+      : selectedPortfolioId === "__unassigned__"
+        ? "portfolio:unassigned"
+        : `portfolio:${selectedPortfolioId}`;
+  const snapshot = snapshots
+    .filter((row) => row.scope_key === scopeKey && isCompletePortfolioSnapshot(row))
+    .sort((left, right) => {
+      const dateOrder = right.snapshot_date.localeCompare(left.snapshot_date);
+      return dateOrder || right.snapshot_at.localeCompare(left.snapshot_at);
+    })[0];
+  if (!snapshot) return null;
+
+  const currency = displayCurrency.toUpperCase();
+  if (currency === "EUR") return Number(snapshot.market_value_eur);
+  if (currency === "USD") return Number(snapshot.market_value_usd);
+  return convert(Number(snapshot.market_value_usd), "USD");
 }
 
 function buildAllocationData(
