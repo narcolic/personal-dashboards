@@ -18,6 +18,9 @@ export type AnalyticsPoint = {
   dailyEarnings: number;
   performance: number;
   profitLoss: number;
+  totalPnl: number;
+  externalFlow: number;
+  accountingVersion: number;
 };
 
 type MetricKey = "totalValue" | "performance" | "unrealized" | "profitLoss";

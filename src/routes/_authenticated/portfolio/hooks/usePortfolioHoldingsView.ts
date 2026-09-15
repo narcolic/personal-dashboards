@@ -7,6 +7,7 @@ import { portfolioHoldingsQueryOptions } from "@/lib/portfolio/queries";
 import { usePortfolioData } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
 import { useTransactionsFilters } from "@/routes/_authenticated/portfolio/hooks/useTransactionsFilters";
+import { usePortfolioCash } from "@/routes/_authenticated/portfolio/hooks/usePortfolioCash";
 
 export type RowWithNative = Enriched & { _nativeCurrency: string };
 
@@ -16,6 +17,7 @@ export function usePortfolioHoldingsView() {
   const { t } = useTranslation();
   const { txQ, portfoliosQ, transactions } = usePortfolioData();
   const holdingsQ = useQuery(portfolioHoldingsQueryOptions());
+  const cashQ = usePortfolioCash();
   const positions = holdingsQ.data ?? EMPTY_HOLDINGS;
   const { quotesQ, enrichedRows } = useQuotes(positions, {
     staleTime: 60_000,
@@ -29,8 +31,12 @@ export function usePortfolioHoldingsView() {
       const currency = (position.currency || "").toUpperCase();
       if (currency) currencies.add(currency);
     }
+    for (const balance of cashQ.data ?? []) {
+      const currency = balance.currency.toUpperCase();
+      if (currency) currencies.add(currency);
+    }
     return currencies.size ? [...currencies].sort() : ["USD"];
-  }, [positions]);
+  }, [cashQ.data, positions]);
 
   const fxWanted = useMemo(
     () => Array.from(new Set(["USD", "EUR", ...transactionCurrencies])).sort(),
@@ -117,23 +123,25 @@ export function usePortfolioHoldingsView() {
       { id: allId, label: t("portfolio.all") },
       ...Array.from(
         new Map(
-          allRows.map((row) => [
-            row.portfolio_id ?? unassignedId,
-            row.portfolio_id
-              ? (portfolioMap.get(row.portfolio_id) ?? "-")
-              : t("portfolio.unassigned"),
+          [
+            ...allRows.map((row) => row.portfolio_id),
+            ...(cashQ.data ?? []).map((row) => row.portfolioId),
+          ].map((portfolioId) => [
+            portfolioId ?? unassignedId,
+            portfolioId ? (portfolioMap.get(portfolioId) ?? "-") : t("portfolio.unassigned"),
           ]),
         ),
         ([id, label]) => ({ id, label: label.toUpperCase() }),
       ),
     ],
-    [allId, allRows, portfolioMap, t, unassignedId],
+    [allId, allRows, cashQ.data, portfolioMap, t, unassignedId],
   );
 
   return {
     txQ,
     holdingsQ,
     quotesQ,
+    cashQ,
     transactions,
     portfolios: portfoliosQ.data ?? [],
     allRows,

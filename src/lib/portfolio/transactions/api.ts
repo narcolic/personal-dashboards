@@ -20,6 +20,8 @@ const TransactionInput = z.object({
   notes: z.string().trim().max(500).optional().nullable(),
   portfolio_id: z.string().uuid().optional().nullable(),
   security_listing_id: z.string().uuid().nullable(),
+  use_available_cash: z.boolean().default(false),
+  fee_amount: z.number().nonnegative().max(1e9).default(0),
 });
 
 export type TransactionInputType = z.infer<typeof TransactionInput>;
@@ -51,6 +53,9 @@ type TransactionApiRow = {
   portfolio_id: string | null;
   security_listing_id: string;
   security: NonNullable<TransactionRow["security"]>;
+  cash_used: number;
+  fee_amount: number;
+  settles_to_cash: boolean;
 };
 
 type TransactionApiListResult = {
@@ -151,6 +156,8 @@ function toTransactionMutation(value: TransactionInputType, listingId: string) {
     notes: value.notes,
     portfolio_id: value.portfolio_id,
     security_listing_id: listingId,
+    use_available_cash: value.use_available_cash,
+    fee_amount: value.fee_amount,
   };
 }
 

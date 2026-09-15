@@ -12,6 +12,7 @@ import {
   usePortfolioSnapshots,
 } from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
 import type { PortfolioSnapshotRow } from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
+import type { TransactionRow } from "@/lib/portfolio/types";
 import {
   type RowWithNative,
   usePortfolioHoldingsView,
@@ -44,17 +45,50 @@ function PortfolioPage() {
   const [currencyFilter, setCurrencyFilter] = useState("__all__");
   const [regionFilter, setRegionFilter] = useState("__all__");
   const [allocationKind, setAllocationKind] = useState<AllocationKind>("assetType");
-  const { txQ, holdingsQ, quotesQ, transactions, rows, display, selected, portfolioMap, convert } =
-    usePortfolioHoldingsView();
+  const {
+    txQ,
+    holdingsQ,
+    quotesQ,
+    cashQ,
+    transactions,
+    rows,
+    display,
+    selected,
+    portfolioMap,
+    convert,
+  } = usePortfolioHoldingsView();
   const snapshotsQ = usePortfolioSnapshots();
 
   const closingSnapshotValue = useMemo(
     () => findClosingSnapshotValue(snapshotsQ.data ?? [], selected, display, convert),
     [convert, display, selected, snapshotsQ.data],
   );
+  const scopedCash = useMemo(
+    () =>
+      (cashQ.data ?? []).filter((balance) =>
+        portfolioMatchesSelection(balance.portfolioId, selected),
+      ),
+    [cashQ.data, selected],
+  );
+  const cashTotal = useMemo(
+    () =>
+      scopedCash.reduce(
+        (sum, balance) => sum + convert(balance.availableAmount, balance.currency),
+        0,
+      ),
+    [convert, scopedCash],
+  );
+  const externalFlow = useMemo(
+    () => scopedCash.reduce((sum, row) => sum + convert(row.externalFlow, row.currency), 0),
+    [convert, scopedCash],
+  );
   const totals = useMemo(
-    () => computeTotals(rows, convert, closingSnapshotValue),
-    [closingSnapshotValue, convert, rows],
+    () => computeTotals(rows, convert, closingSnapshotValue, cashTotal, externalFlow),
+    [cashTotal, closingSnapshotValue, convert, externalFlow, rows],
+  );
+  const realizedPnl = useMemo(
+    () => calculateRealizedPnl(transactions, selected, convert),
+    [convert, selected, transactions],
   );
   const rowRegions = useMemo(
     () =>
@@ -133,7 +167,13 @@ function PortfolioPage() {
     Number(regionFilter !== "__all__") +
     Number(Boolean(activeAllocation));
 
-  if (txQ.isLoading || holdingsQ.isLoading || quotesQ.isLoading || snapshotsQ.isLoading) {
+  if (
+    txQ.isLoading ||
+    holdingsQ.isLoading ||
+    quotesQ.isLoading ||
+    cashQ.isLoading ||
+    snapshotsQ.isLoading
+  ) {
     return <PortfolioSkeleton />;
   }
   if (transactions.length === 0) return <PortfolioEmptyState />;
@@ -161,11 +201,15 @@ function PortfolioPage() {
       <section aria-labelledby="portfolio-summary-heading" className="space-y-3">
         <SectionHeading id="portfolio-summary-heading">{t("portfolio.atAGlance")}</SectionHeading>
         <div className="analytics-panel overflow-hidden rounded-[10px] border border-border/70 bg-card/80 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
-          <div className="grid grid-cols-2 md:grid-cols-[minmax(0,1.35fr)_minmax(220px,1fr)_minmax(220px,1fr)]">
+          <div className="grid grid-cols-2 md:grid-cols-5">
             <PortfolioPulseMetric
               label={t("portfolio.totalValue")}
               value={fmtCurrency(totals.marketValue, display)}
               lead
+            />
+            <PortfolioPulseMetric
+              label={t("portfolio.availableCash")}
+              value={fmtCurrency(cashTotal, display)}
             />
             <PortfolioPulseMetric
               label={t("portfolio.dayPnl")}
@@ -174,10 +218,15 @@ function PortfolioPage() {
               tone={totals.dayChange >= 0 ? "bull" : "bear"}
             />
             <PortfolioPulseMetric
-              label={t("portfolio.totalReturn")}
+              label={t("portfolio.unrealized")}
               value={formatSignedCurrency(totals.unrealized, display)}
               detail={`${formatDirection(totals.unrealized)} ${fmtPct(totals.unrealizedPct)}`}
               tone={totals.unrealized >= 0 ? "bull" : "bear"}
+            />
+            <PortfolioPulseMetric
+              label={t("portfolio.realized")}
+              value={formatSignedCurrency(realizedPnl, display)}
+              tone={realizedPnl >= 0 ? "bull" : "bear"}
               right
             />
           </div>
@@ -470,6 +519,8 @@ function computeTotals(
   rows: RowWithNative[],
   convert: ConvFn,
   closingSnapshotValue: number | null,
+  cashValue: number,
+  externalFlow: number,
 ) {
   let marketValue = 0;
   let costBasis = 0;
@@ -479,12 +530,15 @@ function computeTotals(
     costBasis += convert(row.costBasis, row._nativeCurrency);
     quoteDayChange += convert(row.dayChange, row._nativeCurrency);
   }
+  const totalValue = marketValue + cashValue;
   const dayChange =
-    closingSnapshotValue === null ? quoteDayChange : marketValue - closingSnapshotValue;
-  const dayBaseline = closingSnapshotValue ?? marketValue - quoteDayChange;
+    closingSnapshotValue === null
+      ? quoteDayChange
+      : totalValue - closingSnapshotValue - externalFlow;
+  const dayBaseline = closingSnapshotValue ?? totalValue - quoteDayChange;
   const unrealized = marketValue - costBasis;
   return {
-    marketValue,
+    marketValue: totalValue,
     costBasis,
     dayChange,
     unrealized,
@@ -514,9 +568,67 @@ function findClosingSnapshotValue(
   if (!snapshot) return null;
 
   const currency = displayCurrency.toUpperCase();
-  if (currency === "EUR") return Number(snapshot.market_value_eur);
-  if (currency === "USD") return Number(snapshot.market_value_usd);
-  return convert(Number(snapshot.market_value_usd), "USD");
+  if (currency === "EUR")
+    return Number(snapshot.accounting_version) >= 2
+      ? Number(snapshot.total_value_eur)
+      : Number(snapshot.market_value_eur);
+  if (currency === "USD")
+    return Number(snapshot.accounting_version) >= 2
+      ? Number(snapshot.total_value_usd)
+      : Number(snapshot.market_value_usd);
+  const value =
+    Number(snapshot.accounting_version) >= 2
+      ? Number(snapshot.total_value_usd)
+      : Number(snapshot.market_value_usd);
+  return convert(value, "USD");
+}
+
+function calculateRealizedPnl(
+  transactions: TransactionRow[],
+  selectedPortfolioId: string,
+  convert: ConvFn,
+) {
+  const states = new Map<string, { quantity: number; basis: number }>();
+  let realized = 0;
+  const rows = transactions
+    .filter(
+      (row) =>
+        portfolioMatchesSelection(row.portfolio_id, selectedPortfolioId) &&
+        (row.action === "buy" || row.action === "sell"),
+    )
+    .slice()
+    .sort((left, right) => {
+      const date = left.transaction_date.localeCompare(right.transaction_date);
+      if (date) return date;
+      if (left.action !== right.action) return left.action === "buy" ? -1 : 1;
+      return left.id.localeCompare(right.id);
+    });
+  for (const row of rows) {
+    const key = `${row.security_listing_id}|${row.portfolio_id ?? ""}|${row.currency}`;
+    const state = states.get(key) ?? { quantity: 0, basis: 0 };
+    if (row.action === "buy") {
+      state.quantity += Number(row.shares);
+      state.basis += Number(row.shares) * Number(row.price) + Number(row.fee_amount ?? 0);
+    } else {
+      const average = state.quantity ? state.basis / state.quantity : 0;
+      const disposed = average * Number(row.shares);
+      realized += convert(
+        Number(row.shares) * Number(row.price) - Number(row.fee_amount ?? 0) - disposed,
+        row.currency,
+      );
+      state.quantity -= Number(row.shares);
+      state.basis -= disposed;
+      if (state.quantity === 0) state.basis = 0;
+    }
+    states.set(key, state);
+  }
+  return realized;
+}
+
+function portfolioMatchesSelection(portfolioId: string | null, selectedPortfolioId: string) {
+  if (selectedPortfolioId === "__all__") return true;
+  if (selectedPortfolioId === "__unassigned__") return portfolioId === null;
+  return portfolioId === selectedPortfolioId;
 }
 
 function buildAllocationData(

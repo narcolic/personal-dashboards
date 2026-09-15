@@ -19,7 +19,7 @@ import {
   usePortfolioHoldingsView,
 } from "@/routes/_authenticated/portfolio/hooks/usePortfolioHoldingsView";
 
-export type InsightsRange = "1W" | "1M" | "3M" | "1Y" | "ALL";
+export type InsightsRange = "1W" | "1M" | "3M" | "YTD" | "1Y" | "ALL";
 export type InsightsMetric = "totalValue" | "performance" | "profitLoss";
 type SnapshotCurrency = "EUR" | "USD";
 
@@ -27,6 +27,7 @@ const RANGES: Array<{ key: InsightsRange; days: number | null }> = [
   { key: "1W", days: 7 },
   { key: "1M", days: 30 },
   { key: "3M", days: 90 },
+  { key: "YTD", days: null },
   { key: "1Y", days: 365 },
   { key: "ALL", days: null },
 ];
@@ -54,7 +55,12 @@ export function PortfolioInsights({
   const { rows, convertTo, holdingsQ, quotesQ, display, selected, portfolioMap } =
     usePortfolioHoldingsView();
   const currency: SnapshotCurrency = display === "USD" ? "USD" : "EUR";
-  const scopeKey = selected === "__all__" ? "total" : `portfolio:${selected}`;
+  const scopeKey =
+    selected === "__all__"
+      ? "total"
+      : selected === "__unassigned__"
+        ? "portfolio:unassigned"
+        : `portfolio:${selected}`;
   const selectedScopeLabel =
     selected === "__all__" ? t("portfolio.all") : (portfolioMap.get(selected) ?? "—");
 
@@ -126,7 +132,7 @@ export function PortfolioInsights({
             {model.changePct.toFixed(2)}%
           </div>
         </div>
-        <div className="grid grid-cols-5 bg-secondary/45 p-0.5">
+        <div className="grid grid-cols-6 bg-secondary/45 p-0.5">
           {RANGES.map((item) => (
             <button
               key={item.key}
@@ -349,9 +355,9 @@ function buildAnalyticsModel(
     .slice()
     .sort((left, right) => left.snapshot_date.localeCompare(right.snapshot_date));
   const points = scopedRows.map<AnalyticsPoint>((row, index) => {
-    const totalValue = snapshotMetric(row, currency, "market");
+    const totalValue = snapshotMetric(row, currency, "total");
     const previousValue =
-      index > 0 ? snapshotMetric(scopedRows[index - 1], currency, "market") : totalValue;
+      index > 0 ? snapshotMetric(scopedRows[index - 1], currency, "total") : totalValue;
     return {
       date: row.snapshot_date,
       totalValue,
@@ -360,24 +366,48 @@ function buildAnalyticsModel(
       dailyEarnings: totalValue - previousValue,
       performance: 0,
       profitLoss: 0,
+      totalPnl: snapshotMetric(row, currency, "totalPnl"),
+      externalFlow: snapshotMetric(row, currency, "externalFlow"),
+      accountingVersion: Number(row.accounting_version),
     };
   });
   const rangeConfig = RANGES.find((item) => item.key === range) ?? RANGES[1];
-  const rangedPoints = filterRange(points, rangeConfig.days);
-  const firstValue = rangedPoints[0]?.totalValue ?? 0;
-  const firstUnrealized = rangedPoints[0]?.unrealized ?? 0;
-  const derivedPoints = rangedPoints.map((point) => ({
-    ...point,
-    performance: firstValue ? ((point.totalValue - firstValue) / firstValue) * 100 : 0,
-    profitLoss: point.unrealized - firstUnrealized,
-  }));
+  const rangedPoints = filterRange(points, rangeConfig.days, range);
+  let growth = 1;
+  let pnlChange = 0;
+  const derivedPoints = rangedPoints.map((point, index) => {
+    if (index > 0) {
+      const previousPoint = rangedPoints[index - 1];
+      const sameAccountingVersion = previousPoint.accountingVersion === point.accountingVersion;
+      if (sameAccountingVersion && previousPoint.totalValue) {
+        growth *=
+          1 +
+          (point.totalValue - previousPoint.totalValue - point.externalFlow) /
+            previousPoint.totalValue;
+      }
+      if (sameAccountingVersion) {
+        pnlChange += point.totalPnl - previousPoint.totalPnl;
+      }
+    }
+    return {
+      ...point,
+      performance: (growth - 1) * 100,
+      profitLoss: pnlChange,
+    };
+  });
   const latest = derivedPoints.at(-1) ?? null;
-  const change = latest ? latest.totalValue - firstValue : 0;
+  const change = derivedPoints.reduce(
+    (sum, point, index) =>
+      index === 0 || point.accountingVersion !== derivedPoints[index - 1].accountingVersion
+        ? sum
+        : sum + point.totalValue - derivedPoints[index - 1].totalValue - point.externalFlow,
+    0,
+  );
   return {
     points: derivedPoints,
     latest,
     change,
-    changePct: firstValue ? (change / firstValue) * 100 : 0,
+    changePct: latest?.performance ?? 0,
   };
 }
 
@@ -400,9 +430,14 @@ function buildTopAllocations(
   };
 }
 
-function filterRange(points: AnalyticsPoint[], days: number | null) {
-  if (!days || points.length === 0) return points;
+function filterRange(points: AnalyticsPoint[], days: number | null, range: InsightsRange) {
+  if (points.length === 0) return points;
   const latestDate = new Date(`${points.at(-1)?.date}T00:00:00`);
+  if (range === "YTD") {
+    const cutoffKey = `${latestDate.getFullYear()}-01-01`;
+    return points.filter((point) => point.date >= cutoffKey);
+  }
+  if (!days) return points;
   const cutoff = new Date(latestDate);
   cutoff.setDate(cutoff.getDate() - (days - 1));
   const cutoffKey = cutoff.toISOString().slice(0, 10);
@@ -412,13 +447,28 @@ function filterRange(points: AnalyticsPoint[], days: number | null) {
 function snapshotMetric(
   row: PortfolioSnapshotRow,
   currency: SnapshotCurrency,
-  metric: "market" | "cost" | "unrealized",
+  metric: "market" | "cost" | "unrealized" | "total" | "totalPnl" | "externalFlow",
 ) {
   if (metric === "market") {
     return currency === "EUR" ? row.market_value_eur : row.market_value_usd;
   }
   if (metric === "cost") {
     return currency === "EUR" ? row.cost_basis_eur : row.cost_basis_usd;
+  }
+  if (metric === "total") {
+    if (Number(row.accounting_version) < 2) {
+      return currency === "EUR" ? row.market_value_eur : row.market_value_usd;
+    }
+    return currency === "EUR" ? row.total_value_eur : row.total_value_usd;
+  }
+  if (metric === "totalPnl") {
+    if (Number(row.accounting_version) < 2) {
+      return currency === "EUR" ? row.unrealized_eur : row.unrealized_usd;
+    }
+    return currency === "EUR" ? row.total_pnl_eur : row.total_pnl_usd;
+  }
+  if (metric === "externalFlow") {
+    return currency === "EUR" ? row.external_flow_eur : row.external_flow_usd;
   }
   return currency === "EUR" ? row.unrealized_eur : row.unrealized_usd;
 }

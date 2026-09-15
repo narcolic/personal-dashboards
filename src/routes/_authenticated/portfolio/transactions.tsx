@@ -29,6 +29,8 @@ import {
   usePortfolioData,
 } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useTickerCatalog } from "@/routes/_authenticated/portfolio/hooks/useTickerCatalog";
+import { usePortfolioCash } from "@/routes/_authenticated/portfolio/hooks/usePortfolioCash";
+import { withdrawPortfolioCash, type PortfolioCashBalance } from "@/lib/portfolio/cash/api";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const TRANSACTIONS_PAGE_SIZE = 25;
@@ -48,6 +50,8 @@ const empty = (): TransactionInputType => ({
   notes: "",
   portfolio_id: null,
   security_listing_id: null,
+  use_available_cash: false,
+  fee_amount: 0,
 });
 
 type TransactionTableRow = {
@@ -64,6 +68,9 @@ type TransactionTableRow = {
   notes: string | null;
   portfolio_id: string | null;
   security_listing_id: string;
+  cash_used: number;
+  fee_amount: number;
+  settles_to_cash: boolean;
 };
 
 type DeleteDialogState = {
@@ -85,9 +92,9 @@ export function ActivityPage({
   const qc = useQueryClient();
   const fileRef = useRef<HTMLInputElement>(null);
 
-  const [editing, setEditing] = useState<(TransactionInputType & { id?: string }) | null>(() =>
-    openAddTransaction ? empty() : null,
-  );
+  const [editing, setEditing] = useState<
+    (TransactionInputType & { id?: string; cash_used?: number }) | null
+  >(() => (openAddTransaction ? empty() : null));
   const [showPortfolios, setShowPortfolios] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
@@ -100,6 +107,7 @@ export function ActivityPage({
   const [dateToFilter, setDateToFilter] = useState("");
   const [showFilters, setShowFilters] = useState(false);
   const [showImportHelp, setShowImportHelp] = useState(false);
+  const [withdrawing, setWithdrawing] = useState<PortfolioCashBalance | null>(null);
 
   const { txQ, transactions, transactionCount, portfolios } = usePortfolioData({
     transactionFilters: {
@@ -113,6 +121,7 @@ export function ActivityPage({
     transactionPagination: { page, pageSize: TRANSACTIONS_PAGE_SIZE },
   });
   const { tickerCatalog } = useTickerCatalog();
+  const cashQ = usePortfolioCash();
   const data = transactions.map((row) => {
     if (!row.security) {
       throw new Error(`Canonical security metadata is missing for transaction ${row.id}.`);
@@ -304,6 +313,16 @@ export function ActivityPage({
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const withdrawM = useMutation({
+    mutationFn: withdrawPortfolioCash,
+    onSuccess: () => {
+      invalidate();
+      setWithdrawing(null);
+      toast.success(t("portfolio.cashWithdrawn"));
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const activeFilterCount =
     Number(portfolioFilter !== ALL_FILTER) +
     Number(typeFilter !== ALL_FILTER) +
@@ -332,6 +351,32 @@ export function ActivityPage({
     <div className="space-y-6">
       <div className="flex justify-end">
         <div className="flex shrink-0 gap-2">
+          {(cashQ.data ?? []).some((row) => row.availableAmount > 0) ? (
+            <details className="relative">
+              <summary className="flex h-10 cursor-pointer list-none items-center rounded-lg border border-border/70 bg-card/70 px-4 text-xs font-bold uppercase tracking-[0.1em] hover:border-primary/60">
+                {t("portfolio.withdrawCash")}
+              </summary>
+              <div className="absolute right-0 z-20 mt-2 min-w-64 overflow-hidden rounded-[10px] border border-border/70 bg-popover p-1.5 shadow-xl">
+                {(cashQ.data ?? [])
+                  .filter((row) => row.availableAmount > 0)
+                  .map((row) => (
+                    <button
+                      key={`${row.portfolioId ?? "unassigned"}-${row.currency}`}
+                      type="button"
+                      onClick={() => setWithdrawing(row)}
+                      className="block w-full rounded-md px-3 py-2.5 text-left text-xs hover:bg-secondary/60"
+                    >
+                      <span className="font-bold">
+                        {fmtCash(row.availableAmount, row.currency)}
+                      </span>
+                      <span className="ml-2 text-muted-foreground">
+                        {portfolioName(row.portfolioId)}
+                      </span>
+                    </button>
+                  ))}
+              </div>
+            </details>
+          ) : null}
           <details className="relative">
             <summary className="flex h-10 cursor-pointer list-none items-center rounded-lg border border-border/70 bg-card/70 px-4 text-sm font-bold tracking-[0.12em] transition-colors hover:border-primary/60 hover:bg-secondary/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
               ••• <span className="sr-only">{t("portfolio.moreActions")}</span>
@@ -553,6 +598,7 @@ export function ActivityPage({
           value={editing}
           portfolios={portfolios}
           tickerSuggestions={tickerSuggestions}
+          cashBalances={cashQ.data ?? []}
           onClose={() => {
             setEditing(null);
             if (openAddTransaction) onAddHandled?.();
@@ -573,6 +619,24 @@ export function ActivityPage({
             setShowImportHelp(false);
             fileRef.current?.click();
           }}
+        />
+      ) : null}
+
+      {withdrawing ? (
+        <WithdrawalDialog
+          balance={withdrawing}
+          portfolioLabel={portfolioName(withdrawing.portfolioId)}
+          busy={withdrawM.isPending}
+          onClose={() => setWithdrawing(null)}
+          onSubmit={(amount, withdrawalDate, notes) =>
+            withdrawM.mutate({
+              portfolio_id: withdrawing.portfolioId,
+              currency: withdrawing.currency,
+              amount,
+              withdrawal_date: withdrawalDate,
+              notes,
+            })
+          }
         />
       ) : null}
 
@@ -616,6 +680,99 @@ export function ActivityPage({
         onCancel={() => setDeleteDialog(null)}
         onConfirm={() => deleteDialog?.onConfirm()}
       />
+    </div>
+  );
+}
+
+function fmtCash(value: number, currency: string) {
+  return new Intl.NumberFormat(undefined, { style: "currency", currency }).format(value);
+}
+
+function WithdrawalDialog({
+  balance,
+  portfolioLabel,
+  busy,
+  onClose,
+  onSubmit,
+}: {
+  balance: PortfolioCashBalance;
+  portfolioLabel: string;
+  busy: boolean;
+  onClose: () => void;
+  onSubmit: (amount: number, withdrawalDate: string, notes: string | null) => void;
+}) {
+  const { t } = useTranslation();
+  const [amount, setAmount] = useState(String(balance.availableAmount));
+  const [withdrawalDate, setWithdrawalDate] = useState(today());
+  const [notes, setNotes] = useState("");
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="withdrawal-dialog-title"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-background/80 p-4 backdrop-blur"
+    >
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          onSubmit(Number(amount), withdrawalDate, notes.trim() || null);
+        }}
+        className="analytics-panel w-full max-w-md space-y-4 rounded-xl border border-border/70 bg-card p-5 shadow-2xl"
+      >
+        <div>
+          <h2
+            id="withdrawal-dialog-title"
+            className="text-xs uppercase tracking-[0.16em] text-primary"
+          >
+            {t("portfolio.withdrawCash")}
+          </h2>
+          <p className="mt-2 text-xs text-muted-foreground">
+            {portfolioLabel} · {fmtCash(balance.availableAmount, balance.currency)}
+          </p>
+        </div>
+        <label className="block text-xs uppercase tracking-[0.1em] text-muted-foreground">
+          {t("portfolio.withdrawalAmount")}
+          <input
+            type="number"
+            required
+            min="0.00000001"
+            max={balance.availableAmount}
+            step="any"
+            value={amount}
+            onChange={(event) => setAmount(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+          />
+        </label>
+        <label className="block text-xs uppercase tracking-[0.1em] text-muted-foreground">
+          {t("portfolio.date")}
+          <input
+            type="date"
+            required
+            value={withdrawalDate}
+            onChange={(event) => setWithdrawalDate(event.target.value)}
+            className="mt-1 w-full rounded-lg border border-border bg-background px-3 py-2 text-foreground"
+          />
+        </label>
+        <textarea
+          rows={2}
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
+          placeholder={t("portfolio.notes")}
+          className="w-full rounded-lg border border-border bg-background px-3 py-2"
+        />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-xs uppercase">
+            {t("common.cancel")}
+          </button>
+          <button
+            type="submit"
+            disabled={busy || Number(amount) <= 0 || Number(amount) > balance.availableAmount}
+            className="rounded-lg bg-primary px-4 py-2 text-xs font-bold uppercase text-primary-foreground disabled:opacity-50"
+          >
+            {busy ? t("portfolio.saving") : t("portfolio.withdrawCash")}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

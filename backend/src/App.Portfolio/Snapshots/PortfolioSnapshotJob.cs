@@ -24,10 +24,18 @@ public sealed class PortfolioSnapshotJob(
             return Skipped("outside_athens_midnight_window", snapshotDate);
         }
 
-        var transactions = await store.ReadTransactionsAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var transactionTask = store.ReadTransactionsAsync(cancellationToken);
+        var withdrawalTask = store.ReadWithdrawalsAsync(cancellationToken);
+        await Task.WhenAll(transactionTask, withdrawalTask).ConfigureAwait(false);
+        var transactions = (await transactionTask.ConfigureAwait(false))
+            .Where(row => row.TransactionDate <= snapshotDate)
+            .ToArray();
+        var withdrawals = (await withdrawalTask.ConfigureAwait(false))
+            .Where(row => row.WithdrawalDate <= snapshotDate)
+            .ToArray();
         var holdings = Aggregate(transactions);
-        if (holdings.Length == 0)
+        var accounting = BuildAccounting(transactions, withdrawals, snapshotDate);
+        if (holdings.Length == 0 && accounting.Length == 0)
         {
             return Completed(snapshotDate, rows: 0, users: 0, symbols: 0);
         }
@@ -82,6 +90,7 @@ public sealed class PortfolioSnapshotJob(
 
         var records = BuildRecords(
             enriched,
+            accounting,
             snapshotDate,
             now,
             rates,
@@ -96,35 +105,125 @@ public sealed class PortfolioSnapshotJob(
     }
 
     private static SnapshotHolding[] Aggregate(
-        IReadOnlyList<SnapshotTransaction> transactions) =>
-        [.. transactions
+        IReadOnlyList<SnapshotTransaction> transactions)
+    {
+        var holdings = new List<SnapshotHolding>();
+        foreach (var group in transactions
+            .Where(row => row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase) ||
+                          row.Action.Equals("sell", StringComparison.OrdinalIgnoreCase))
             .GroupBy(transaction => new HoldingKey(
                 transaction.UserId,
                 transaction.SecurityListingId,
                 transaction.PortfolioId,
-                NormalizeCurrency(transaction.Currency)))
-            .Select(group =>
+                NormalizeCurrency(transaction.Currency))))
+        {
+            decimal shares = 0m;
+            decimal costBasis = 0m;
+            SnapshotTransaction? last = null;
+            foreach (var row in Ordered(group))
             {
-                var rows = group.ToArray();
-                var shares = rows.Sum(row => row.Shares);
-                if (shares <= 0m)
+                last = row;
+                if (row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
                 {
-                    return null;
+                    shares += row.Shares;
+                    costBasis += row.Shares * row.Price + row.FeeAmount;
+                    continue;
                 }
+                if (row.Shares > shares)
+                    throw new InvalidOperationException($"Snapshot history oversells {row.Ticker}.");
+                var average = shares == 0m ? 0m : costBasis / shares;
+                costBasis -= average * row.Shares;
+                shares -= row.Shares;
+                if (shares == 0m) costBasis = 0m;
+            }
+            if (shares <= 0m || last is null) continue;
+            holdings.Add(new(
+                group.Key.UserId, last.Ticker, group.Key.Currency,
+                shares, costBasis / shares, group.Key.PortfolioId, last.PortfolioName));
+        }
+        return [.. holdings.OrderBy(row => row.Ticker, StringComparer.Ordinal)];
+    }
 
-                var last = rows.MaxBy(row => row.TransactionDate)!;
-                return new SnapshotHolding(
-                    group.Key.UserId,
-                    last.Ticker,
-                    group.Key.Currency,
-                    shares,
-                    rows.Sum(row => row.Shares * row.Price) / shares,
-                    group.Key.PortfolioId,
-                    last.PortfolioName);
-            })
-            .Where(holding => holding is not null)
-            .Select(holding => holding!)
-            .OrderBy(holding => holding.Ticker, StringComparer.Ordinal)];
+    private static AccountingRow[] BuildAccounting(
+        IReadOnlyList<SnapshotTransaction> transactions,
+        IReadOnlyList<SnapshotWithdrawal> withdrawals,
+        DateOnly snapshotDate)
+    {
+        var realized = new Dictionary<AccountingKey, decimal>();
+        foreach (var group in transactions
+            .Where(row => row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase) ||
+                          row.Action.Equals("sell", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(row => new HoldingKey(
+                row.UserId, row.SecurityListingId, row.PortfolioId, NormalizeCurrency(row.Currency))))
+        {
+            decimal quantity = 0m;
+            decimal basis = 0m;
+            foreach (var row in Ordered(group))
+            {
+                if (row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
+                {
+                    quantity += row.Shares;
+                    basis += row.Shares * row.Price + row.FeeAmount;
+                    continue;
+                }
+                var average = quantity == 0m ? 0m : basis / quantity;
+                var disposed = average * row.Shares;
+                var key = new AccountingKey(
+                    row.UserId, row.PortfolioId, row.PortfolioName, NormalizeCurrency(row.Currency));
+                realized[key] = realized.GetValueOrDefault(key) +
+                    (row.Shares * row.Price - row.FeeAmount - disposed);
+                quantity -= row.Shares;
+                basis -= disposed;
+                if (quantity == 0m) basis = 0m;
+            }
+        }
+
+        var rows = new Dictionary<AccountingKey, AccountingAmounts>();
+        foreach (var transaction in transactions)
+        {
+            var key = new AccountingKey(
+                transaction.UserId, transaction.PortfolioId,
+                transaction.PortfolioName, NormalizeCurrency(transaction.Currency));
+            var value = rows.GetValueOrDefault(key) ?? new AccountingAmounts();
+            if (transaction.Action.Equals("sell", StringComparison.OrdinalIgnoreCase) &&
+                transaction.SettlesToCash)
+                value.Cash += transaction.Shares * transaction.Price - transaction.FeeAmount;
+            if (transaction.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
+            {
+                value.Cash -= transaction.CashUsed;
+                if (transaction.TransactionDate == snapshotDate)
+                    value.ExternalFlow += transaction.Shares * transaction.Price +
+                        transaction.FeeAmount - transaction.CashUsed;
+            }
+            rows[key] = value;
+        }
+        foreach (var withdrawal in withdrawals)
+        {
+            var key = new AccountingKey(
+                withdrawal.UserId, withdrawal.PortfolioId,
+                withdrawal.PortfolioName, NormalizeCurrency(withdrawal.Currency));
+            var value = rows.GetValueOrDefault(key) ?? new AccountingAmounts();
+            value.Cash -= withdrawal.Amount;
+            if (withdrawal.WithdrawalDate == snapshotDate) value.ExternalFlow -= withdrawal.Amount;
+            rows[key] = value;
+        }
+        foreach (var item in realized)
+        {
+            var value = rows.GetValueOrDefault(item.Key) ?? new AccountingAmounts();
+            value.Realized = item.Value;
+            rows[item.Key] = value;
+        }
+        return [.. rows.Select(item => new AccountingRow(
+            item.Key.UserId, item.Key.PortfolioId, item.Key.PortfolioName,
+            item.Key.Currency, item.Value.Cash, item.Value.Realized, item.Value.ExternalFlow))];
+    }
+
+    private static IOrderedEnumerable<SnapshotTransaction> Ordered(
+        IEnumerable<SnapshotTransaction> rows) =>
+        rows.OrderBy(row => row.TransactionDate)
+            .ThenBy(row => row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
+            .ThenBy(row => row.CreatedAt ?? DateTimeOffset.MinValue)
+            .ThenBy(row => row.Id);
 
     private static EnrichedSnapshotHolding[] Enrich(
         IReadOnlyList<SnapshotHolding> holdings,
@@ -155,6 +254,7 @@ public sealed class PortfolioSnapshotJob(
 
     private static List<PortfolioSnapshotRecord> BuildRecords(
         IReadOnlyList<EnrichedSnapshotHolding> holdings,
+        IReadOnlyList<AccountingRow> accounting,
         DateOnly snapshotDate,
         DateTimeOffset snapshotAt,
         IReadOnlyDictionary<string, decimal> rates,
@@ -162,36 +262,46 @@ public sealed class PortfolioSnapshotJob(
         JsonElement fxMetadata)
     {
         var records = new List<PortfolioSnapshotRecord>();
-        foreach (var userGroup in holdings.GroupBy(holding => holding.UserId))
+        var userIds = holdings.Select(row => row.UserId)
+            .Concat(accounting.Select(row => row.UserId)).Distinct();
+        foreach (var userId in userIds)
         {
+            var userHoldings = holdings.Where(row => row.UserId == userId).ToArray();
+            var userAccounting = accounting.Where(row => row.UserId == userId).ToArray();
             records.Add(CreateRecord(
-                userGroup.Key,
+                userId,
                 snapshotDate,
                 snapshotAt,
                 "total",
                 "total",
                 null,
                 null,
-                userGroup,
+                userHoldings,
+                userAccounting,
                 rates,
                 quoteMetadata,
                 fxMetadata));
 
-            foreach (var portfolioGroup in userGroup.GroupBy(holding => holding.PortfolioId))
+            var portfolioIds = userHoldings.Select(row => row.PortfolioId)
+                .Concat(userAccounting.Select(row => row.PortfolioId)).Distinct();
+            foreach (var portfolioId in portfolioIds)
             {
-                var first = portfolioGroup.First();
-                var key = portfolioGroup.Key?.ToString() ?? "unassigned";
+                var portfolioHoldings = userHoldings.Where(row => row.PortfolioId == portfolioId).ToArray();
+                var portfolioAccounting = userAccounting.Where(row => row.PortfolioId == portfolioId).ToArray();
+                var key = portfolioId?.ToString() ?? "unassigned";
                 records.Add(CreateRecord(
-                    userGroup.Key,
+                    userId,
                     snapshotDate,
                     snapshotAt,
                     "portfolio",
                     $"portfolio:{key}",
-                    portfolioGroup.Key,
-                    portfolioGroup.Key is null
+                    portfolioId,
+                    portfolioId is null
                         ? "Unassigned"
-                        : first.PortfolioName ?? "Unknown portfolio",
-                    portfolioGroup,
+                        : portfolioHoldings.FirstOrDefault()?.PortfolioName ??
+                          portfolioAccounting.FirstOrDefault()?.PortfolioName ?? "Unknown portfolio",
+                    portfolioHoldings,
+                    portfolioAccounting,
                     rates,
                     quoteMetadata,
                     fxMetadata));
@@ -209,6 +319,7 @@ public sealed class PortfolioSnapshotJob(
         Guid? portfolioId,
         string? portfolioName,
         IEnumerable<EnrichedSnapshotHolding> holdings,
+        IEnumerable<AccountingRow> accounting,
         IReadOnlyDictionary<string, decimal> rates,
         JsonElement quoteMetadata,
         JsonElement fxMetadata)
@@ -218,6 +329,15 @@ public sealed class PortfolioSnapshotJob(
         var marketValueUsd = rows.Sum(row => Convert(row.MarketValue, row.Currency, "USD", rates));
         var costBasisEur = rows.Sum(row => Convert(row.CostBasis, row.Currency, "EUR", rates));
         var costBasisUsd = rows.Sum(row => Convert(row.CostBasis, row.Currency, "USD", rates));
+        var cashRows = accounting.ToArray();
+        var cashEur = cashRows.Sum(row => Convert(row.Cash, row.Currency, "EUR", rates));
+        var cashUsd = cashRows.Sum(row => Convert(row.Cash, row.Currency, "USD", rates));
+        var realizedEur = cashRows.Sum(row => Convert(row.Realized, row.Currency, "EUR", rates));
+        var realizedUsd = cashRows.Sum(row => Convert(row.Realized, row.Currency, "USD", rates));
+        var externalFlowEur = cashRows.Sum(row => Convert(row.ExternalFlow, row.Currency, "EUR", rates));
+        var externalFlowUsd = cashRows.Sum(row => Convert(row.ExternalFlow, row.Currency, "USD", rates));
+        var unrealizedEur = marketValueEur - costBasisEur;
+        var unrealizedUsd = marketValueUsd - costBasisUsd;
         return new PortfolioSnapshotRecord(
             userId,
             snapshotDate,
@@ -230,10 +350,21 @@ public sealed class PortfolioSnapshotJob(
             marketValueUsd,
             costBasisEur,
             costBasisUsd,
-            marketValueEur - costBasisEur,
-            marketValueUsd - costBasisUsd,
+            unrealizedEur,
+            unrealizedUsd,
             quoteMetadata,
-            fxMetadata);
+            fxMetadata,
+            cashEur,
+            cashUsd,
+            marketValueEur + cashEur,
+            marketValueUsd + cashUsd,
+            realizedEur,
+            realizedUsd,
+            realizedEur + unrealizedEur,
+            realizedUsd + unrealizedUsd,
+            externalFlowEur,
+            externalFlowUsd,
+            2);
     }
 
     private static Dictionary<string, decimal> ReadRates(JsonElement payload)
@@ -291,6 +422,28 @@ public sealed class PortfolioSnapshotJob(
         Guid SecurityListingId,
         Guid? PortfolioId,
         string Currency);
+
+    private sealed record AccountingKey(
+        Guid UserId,
+        Guid? PortfolioId,
+        string? PortfolioName,
+        string Currency);
+
+    private sealed class AccountingAmounts
+    {
+        public decimal Cash { get; set; }
+        public decimal Realized { get; set; }
+        public decimal ExternalFlow { get; set; }
+    }
+
+    private sealed record AccountingRow(
+        Guid UserId,
+        Guid? PortfolioId,
+        string? PortfolioName,
+        string Currency,
+        decimal Cash,
+        decimal Realized,
+        decimal ExternalFlow);
 
     private sealed record SnapshotHolding(
         Guid UserId,

@@ -24,8 +24,17 @@ function HoldingDetailsPage() {
   const normalizedTicker = ticker.trim().toUpperCase();
   const [editing, setEditing] = useState<(TransactionInputType & { id?: string }) | null>(null);
   const [txSortDirection, setTxSortDirection] = useState<"asc" | "desc">("desc");
-  const { txQ, holdingsQ, quotesQ, transactions, portfolios, allRows, portfolioMap, convertTo } =
-    usePortfolioHoldingsView();
+  const {
+    txQ,
+    holdingsQ,
+    quotesQ,
+    cashQ,
+    transactions,
+    portfolios,
+    allRows,
+    portfolioMap,
+    convertTo,
+  } = usePortfolioHoldingsView();
   const { tickerCatalog } = useTickerCatalog();
 
   const holdingRows = useMemo(
@@ -462,6 +471,7 @@ function HoldingDetailsPage() {
           value={editing}
           portfolios={portfolios}
           tickerSuggestions={tickerSuggestions}
+          cashBalances={cashQ.data ?? []}
           busy={createM.isPending}
           onClose={() => setEditing(null)}
           onSave={(value) => createM.mutate(value)}
@@ -555,6 +565,8 @@ function makeTransactionDraft(
     notes: "",
     portfolio_id: uniquePortfolioId,
     security_listing_id: summary.securityListingId,
+    use_available_cash: false,
+    fee_amount: 0,
   };
 }
 

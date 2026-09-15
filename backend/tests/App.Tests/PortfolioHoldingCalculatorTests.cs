@@ -64,11 +64,10 @@ public sealed class PortfolioHoldingCalculatorTests
     }
 
     [Fact]
-    public void AggregatePreservesCurrentBehaviorByIgnoringNonBuyActionsAndEmptyPositions()
+    public void AggregateIgnoresNonPositionActionsAndEmptyPositions()
     {
         var rows = new[]
         {
-            Transaction("ABC", 2m, 10m, new DateOnly(2026, 1, 1), action: "sell"),
             Transaction("ABC", 0m, 10m, new DateOnly(2026, 1, 2)),
             Transaction("XYZ", 1m, 20m, new DateOnly(2026, 1, 3), action: "dividend"),
         };
@@ -76,6 +75,75 @@ public sealed class PortfolioHoldingCalculatorTests
         var holdings = PortfolioHoldingCalculator.Aggregate(rows);
 
         Assert.Empty(holdings);
+    }
+
+    [Fact]
+    public void PartialSaleUsesMovingAverageAndPreservesRemainingBasis()
+    {
+        var rows = new[]
+        {
+            Transaction("MSFT", 10m, 100m, new DateOnly(2026, 1, 1)),
+            Transaction("MSFT", 10m, 200m, new DateOnly(2026, 2, 1)),
+            Transaction("MSFT", 4m, 250m, new DateOnly(2026, 3, 1), action: "sell"),
+        };
+
+        var result = PortfolioAccountingCalculator.Calculate(rows);
+
+        var holding = Assert.Single(result.Holdings);
+        Assert.Equal(16m, holding.Shares);
+        Assert.Equal(150m, holding.AvgCost);
+        var sale = Assert.Single(result.RealizedSales);
+        Assert.Equal(600m, sale.DisposedCostBasis);
+        Assert.Equal(400m, sale.RealizedPnl);
+    }
+
+    [Fact]
+    public void SaleAtLossCalculatesNegativeRealizedPnl()
+    {
+        var result = PortfolioAccountingCalculator.Calculate([
+            Transaction("MSFT", 10m, 100m, new DateOnly(2026, 1, 1)),
+            Transaction("MSFT", 4m, 75m, new DateOnly(2026, 2, 1), action: "sell"),
+        ]);
+
+        Assert.Equal(-100m, Assert.Single(result.RealizedSales).RealizedPnl);
+        Assert.Equal(6m, Assert.Single(result.Holdings).Shares);
+    }
+
+    [Fact]
+    public void TradeFeesEnterBuyBasisAndReduceSellProceeds()
+    {
+        var result = PortfolioAccountingCalculator.Calculate([
+            Transaction("MSFT", 10m, 100m, new DateOnly(2026, 1, 1), feeAmount: 10m),
+            Transaction("MSFT", 4m, 150m, new DateOnly(2026, 2, 1), action: "sell", feeAmount: 5m),
+        ]);
+
+        Assert.Equal(101m, Assert.Single(result.Holdings).AvgCost);
+        var sale = Assert.Single(result.RealizedSales);
+        Assert.Equal(595m, sale.NetProceeds);
+        Assert.Equal(404m, sale.DisposedCostBasis);
+        Assert.Equal(191m, sale.RealizedPnl);
+    }
+
+    [Fact]
+    public void CompleteSaleClosesHoldingButKeepsRealizedResult()
+    {
+        var result = PortfolioAccountingCalculator.Calculate([
+            Transaction("MSFT", 10m, 100m, new DateOnly(2026, 1, 1)),
+            Transaction("MSFT", 10m, 150m, new DateOnly(2026, 2, 1), action: "sell"),
+        ]);
+
+        Assert.Empty(result.Holdings);
+        Assert.Equal(500m, Assert.Single(result.RealizedSales).RealizedPnl);
+    }
+
+    [Fact]
+    public void OversellIsRejected()
+    {
+        Assert.Throws<PortfolioAccountingException>(() =>
+            PortfolioAccountingCalculator.Calculate([
+                Transaction("MSFT", 2m, 100m, new DateOnly(2026, 1, 1)),
+                Transaction("MSFT", 3m, 150m, new DateOnly(2026, 2, 1), action: "sell"),
+            ]));
     }
 
     [Fact]
@@ -125,7 +193,8 @@ public sealed class PortfolioHoldingCalculatorTests
         Guid? portfolioId = null,
         string action = "buy",
         string currency = "USD",
-        string? name = "Example")
+        string? name = "Example",
+        decimal feeAmount = 0m)
     {
         var listingId = Guid.Parse("12b5f14b-611c-4707-ab1e-e194116f16f8");
         var symbol = ticker.Trim().ToUpperInvariant();
@@ -144,6 +213,7 @@ public sealed class PortfolioHoldingCalculatorTests
             null,
             portfolioId,
             listingId,
-            security);
+            security,
+            FeeAmount: feeAmount);
     }
 }

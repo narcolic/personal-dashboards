@@ -19,6 +19,9 @@ function metricValue(
   metric: SnapshotMetric,
 ) {
   if (metric === "market") {
+    if (Number(row.accounting_version) >= 2) {
+      return currency === "EUR" ? row.total_value_eur : row.total_value_usd;
+    }
     return currency === "EUR" ? row.market_value_eur : row.market_value_usd;
   }
   return currency === "EUR" ? row.unrealized_eur : row.unrealized_usd;

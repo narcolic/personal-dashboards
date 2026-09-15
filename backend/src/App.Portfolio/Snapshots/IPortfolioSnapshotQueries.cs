@@ -36,4 +36,15 @@ public sealed record PortfolioSnapshotListItem(
     JsonElement QuoteMetadata,
     JsonElement FxMetadata,
     DateTimeOffset CreatedAt,
-    DateTimeOffset UpdatedAt);
+    DateTimeOffset UpdatedAt,
+    decimal CashBalanceEur = 0m,
+    decimal CashBalanceUsd = 0m,
+    decimal TotalValueEur = 0m,
+    decimal TotalValueUsd = 0m,
+    decimal RealizedEur = 0m,
+    decimal RealizedUsd = 0m,
+    decimal TotalPnlEur = 0m,
+    decimal TotalPnlUsd = 0m,
+    decimal ExternalFlowEur = 0m,
+    decimal ExternalFlowUsd = 0m,
+    short AccountingVersion = 1);

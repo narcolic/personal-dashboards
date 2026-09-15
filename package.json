@@ -11,6 +11,7 @@
     "build:dev": "npm run generate-routes && vite build --mode development",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
+    "test:unit": "node --experimental-strip-types --test tests/*.test.ts",
     "lint": "eslint .",
     "format": "prettier --write ."
   },

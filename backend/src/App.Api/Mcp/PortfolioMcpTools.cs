@@ -74,7 +74,7 @@ public sealed partial class PortfolioMcpTools
         Idempotent = true,
         OpenWorld = false,
         UseStructuredContent = true)]
-    [Description("Lists live holdings and portfolio weights, optionally filtered by ticker. Results use the application's current buy-only cost-basis semantics.")]
+    [Description("Lists live holdings and portfolio weights, optionally filtered by ticker. Open-position cost basis uses moving-average accounting and reflects sales.")]
     [McpMeta("securitySchemes", JsonValue = """[{"type":"oauth2","scopes":["openid"]}]""")]
     public static Task<PortfolioHoldingsResult> GetHoldingsAsync(
         IPortfolioAnalysisService analysis,

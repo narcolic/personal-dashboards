@@ -4,6 +4,7 @@ using System.Text.RegularExpressions;
 using PortfolioTerminal.Api.Auth;
 using PortfolioTerminal.Portfolio;
 using PortfolioTerminal.Portfolio.Holdings;
+using PortfolioTerminal.Portfolio.Cash;
 using PortfolioTerminal.Portfolio.MarketData;
 using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.SecurityMetadata;
@@ -86,6 +87,18 @@ public static class PortfolioEndpoints
                 return TypedResults.Ok(holdings.Select(PortfolioHoldingResponse.From));
             })
             .WithName("ListPortfolioHoldings");
+
+        group.MapGet("/cash", async (
+                DateOnly? asOf,
+                IPortfolioCashQueries queries,
+                ICurrentUser currentUser,
+                CancellationToken cancellationToken) =>
+            TypedResults.Ok(await queries.ListAsync(
+                currentUser.UserId, asOf, cancellationToken)))
+            .WithName("ListPortfolioCash");
+
+        group.MapPost("/cash/withdrawals", WithdrawCashAsync)
+            .WithName("WithdrawPortfolioCash");
 
         group.MapGet("/quotes", async Task<IResult> (
                 string? symbols,
@@ -262,6 +275,40 @@ public static class PortfolioEndpoints
             portfolioId,
             cancellationToken));
 
+    private static async Task<IResult> WithdrawCashAsync(
+        CashWithdrawalRequest request,
+        IPortfolioCashCommands commands,
+        ICurrentUser currentUser,
+        CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (string.IsNullOrWhiteSpace(request.Currency) ||
+            !Regex.IsMatch(request.Currency.Trim(), "^[A-Za-z]{3,5}$"))
+            errors["currency"] = ["Currency must contain 3 to 5 letters."];
+        if (request.Amount <= 0m || request.Amount > 1_000_000_000m)
+            errors["amount"] = ["Amount must be greater than zero and no more than 1,000,000,000."];
+        if (request.WithdrawalDate == default)
+            errors["withdrawal_date"] = ["Withdrawal date is required."];
+        if (request.Notes?.Trim().Length > 500)
+            errors["notes"] = ["Notes must not exceed 500 characters."];
+        if (errors.Count > 0) return Results.ValidationProblem(errors);
+
+        var result = await commands.WithdrawAsync(
+            currentUser.UserId,
+            new CashWithdrawalMutation(
+                request.PortfolioId,
+                request.Currency,
+                request.Amount,
+                request.WithdrawalDate,
+                request.Notes),
+            cancellationToken);
+        return result.Status == PortfolioMutationStatus.Success
+            ? TypedResults.Created(
+                $"/api/portfolio/cash/withdrawals/{result.Id}",
+                new PortfolioMutationResponse(result.Id!.Value))
+            : ToErrorResult(result);
+    }
+
     private static async Task<IResult> CreateTransactionAsync(
         TransactionMutationRequest request,
         ITransactionCommands commands,
@@ -334,7 +381,9 @@ public static class PortfolioEndpoints
             currentUser.UserId,
             request.Ids,
             cancellationToken);
-        return TypedResults.Ok(new PortfolioBulkMutationResponse(result.AffectedCount));
+        return result.Status == PortfolioMutationStatus.Success
+            ? TypedResults.Ok(new PortfolioBulkMutationResponse(result.AffectedCount))
+            : ToErrorResult(result);
     }
 
     private static async Task<IResult> ImportTransactionsAsync(
@@ -389,9 +438,10 @@ public static class PortfolioEndpoints
     private static Dictionary<string, string[]> Validate(TransactionMutationRequest request)
     {
         var errors = new Dictionary<string, string[]>();
+        var action = request.Action?.Trim();
         if (request.SecurityListingId == Guid.Empty)
             errors["security_listing_id"] = ["Security listing is required."];
-        if (!TransactionActions.Contains(request.Action?.Trim() ?? string.Empty))
+        if (!TransactionActions.Contains(action ?? string.Empty))
             errors["action"] = ["Action is invalid."];
         if (string.IsNullOrWhiteSpace(request.TransactionCurrency) ||
             request.TransactionCurrency.Trim().Length is < 3 or > 5)
@@ -400,6 +450,13 @@ public static class PortfolioEndpoints
             errors["shares"] = ["Shares are outside the allowed range."];
         if (request.Price is < 0 or > 1_000_000_000m)
             errors["price"] = ["Price is outside the allowed range."];
+        if (request.FeeAmount is < 0 or > 1_000_000_000m)
+            errors["fee_amount"] = ["Fee amount is outside the allowed range."];
+        if (action?.Equals("sell", StringComparison.OrdinalIgnoreCase) == true &&
+            request.FeeAmount > request.Shares * request.Price)
+            errors["fee_amount"] = ["Fee amount cannot exceed sale proceeds."];
+        if (action?.Equals("buy", StringComparison.OrdinalIgnoreCase) != true && request.UseAvailableCash)
+            errors["use_available_cash"] = ["Available cash can only fund a BUY."];
         if (request.TransactionDate == default)
             errors["transaction_date"] = ["Transaction date is required."];
         if (request.Notes?.Trim().Length > 500)
@@ -593,7 +650,18 @@ public sealed record PortfolioSnapshotResponse(
     [property: JsonPropertyName("quote_metadata")] JsonElement QuoteMetadata,
     [property: JsonPropertyName("fx_metadata")] JsonElement FxMetadata,
     [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt,
-    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt)
+    [property: JsonPropertyName("updated_at")] DateTimeOffset UpdatedAt,
+    [property: JsonPropertyName("cash_balance_eur")] decimal CashBalanceEur,
+    [property: JsonPropertyName("cash_balance_usd")] decimal CashBalanceUsd,
+    [property: JsonPropertyName("total_value_eur")] decimal TotalValueEur,
+    [property: JsonPropertyName("total_value_usd")] decimal TotalValueUsd,
+    [property: JsonPropertyName("realized_eur")] decimal RealizedEur,
+    [property: JsonPropertyName("realized_usd")] decimal RealizedUsd,
+    [property: JsonPropertyName("total_pnl_eur")] decimal TotalPnlEur,
+    [property: JsonPropertyName("total_pnl_usd")] decimal TotalPnlUsd,
+    [property: JsonPropertyName("external_flow_eur")] decimal ExternalFlowEur,
+    [property: JsonPropertyName("external_flow_usd")] decimal ExternalFlowUsd,
+    [property: JsonPropertyName("accounting_version")] short AccountingVersion)
 {
     public static PortfolioSnapshotResponse From(PortfolioSnapshotListItem item) =>
         new(item.Id, item.UserId, item.SnapshotDate, item.SnapshotAt,
@@ -601,7 +669,13 @@ public sealed record PortfolioSnapshotResponse(
             item.MarketValueEur, item.MarketValueUsd,
             item.CostBasisEur, item.CostBasisUsd,
             item.UnrealizedEur, item.UnrealizedUsd,
-            item.QuoteMetadata, item.FxMetadata, item.CreatedAt, item.UpdatedAt);
+            item.QuoteMetadata, item.FxMetadata, item.CreatedAt, item.UpdatedAt,
+            item.CashBalanceEur, item.CashBalanceUsd,
+            item.TotalValueEur, item.TotalValueUsd,
+            item.RealizedEur, item.RealizedUsd,
+            item.TotalPnlEur, item.TotalPnlUsd,
+            item.ExternalFlowEur, item.ExternalFlowUsd,
+            item.AccountingVersion);
 }
 
 public sealed record PortfolioBulkMutationResponse(int Deleted);
@@ -624,12 +698,21 @@ public sealed record TransactionMutationRequest(
     [property: JsonPropertyName("transaction_date")] DateOnly TransactionDate,
     string? Notes,
     [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
-    [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId)
+    [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId,
+    [property: JsonPropertyName("use_available_cash")] bool UseAvailableCash = false,
+    [property: JsonPropertyName("fee_amount")] decimal FeeAmount = 0m)
 {
     public TransactionMutation ToMutation() =>
         new(Action, TransactionCurrency, Shares, Price, TransactionDate,
-            Notes, PortfolioId, SecurityListingId);
+            Notes, PortfolioId, SecurityListingId, UseAvailableCash, FeeAmount);
 }
+
+public sealed record CashWithdrawalRequest(
+    [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
+    string Currency,
+    decimal Amount,
+    [property: JsonPropertyName("withdrawal_date")] DateOnly WithdrawalDate,
+    string? Notes);
 
 public sealed record TransactionBulkDeleteRequest(IReadOnlyList<Guid> Ids);
 
@@ -678,7 +761,10 @@ public sealed record TransactionResponse(
     string? Notes,
     [property: JsonPropertyName("portfolio_id")] Guid? PortfolioId,
     [property: JsonPropertyName("security_listing_id")] Guid SecurityListingId,
-    SecurityMetadataView Security)
+    SecurityMetadataView Security,
+    [property: JsonPropertyName("cash_used")] decimal CashUsed,
+    [property: JsonPropertyName("fee_amount")] decimal FeeAmount,
+    [property: JsonPropertyName("settles_to_cash")] bool SettlesToCash)
 {
     public static TransactionResponse From(TransactionListItem transaction) =>
         new(
@@ -692,5 +778,8 @@ public sealed record TransactionResponse(
             transaction.PortfolioId,
             transaction.SecurityListingId,
             transaction.Security ?? throw new InvalidOperationException(
-                "Transaction security metadata is required."));
+                "Transaction security metadata is required."),
+            transaction.CashUsed,
+            transaction.FeeAmount,
+            transaction.SettlesToCash);
 }

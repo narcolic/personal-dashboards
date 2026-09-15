@@ -28,7 +28,7 @@ public sealed class PortfolioAnalysisServiceTests
         Assert.Equal(45m, result.Totals.DayChange);
         Assert.Equal(50m, result.Totals.UnrealizedReturnPct);
         Assert.Single(result.TopPositions);
-        Assert.Contains(result.Warnings, warning => warning.Code == "buy_only_cost_basis");
+        Assert.Contains(result.Warnings, warning => warning.Code == "securities_only_live_summary");
     }
 
     [Fact]

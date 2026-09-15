@@ -5,7 +5,7 @@ import {
   type InsightsRange,
 } from "@/routes/_authenticated/portfolio/analytics";
 
-const RANGES = new Set<InsightsRange>(["1W", "1M", "3M", "1Y", "ALL"]);
+const RANGES = new Set<InsightsRange>(["1W", "1M", "3M", "YTD", "1Y", "ALL"]);
 const METRICS = new Set<InsightsMetric>(["totalValue", "performance", "profitLoss"]);
 
 export const Route = createFileRoute("/_authenticated/portfolio/insights")({

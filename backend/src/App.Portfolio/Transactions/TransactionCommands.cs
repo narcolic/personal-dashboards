@@ -3,6 +3,7 @@ using System.Text.Json.Serialization;
 using Npgsql;
 using NpgsqlTypes;
 using PortfolioTerminal.Data;
+using PortfolioTerminal.Portfolio.Cash;
 using PortfolioTerminal.Portfolio.SecurityMetadata;
 
 namespace PortfolioTerminal.Portfolio.Transactions;
@@ -16,10 +17,14 @@ public sealed class TransactionCommands(
         TransactionMutation mutation,
         CancellationToken cancellationToken = default)
     {
-        return await dataSource.ExecuteAsUserAsync(
-            userId,
-            async (connection, transaction, token) =>
+        try
+        {
+            return await dataSource.ExecuteAsUserAsync(
+                userId,
+                async (connection, transaction, token) =>
             {
+                await PortfolioAccountingGuard.LockUserAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 if (!await OwnsPortfolioAsync(
                         connection,
                         transaction,
@@ -30,11 +35,24 @@ public sealed class TransactionCommands(
                     return PortfolioMutationResult.Missing("Portfolio not found.");
                 }
 
+                var action = mutation.Action.Trim().ToLowerInvariant();
+                var availableCash = action == "buy" && mutation.UseAvailableCash
+                    ? await PortfolioAccountingGuard.GetAvailableCashAsync(
+                            connection, transaction, userId, mutation.PortfolioId,
+                            mutation.TransactionCurrency, mutation.TransactionDate, null, token)
+                            .ConfigureAwait(false)
+                    : 0m;
+                var cashUsed = PortfolioCashCalculator.FundPurchase(
+                    availableCash,
+                    mutation.Shares * mutation.Price + mutation.FeeAmount,
+                    mutation.UseAvailableCash).CashUsed;
                 var id = await InsertTransactionAsync(
                     connection,
                     transaction,
                     userId,
                     mutation,
+                    cashUsed,
+                    settlesToCash: action == "sell",
                     token).ConfigureAwait(false);
                 await UpsertTickerAsync(
                     connection,
@@ -42,9 +60,16 @@ public sealed class TransactionCommands(
                     userId,
                     mutation,
                     token).ConfigureAwait(false);
+                await PortfolioAccountingGuard.ValidateAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 return PortfolioMutationResult.Succeeded(id);
             },
             cancellationToken).ConfigureAwait(false);
+        }
+        catch (PortfolioAccountingConflictException exception)
+        {
+            return PortfolioMutationResult.Conflicted(exception.Message);
+        }
     }
 
     public async Task<PortfolioMutationResult> UpdateAsync(
@@ -53,10 +78,14 @@ public sealed class TransactionCommands(
         TransactionMutation mutation,
         CancellationToken cancellationToken = default)
     {
-        return await dataSource.ExecuteAsUserAsync(
-            userId,
-            async (connection, transaction, token) =>
+        try
+        {
+            return await dataSource.ExecuteAsUserAsync(
+                userId,
+                async (connection, transaction, token) =>
             {
+                await PortfolioAccountingGuard.LockUserAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 if (!await LockOwnedTransactionAsync(
                         connection,
                         transaction,
@@ -77,6 +106,22 @@ public sealed class TransactionCommands(
                     return PortfolioMutationResult.Missing("Portfolio not found.");
                 }
 
+                var oldState = await ReadCashStateAsync(
+                    connection, transaction, userId, transactionId, token).ConfigureAwait(false);
+                var action = mutation.Action.Trim().ToLowerInvariant();
+                var availableCash = action == "buy" && mutation.UseAvailableCash
+                    ? await PortfolioAccountingGuard.GetAvailableCashAsync(
+                            connection, transaction, userId, mutation.PortfolioId,
+                            mutation.TransactionCurrency, mutation.TransactionDate, transactionId, token)
+                            .ConfigureAwait(false)
+                    : 0m;
+                var cashUsed = PortfolioCashCalculator.FundPurchase(
+                    availableCash,
+                    mutation.Shares * mutation.Price + mutation.FeeAmount,
+                    mutation.UseAvailableCash).CashUsed;
+                var settlesToCash = action == "sell" &&
+                    (oldState.Action != "sell" || oldState.SettlesToCash);
+
                 await using (var command = connection.CreateCommand())
                 {
                     command.Transaction = transaction;
@@ -84,13 +129,17 @@ public sealed class TransactionCommands(
                         update public.transactions
                         set action = $3, transaction_currency = $4, shares = $5, price = $6,
                             transaction_date = $7, notes = $8, portfolio_id = $9,
-                            security_listing_id = $10
+                            security_listing_id = $10, cash_used = $11,
+                            fee_amount = $12, settles_to_cash = $13
                         where id = $1 and user_id = $2
                         returning id;
                         """;
                     AddUuid(command, transactionId);
                     AddUuid(command, userId);
                     AddCanonicalTransactionParameters(command, mutation);
+                    command.Parameters.AddWithValue(cashUsed);
+                    command.Parameters.AddWithValue(mutation.FeeAmount);
+                    command.Parameters.AddWithValue(settlesToCash);
                     await command.ExecuteScalarAsync(token).ConfigureAwait(false);
                 }
 
@@ -100,19 +149,31 @@ public sealed class TransactionCommands(
                     userId,
                     mutation,
                     token).ConfigureAwait(false);
+                await PortfolioAccountingGuard.ValidateAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 return PortfolioMutationResult.Succeeded(transactionId);
             },
             cancellationToken).ConfigureAwait(false);
+        }
+        catch (PortfolioAccountingConflictException exception)
+        {
+            return PortfolioMutationResult.Conflicted(exception.Message);
+        }
     }
 
-    public Task<PortfolioMutationResult> DeleteAsync(
+    public async Task<PortfolioMutationResult> DeleteAsync(
         Guid userId,
         Guid transactionId,
-        CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
-            userId,
-            async (connection, transaction, token) =>
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await dataSource.ExecuteAsUserAsync(
+                userId,
+                async (connection, transaction, token) =>
             {
+                await PortfolioAccountingGuard.LockUserAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 await using var command = connection.CreateCommand();
                 command.Transaction = transaction;
                 command.CommandText = """
@@ -122,20 +183,33 @@ public sealed class TransactionCommands(
                     """;
                 AddUuid(command, transactionId);
                 AddUuid(command, userId);
-                return await command.ExecuteScalarAsync(token).ConfigureAwait(false) is Guid
-                    ? PortfolioMutationResult.Succeeded(affectedCount: 1)
-                    : PortfolioMutationResult.Missing("Transaction not found.");
+                var deleted = await command.ExecuteScalarAsync(token).ConfigureAwait(false) is Guid;
+                if (!deleted) return PortfolioMutationResult.Missing("Transaction not found.");
+                await PortfolioAccountingGuard.ValidateAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
+                return PortfolioMutationResult.Succeeded(affectedCount: 1);
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+        }
+        catch (PortfolioAccountingConflictException exception)
+        {
+            return PortfolioMutationResult.Conflicted(exception.Message);
+        }
+    }
 
-    public Task<PortfolioMutationResult> DeleteManyAsync(
+    public async Task<PortfolioMutationResult> DeleteManyAsync(
         Guid userId,
         IReadOnlyCollection<Guid> transactionIds,
-        CancellationToken cancellationToken = default) =>
-        dataSource.ExecuteAsUserAsync(
-            userId,
-            async (connection, transaction, token) =>
+        CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            return await dataSource.ExecuteAsUserAsync(
+                userId,
+                async (connection, transaction, token) =>
             {
+                await PortfolioAccountingGuard.LockUserAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 var ids = transactionIds.Distinct().ToArray();
                 await using var command = connection.CreateCommand();
                 command.Transaction = transaction;
@@ -150,9 +224,17 @@ public sealed class TransactionCommands(
                     Value = ids,
                 });
                 var deleted = await command.ExecuteNonQueryAsync(token).ConfigureAwait(false);
+                await PortfolioAccountingGuard.ValidateAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 return PortfolioMutationResult.Succeeded(affectedCount: deleted);
             },
-            cancellationToken);
+            cancellationToken).ConfigureAwait(false);
+        }
+        catch (PortfolioAccountingConflictException exception)
+        {
+            return PortfolioMutationResult.Conflicted(exception.Message);
+        }
+    }
 
     public async Task<PortfolioMutationResult> ImportAsync(
         Guid userId,
@@ -176,6 +258,8 @@ public sealed class TransactionCommands(
             userId,
             async (connection, transaction, token) =>
             {
+                await PortfolioAccountingGuard.LockUserAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 var portfolios = await ReadPortfolioMapAsync(
                     connection,
                     transaction,
@@ -213,6 +297,8 @@ public sealed class TransactionCommands(
                     userId,
                     rows,
                     token).ConfigureAwait(false);
+                await PortfolioAccountingGuard.ValidateAsync(connection, transaction, userId, token)
+                    .ConfigureAwait(false);
                 return PortfolioMutationResult.Succeeded(affectedCount: inserted);
             },
             cancellationToken).ConfigureAwait(false);
@@ -223,6 +309,8 @@ public sealed class TransactionCommands(
         NpgsqlTransaction transaction,
         Guid userId,
         TransactionMutation mutation,
+        decimal cashUsed,
+        bool settlesToCash,
         CancellationToken cancellationToken)
     {
         await using var command = connection.CreateCommand();
@@ -230,12 +318,15 @@ public sealed class TransactionCommands(
         command.CommandText = """
             insert into public.transactions (
                 user_id, action, transaction_currency, shares, price, transaction_date,
-                notes, portfolio_id, security_listing_id)
-            values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+                notes, portfolio_id, security_listing_id, cash_used, fee_amount, settles_to_cash)
+            values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
             returning id;
             """;
         AddUuid(command, userId);
         AddCanonicalTransactionParameters(command, mutation);
+        command.Parameters.AddWithValue(cashUsed);
+        command.Parameters.AddWithValue(mutation.FeeAmount);
+        command.Parameters.AddWithValue(settlesToCash);
         return (Guid)(await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false))!;
     }
 
@@ -396,6 +487,27 @@ public sealed class TransactionCommands(
         return await command.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false) is Guid;
     }
 
+    private static async Task<TransactionCashState> ReadCashStateAsync(
+        NpgsqlConnection connection,
+        NpgsqlTransaction transaction,
+        Guid userId,
+        Guid transactionId,
+        CancellationToken cancellationToken)
+    {
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            select action, settles_to_cash
+            from public.transactions
+            where id = $1 and user_id = $2;
+            """;
+        AddUuid(command, transactionId);
+        AddUuid(command, userId);
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
+        return new TransactionCashState(reader.GetString(0), reader.GetBoolean(1));
+    }
+
     private static void AddCanonicalTransactionParameters(
         NpgsqlCommand command,
         TransactionMutation mutation)
@@ -473,6 +585,8 @@ public sealed class TransactionCommands(
                 row.SecurityListingId ?? throw new InvalidOperationException(
                     "Imported transaction listing resolution was not completed."));
     }
+
+    private sealed record TransactionCashState(string Action, bool SettlesToCash);
 
     private static string? TrimToNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();

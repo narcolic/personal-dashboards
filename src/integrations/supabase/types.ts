@@ -362,11 +362,60 @@ export type Database = {
         };
         Relationships: [];
       };
+      portfolio_cash_withdrawals: {
+        Row: {
+          amount: number;
+          created_at: string;
+          currency: string;
+          id: string;
+          notes: string | null;
+          portfolio_id: string | null;
+          updated_at: string;
+          user_id: string;
+          withdrawal_date: string;
+        };
+        Insert: {
+          amount: number;
+          created_at?: string;
+          currency: string;
+          id?: string;
+          notes?: string | null;
+          portfolio_id?: string | null;
+          updated_at?: string;
+          user_id: string;
+          withdrawal_date?: string;
+        };
+        Update: {
+          amount?: number;
+          created_at?: string;
+          currency?: string;
+          id?: string;
+          notes?: string | null;
+          portfolio_id?: string | null;
+          updated_at?: string;
+          user_id?: string;
+          withdrawal_date?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "portfolio_cash_withdrawals_portfolio_id_fkey";
+            columns: ["portfolio_id"];
+            isOneToOne: false;
+            referencedRelation: "portfolios";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       portfolio_value_snapshots: {
         Row: {
+          accounting_version: number;
+          cash_balance_eur: number;
+          cash_balance_usd: number;
           cost_basis_eur: number;
           cost_basis_usd: number;
           created_at: string;
+          external_flow_eur: number;
+          external_flow_usd: number;
           fx_metadata: Json;
           id: string;
           market_value_eur: number;
@@ -374,50 +423,78 @@ export type Database = {
           portfolio_id: string | null;
           portfolio_name: string | null;
           quote_metadata: Json;
+          realized_eur: number;
+          realized_usd: number;
           scope: string;
           scope_key: string;
           snapshot_at: string;
           snapshot_date: string;
+          total_pnl_eur: number;
+          total_pnl_usd: number;
+          total_value_eur: number;
+          total_value_usd: number;
           unrealized_eur: number;
           unrealized_usd: number;
           updated_at: string;
           user_id: string;
         };
         Insert: {
+          accounting_version?: number;
+          cash_balance_eur?: number;
+          cash_balance_usd?: number;
           cost_basis_eur?: number;
           cost_basis_usd?: number;
           created_at?: string;
           fx_metadata?: Json;
+          external_flow_eur?: number;
+          external_flow_usd?: number;
           id?: string;
           market_value_eur?: number;
           market_value_usd?: number;
           portfolio_id?: string | null;
           portfolio_name?: string | null;
+          realized_eur?: number;
+          realized_usd?: number;
           quote_metadata?: Json;
           scope: string;
           scope_key: string;
           snapshot_at: string;
           snapshot_date: string;
+          total_pnl_eur?: number;
+          total_pnl_usd?: number;
+          total_value_eur?: number;
+          total_value_usd?: number;
           unrealized_eur?: number;
           unrealized_usd?: number;
           updated_at?: string;
           user_id: string;
         };
         Update: {
+          accounting_version?: number;
+          cash_balance_eur?: number;
+          cash_balance_usd?: number;
           cost_basis_eur?: number;
           cost_basis_usd?: number;
           created_at?: string;
           fx_metadata?: Json;
+          external_flow_eur?: number;
+          external_flow_usd?: number;
           id?: string;
           market_value_eur?: number;
           market_value_usd?: number;
           portfolio_id?: string | null;
           portfolio_name?: string | null;
+          realized_eur?: number;
+          realized_usd?: number;
           quote_metadata?: Json;
           scope?: string;
           scope_key?: string;
           snapshot_at?: string;
           snapshot_date?: string;
+          total_pnl_eur?: number;
+          total_pnl_usd?: number;
+          total_value_eur?: number;
+          total_value_usd?: number;
           unrealized_eur?: number;
           unrealized_usd?: number;
           updated_at?: string;
@@ -892,12 +969,15 @@ export type Database = {
       transactions: {
         Row: {
           action: string;
+          cash_used: number;
           created_at: string;
           id: string;
+          fee_amount: number;
           notes: string | null;
           portfolio_id: string | null;
           price: number;
           security_listing_id: string;
+          settles_to_cash: boolean;
           shares: number;
           transaction_currency: string;
           transaction_date: string;
@@ -906,12 +986,15 @@ export type Database = {
         };
         Insert: {
           action?: string;
+          cash_used?: number;
           created_at?: string;
           id?: string;
+          fee_amount?: number;
           notes?: string | null;
           portfolio_id?: string | null;
           price?: number;
           security_listing_id: string;
+          settles_to_cash?: boolean;
           shares: number;
           transaction_currency?: string;
           transaction_date?: string;
@@ -920,12 +1003,15 @@ export type Database = {
         };
         Update: {
           action?: string;
+          cash_used?: number;
           created_at?: string;
           id?: string;
+          fee_amount?: number;
           notes?: string | null;
           portfolio_id?: string | null;
           price?: number;
           security_listing_id?: string;
+          settles_to_cash?: boolean;
           shares?: number;
           transaction_currency?: string;
           transaction_date?: string;

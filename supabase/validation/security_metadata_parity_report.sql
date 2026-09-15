@@ -8,37 +8,97 @@
 -- `review` are intentionally explicit unknown/incomplete states and require an
 -- operator decision; they are not silently treated as successful metadata.
 
-with
-canonical_holdings as (
+with recursive
+ordered_position_transactions as (
   select
     transaction_row.user_id,
-    coalesce(transaction_row.portfolio_id::text, 'unassigned') as portfolio_key,
-    listing.symbol,
+    transaction_row.portfolio_id,
+    transaction_row.security_listing_id as listing_id,
     upper(coalesce(nullif(btrim(transaction_row.transaction_currency), ''), 'USD')) as currency,
-    sum(coalesce(transaction_row.shares, 0)::numeric) as shares,
-    sum(
-      coalesce(transaction_row.shares, 0)::numeric
-      * coalesce(transaction_row.price, 0)::numeric
-    ) as cost
+    lower(transaction_row.action) as action,
+    coalesce(transaction_row.shares, 0)::numeric as shares,
+    coalesce(transaction_row.price, 0)::numeric as price,
+    coalesce(transaction_row.fee_amount, 0)::numeric as fee_amount,
+    row_number() over (
+      partition by
+        transaction_row.user_id,
+        transaction_row.portfolio_id,
+        transaction_row.security_listing_id,
+        upper(coalesce(nullif(btrim(transaction_row.transaction_currency), ''), 'USD'))
+      order by
+        transaction_row.transaction_date,
+        case when lower(transaction_row.action) = 'buy' then 0 else 1 end,
+        transaction_row.created_at,
+        transaction_row.id
+    ) as sequence_number
   from public.transactions transaction_row
-  join public.security_listings listing
-    on listing.id = transaction_row.security_listing_id
-  where lower(transaction_row.action) = 'buy'
-  group by
-    transaction_row.user_id,
-    coalesce(transaction_row.portfolio_id::text, 'unassigned'),
+  where lower(transaction_row.action) in ('buy', 'sell')
+    and transaction_row.security_listing_id is not null
+),
+position_history as (
+  select
+    ordered.user_id,
+    ordered.portfolio_id,
+    ordered.listing_id,
+    ordered.currency,
+    ordered.sequence_number,
+    case when ordered.action = 'buy' then ordered.shares else -ordered.shares end::numeric
+      as shares,
+    case when ordered.action = 'buy'
+      then ordered.shares * ordered.price + ordered.fee_amount
+      else 0 end::numeric as cost
+  from ordered_position_transactions ordered
+  where ordered.sequence_number = 1
+
+  union all
+
+  select
+    ordered.user_id,
+    ordered.portfolio_id,
+    ordered.listing_id,
+    ordered.currency,
+    ordered.sequence_number,
+    case when ordered.action = 'buy'
+      then history.shares + ordered.shares
+      else history.shares - ordered.shares end::numeric as shares,
+    case
+      when ordered.action = 'buy'
+        then history.cost + ordered.shares * ordered.price + ordered.fee_amount
+      when history.shares > 0
+        then greatest(0, history.cost - (history.cost / history.shares) * ordered.shares)
+      else history.cost
+    end::numeric as cost
+  from position_history history
+  join ordered_position_transactions ordered
+    on ordered.user_id = history.user_id
+   and ordered.portfolio_id is not distinct from history.portfolio_id
+   and ordered.listing_id = history.listing_id
+   and ordered.currency = history.currency
+   and ordered.sequence_number = history.sequence_number + 1
+),
+canonical_holdings as (
+  select distinct on (
+      history.user_id, history.portfolio_id, history.listing_id, history.currency)
+    history.user_id,
+    coalesce(history.portfolio_id::text, 'unassigned') as portfolio_key,
+    history.listing_id,
     listing.symbol,
-    upper(coalesce(nullif(btrim(transaction_row.transaction_currency), ''), 'USD'))
+    history.currency,
+    history.shares,
+    history.cost
+  from position_history history
+  join public.security_listings listing on listing.id = history.listing_id
+  order by
+    history.user_id,
+    history.portfolio_id,
+    history.listing_id,
+    history.currency,
+    history.sequence_number desc
 ),
 active_listings as (
-  -- This intentionally matches the application's current buy-only holding
-  -- semantics. It must change together with PortfolioHoldingCalculator if
-  -- sell transactions become quantity-affecting in a later feature.
-  select distinct transaction_row.security_listing_id as listing_id
-  from public.transactions transaction_row
-  where lower(transaction_row.action) = 'buy'
-    and coalesce(transaction_row.shares, 0) > 0
-    and transaction_row.security_listing_id is not null
+  select distinct holding.listing_id
+  from canonical_holdings holding
+  where holding.shares > 0
 ),
 effective_metadata as (
   select

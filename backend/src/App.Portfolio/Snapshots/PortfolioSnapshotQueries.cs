@@ -45,7 +45,13 @@ public sealed class PortfolioSnapshotQueries(AppDataSource dataSource) : IPortfo
                    cost_basis_eur::numeric, cost_basis_usd::numeric,
                    unrealized_eur::numeric, unrealized_usd::numeric,
                    quote_metadata::text, fx_metadata::text,
-                   created_at, updated_at
+                   created_at, updated_at,
+                   cash_balance_eur::numeric, cash_balance_usd::numeric,
+                   total_value_eur::numeric, total_value_usd::numeric,
+                   realized_eur::numeric, realized_usd::numeric,
+                   total_pnl_eur::numeric, total_pnl_usd::numeric,
+                   external_flow_eur::numeric, external_flow_usd::numeric,
+                   accounting_version
             from public.portfolio_value_snapshots
             where user_id = $1
             order by snapshot_date desc, scope, id
@@ -85,7 +91,13 @@ public sealed class PortfolioSnapshotQueries(AppDataSource dataSource) : IPortfo
                 JsonDocument.Parse(reader.GetString(14)).RootElement.Clone(),
                 JsonDocument.Parse(reader.GetString(15)).RootElement.Clone(),
                 reader.GetFieldValue<DateTimeOffset>(16),
-                reader.GetFieldValue<DateTimeOffset>(17)));
+                reader.GetFieldValue<DateTimeOffset>(17),
+                reader.GetDecimal(18), reader.GetDecimal(19),
+                reader.GetDecimal(20), reader.GetDecimal(21),
+                reader.GetDecimal(22), reader.GetDecimal(23),
+                reader.GetDecimal(24), reader.GetDecimal(25),
+                reader.GetDecimal(26), reader.GetDecimal(27),
+                reader.GetInt16(28)));
         }
 
         return items;
@@ -109,7 +121,13 @@ public sealed class PortfolioSnapshotQueries(AppDataSource dataSource) : IPortfo
                    cost_basis_eur::numeric, cost_basis_usd::numeric,
                    unrealized_eur::numeric, unrealized_usd::numeric,
                    quote_metadata::text, fx_metadata::text,
-                   created_at, updated_at
+                   created_at, updated_at,
+                   cash_balance_eur::numeric, cash_balance_usd::numeric,
+                   total_value_eur::numeric, total_value_usd::numeric,
+                   realized_eur::numeric, realized_usd::numeric,
+                   total_pnl_eur::numeric, total_pnl_usd::numeric,
+                   external_flow_eur::numeric, external_flow_usd::numeric,
+                   accounting_version
             from public.portfolio_value_snapshots
             where user_id = $1
               and scope_key = $2
@@ -149,5 +167,11 @@ public sealed class PortfolioSnapshotQueries(AppDataSource dataSource) : IPortfo
         JsonDocument.Parse(reader.GetString(14)).RootElement.Clone(),
         JsonDocument.Parse(reader.GetString(15)).RootElement.Clone(),
         reader.GetFieldValue<DateTimeOffset>(16),
-        reader.GetFieldValue<DateTimeOffset>(17));
+        reader.GetFieldValue<DateTimeOffset>(17),
+        reader.GetDecimal(18), reader.GetDecimal(19),
+        reader.GetDecimal(20), reader.GetDecimal(21),
+        reader.GetDecimal(22), reader.GetDecimal(23),
+        reader.GetDecimal(24), reader.GetDecimal(25),
+        reader.GetDecimal(26), reader.GetDecimal(27),
+        reader.GetInt16(28));
 }

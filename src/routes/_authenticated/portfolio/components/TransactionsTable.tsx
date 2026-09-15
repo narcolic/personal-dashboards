@@ -19,6 +19,9 @@ type TransactionTableRow = {
   notes: string | null;
   portfolio_id: string | null;
   security_listing_id: string;
+  cash_used: number;
+  fee_amount: number;
+  settles_to_cash: boolean;
 };
 
 type SortKey =
@@ -45,7 +48,9 @@ export function TransactionsTable({
   selected: Set<string>;
   setSelected: Dispatch<SetStateAction<Set<string>>>;
   portfolioName: (id: string | null) => string;
-  setEditing: Dispatch<SetStateAction<(TransactionInputType & { id?: string }) | null>>;
+  setEditing: Dispatch<
+    SetStateAction<(TransactionInputType & { id?: string; cash_used?: number }) | null>
+  >;
   onDelete: (id: string, ticker: string, transactionDate: string) => void;
 }) {
   const { t } = useTranslation();
@@ -107,6 +112,9 @@ export function TransactionsTable({
       notes: position.notes ?? "",
       portfolio_id: position.portfolio_id ?? null,
       security_listing_id: position.security_listing_id,
+      use_available_cash: Number(position.cash_used) > 0,
+      fee_amount: Number(position.fee_amount),
+      cash_used: Number(position.cash_used),
     });
   };
 

@@ -543,7 +543,7 @@ public sealed class PortfolioAnalysisService(
 
     private static PortfolioAnalysisWarning[] CurrentSemanticsWarnings() =>
     [
-        new("buy_only_cost_basis", "Current holdings and unrealized P&L preserve the application's buy-only accounting semantics; sells, dividends, and fees are not realized-P&L calculations."),
+        new("securities_only_live_summary", "Live analysis uses sell-aware moving-average cost basis, but excludes retained sale cash and realized P&L; use the application dashboard and accounting-version-2 snapshots for total portfolio accounting."),
     ];
 
     private sealed record LiveState(

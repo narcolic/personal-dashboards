@@ -92,12 +92,106 @@ public sealed class PortfolioSnapshotJobTests
         Assert.Empty(store.Upserted);
     }
 
+    [Fact]
+    public async Task SellRetainsCashAndRealizedPnlWithoutReducingTotalValue()
+    {
+        var userId = Guid.NewGuid();
+        var portfolioId = Guid.NewGuid();
+        var store = new RecordingStore([
+            Transaction(userId, portfolioId, 10m, 100m, new DateOnly(2026, 1, 1)),
+            Transaction(userId, portfolioId, 4m, 150m, new DateOnly(2026, 8, 10), "sell", true),
+        ]);
+        var quotes = new FixedQuoteService(new QuoteLookupResult(
+            [new MarketQuote("ABC", "ABC", "ABC Fund", 150m, 145m, "EUR", null, null, null, "ETF")], []));
+        var fx = new FixedFxRateService(JsonSerializer.SerializeToElement(new
+        {
+            @base = "USD",
+            rates = new { USD = 1m, EUR = 1m },
+        }));
+        var job = new PortfolioSnapshotJob(
+            store, quotes, fx,
+            new FixedTimeProvider(new DateTimeOffset(2026, 8, 10, 22, 0, 0, TimeSpan.Zero)));
+
+        await job.RunAsync(new PortfolioSnapshotRunRequest(Force: true, Date: new(2026, 8, 10)));
+
+        var total = Assert.Single(store.Upserted, row => row.Scope == "total");
+        Assert.Equal(900m, total.MarketValueEur);
+        Assert.Equal(600m, total.CashBalanceEur);
+        Assert.Equal(1500m, total.TotalValueEur);
+        Assert.Equal(200m, total.RealizedEur);
+        Assert.Equal(300m, total.UnrealizedEur);
+        Assert.Equal(500m, total.TotalPnlEur);
+        Assert.Equal(0m, total.ExternalFlowEur);
+    }
+
+    [Fact]
+    public async Task WithdrawalReducesCashWithoutChangingInvestmentPnl()
+    {
+        var userId = Guid.NewGuid();
+        var portfolioId = Guid.NewGuid();
+        var date = new DateOnly(2026, 8, 10);
+        var store = new RecordingStore(
+        [
+            Transaction(userId, portfolioId, 10m, 100m, new DateOnly(2026, 1, 1)),
+            Transaction(userId, portfolioId, 4m, 150m, date, "sell", true),
+        ],
+        [
+            new SnapshotWithdrawal(Guid.NewGuid(), userId, portfolioId, "Main", "EUR", 400m, date),
+        ]);
+        var job = new PortfolioSnapshotJob(
+            store,
+            new FixedQuoteService(new QuoteLookupResult(
+                [new MarketQuote("ABC", "ABC", "ABC Fund", 150m, 145m, "EUR", null, null, null, "ETF")], [])),
+            new FixedFxRateService(JsonSerializer.SerializeToElement(new
+            { @base = "USD", rates = new { USD = 1m, EUR = 1m } })),
+            new FixedTimeProvider(new DateTimeOffset(2026, 8, 10, 22, 0, 0, TimeSpan.Zero)));
+
+        await job.RunAsync(new PortfolioSnapshotRunRequest(Force: true, Date: date));
+
+        var total = Assert.Single(store.Upserted, row => row.Scope == "total");
+        Assert.Equal(200m, total.CashBalanceEur);
+        Assert.Equal(1100m, total.TotalValueEur);
+        Assert.Equal(500m, total.TotalPnlEur);
+        Assert.Equal(-400m, total.ExternalFlowEur);
+    }
+
+    [Fact]
+    public async Task ReinvestingSaleCashIsNotAnExternalFlow()
+    {
+        var userId = Guid.NewGuid();
+        var portfolioId = Guid.NewGuid();
+        var snapshotDate = new DateOnly(2026, 8, 10);
+        var store = new RecordingStore([
+            Transaction(userId, portfolioId, 10m, 100m, new DateOnly(2026, 1, 1)),
+            Transaction(userId, portfolioId, 4m, 150m, new DateOnly(2026, 8, 9), "sell", true),
+            Transaction(userId, portfolioId, 4m, 125m, snapshotDate, cashUsed: 500m),
+        ]);
+        var job = new PortfolioSnapshotJob(
+            store,
+            new FixedQuoteService(new QuoteLookupResult(
+                [new MarketQuote("ABC", "ABC", "ABC Fund", 150m, 145m, "EUR", null, null, null, "ETF")], [])),
+            new FixedFxRateService(JsonSerializer.SerializeToElement(new
+            { @base = "USD", rates = new { USD = 1m, EUR = 1m } })),
+            new FixedTimeProvider(new DateTimeOffset(2026, 8, 10, 22, 0, 0, TimeSpan.Zero)));
+
+        await job.RunAsync(new PortfolioSnapshotRunRequest(Force: true, Date: snapshotDate));
+
+        var total = Assert.Single(store.Upserted, row => row.Scope == "total");
+        Assert.Equal(100m, total.CashBalanceEur);
+        Assert.Equal(1600m, total.TotalValueEur);
+        Assert.Equal(600m, total.TotalPnlEur);
+        Assert.Equal(0m, total.ExternalFlowEur);
+    }
+
     private static SnapshotTransaction Transaction(
         Guid userId,
         Guid? portfolioId,
         decimal shares,
         decimal price,
-        DateOnly date) =>
+        DateOnly date,
+        string action = "buy",
+        bool settlesToCash = false,
+        decimal cashUsed = 0m) =>
         new(
             Guid.NewGuid(),
             userId,
@@ -108,10 +202,14 @@ public sealed class PortfolioSnapshotJobTests
             price,
             date,
             portfolioId,
-            portfolioId is null ? null : "Main");
+            portfolioId is null ? null : "Main",
+            action,
+            CashUsed: cashUsed,
+            SettlesToCash: settlesToCash);
 
     private sealed class RecordingStore(
-        IReadOnlyList<SnapshotTransaction> transactions) : IPortfolioSnapshotStore
+        IReadOnlyList<SnapshotTransaction> transactions,
+        IReadOnlyList<SnapshotWithdrawal>? withdrawals = null) : IPortfolioSnapshotStore
     {
         public int ReadCount { get; private set; }
         public IReadOnlyList<PortfolioSnapshotRecord> Upserted { get; private set; } = [];
@@ -122,6 +220,10 @@ public sealed class PortfolioSnapshotJobTests
             ReadCount++;
             return Task.FromResult(transactions);
         }
+
+        public Task<IReadOnlyList<SnapshotWithdrawal>> ReadWithdrawalsAsync(
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(withdrawals ?? (IReadOnlyList<SnapshotWithdrawal>)[]);
 
         public Task UpsertAsync(
             IReadOnlyList<PortfolioSnapshotRecord> records,

@@ -97,7 +97,7 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
 
         var response = await client.PostAsJsonAsync(
             "/api/portfolio/transactions",
-            TransactionBody(portfolioId, listingId));
+            TransactionBody(portfolioId, listingId, useAvailableCash: true, feeAmount: 1.25m));
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         Assert.Equal(UserId, commands.RequestedUserId);
@@ -106,6 +106,8 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
         Assert.Equal(2.125m, commands.Mutation.Shares);
         Assert.Equal(181.2575m, commands.Mutation.Price);
         Assert.Equal(portfolioId, commands.Mutation.PortfolioId);
+        Assert.True(commands.Mutation.UseAvailableCash);
+        Assert.Equal(1.25m, commands.Mutation.FeeAmount);
         var payload = await response.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(transactionId.ToString(), payload.GetProperty("id").GetString());
     }
@@ -288,17 +290,23 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
             });
         });
 
-    private static object TransactionBody(Guid? portfolioId, Guid listingId) => new
-    {
-        action = "buy",
-        transaction_currency = "USD",
-        shares = 2.125m,
-        price = 181.2575m,
-        transaction_date = "2026-08-11",
-        notes = "Example",
-        portfolio_id = portfolioId,
-        security_listing_id = listingId,
-    };
+    private static object TransactionBody(
+        Guid? portfolioId,
+        Guid listingId,
+        bool useAvailableCash = false,
+        decimal feeAmount = 0m) => new
+        {
+            action = "buy",
+            transaction_currency = "USD",
+            shares = 2.125m,
+            price = 181.2575m,
+            transaction_date = "2026-08-11",
+            notes = "Example",
+            portfolio_id = portfolioId,
+            security_listing_id = listingId,
+            use_available_cash = useAvailableCash,
+            fee_amount = feeAmount,
+        };
 
     private sealed class RecordingPortfolioCommands(
         PortfolioMutationResult result) : IPortfolioCommands

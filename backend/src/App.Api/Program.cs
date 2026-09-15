@@ -17,6 +17,7 @@ using PortfolioTerminal.Data;
 using PortfolioTerminal.Portfolio.Analytics;
 using PortfolioTerminal.Portfolio.Portfolios;
 using PortfolioTerminal.Portfolio.Holdings;
+using PortfolioTerminal.Portfolio.Cash;
 using PortfolioTerminal.Portfolio.MarketData;
 using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Snapshots;
@@ -128,6 +129,8 @@ builder.Services.AddScoped<ISecurityMetadataRefreshJob, SecurityMetadataRefreshJ
 builder.Services.AddScoped<IPortfolioQueries, PortfolioQueries>();
 builder.Services.AddScoped<IPortfolioCommands, PortfolioCommands>();
 builder.Services.AddScoped<IPortfolioHoldingQueries, PortfolioHoldingQueries>();
+builder.Services.AddScoped<IPortfolioCashQueries, PortfolioCashQueries>();
+builder.Services.AddScoped<IPortfolioCashCommands, PortfolioCashCommands>();
 builder.Services.AddScoped<IPortfolioSnapshotQueries, PortfolioSnapshotQueries>();
 builder.Services.AddScoped<IPortfolioSnapshotStore, PortfolioSnapshotStore>();
 builder.Services.AddScoped<IPortfolioSnapshotJob, PortfolioSnapshotJob>();

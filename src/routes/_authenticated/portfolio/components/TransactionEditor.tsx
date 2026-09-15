@@ -4,23 +4,27 @@ import { fmtCurrency } from "@/lib/portfolio/formatters";
 import { normalizeTicker, type TickerSuggestion } from "@/lib/portfolio/tickerCatalog";
 import { useTranslation } from "react-i18next";
 import { TerminalSelect } from "@/components/ui/TerminalSelect";
+import type { PortfolioCashBalance } from "@/lib/portfolio/cash/api";
+import { shouldOfferAvailableCash } from "@/lib/portfolio/cash/rules";
 
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const TRANSACTION_ACTIONS = ["buy", "sell", "dividend", "fee"] as const;
 const CURRENCIES = ["USD", "EUR", "GBP", "CHF", "CAD", "AUD", "JPY", "HKD"];
 
-type TransactionDraft = Omit<TransactionInputType, "shares" | "price"> & {
+type TransactionDraft = Omit<TransactionInputType, "shares" | "price" | "fee_amount"> & {
   shares: string;
   price: string;
+  fee_amount: string;
 };
 
 const toDraft = (
-  value: TransactionInputType & { id?: string },
+  value: TransactionInputType & { id?: string; cash_used?: number },
 ): TransactionDraft & { id?: string } => ({
   ...value,
   action: value.action ?? "buy",
   shares: value.id == null && value.shares === 0 ? "" : String(value.shares),
   price: value.id == null && value.price === 0 ? "" : String(value.price),
+  fee_amount: value.fee_amount ? String(value.fee_amount) : "",
 });
 
 function Field({
@@ -53,13 +57,15 @@ export function TransactionEditor({
   value,
   portfolios,
   tickerSuggestions,
+  cashBalances,
   onSave,
   onClose,
   busy,
 }: {
-  value: TransactionInputType & { id?: string };
+  value: TransactionInputType & { id?: string; cash_used?: number };
   portfolios: { id: string; name: string }[];
   tickerSuggestions: TickerSuggestion[];
+  cashBalances: PortfolioCashBalance[];
   onSave: (v: TransactionInputType) => void;
   onClose: () => void;
   busy: boolean;
@@ -78,6 +84,24 @@ export function TransactionEditor({
   const sharesValue = Number(v.shares);
   const priceValue = Number(v.price);
   const totalPreview = sharesValue * priceValue;
+  const feeValue = Number(v.fee_amount || 0);
+  const matchingCash = cashBalances.find(
+    (row) =>
+      row.portfolioId === (v.portfolio_id ?? null) &&
+      row.currency.toUpperCase() === v.currency.toUpperCase(),
+  );
+  const returnsExistingCash =
+    Boolean(value.id) &&
+    value.action === "buy" &&
+    value.portfolio_id === v.portfolio_id &&
+    value.currency.toUpperCase() === v.currency.toUpperCase();
+  const availableCash =
+    Number(matchingCash?.availableAmount ?? 0) +
+    (returnsExistingCash ? Number(value.cash_used ?? 0) : 0);
+  const purchaseCost = totalPreview + (Number.isFinite(feeValue) ? feeValue : 0);
+  const transactionTotal =
+    v.action === "sell" ? totalPreview - (Number.isFinite(feeValue) ? feeValue : 0) : purchaseCost;
+  const cashUsedPreview = v.use_available_cash ? Math.min(availableCash, purchaseCost) : 0;
   const hasValidTotalPreview =
     Number.isFinite(sharesValue) &&
     Number.isFinite(priceValue) &&
@@ -117,6 +141,7 @@ export function TransactionEditor({
               ...v,
               shares: Number(v.shares),
               price: Number(v.price),
+              fee_amount: Number(v.fee_amount || 0),
             });
           }}
           className="grid grid-cols-2 gap-4 p-5 [&_input]:rounded-lg [&_input]:border-border/70 [&_input]:bg-background/70 [&_input]:px-3 [&_input]:py-2.5 [&_input]:transition-colors [&_input]:focus:ring-1 [&_input]:focus:ring-primary/30 [&_select]:rounded-lg [&_select]:border-border/70 [&_select]:bg-background/70 [&_select]:px-3 [&_select]:py-2.5 [&_select]:transition-colors [&_select]:focus:ring-1 [&_select]:focus:ring-primary/30 [&_textarea]:rounded-lg [&_textarea]:border-border/70 [&_textarea]:bg-background/70 [&_textarea]:px-3 [&_textarea]:py-2.5 [&_textarea]:transition-colors [&_textarea]:focus:ring-1 [&_textarea]:focus:ring-primary/30"
@@ -134,7 +159,14 @@ export function TransactionEditor({
           <Field label={t("portfolio.action")} required>
             <TerminalSelect
               value={v.action}
-              onChange={(value) => set("action", value as TransactionInputType["action"])}
+              onChange={(action) =>
+                setV((state) => ({
+                  ...state,
+                  action: action as TransactionInputType["action"],
+                  use_available_cash: action === "buy" ? state.use_available_cash : false,
+                  fee_amount: action === "buy" || action === "sell" ? state.fee_amount : "",
+                }))
+              }
               ariaLabel={t("portfolio.action")}
               required
               options={TRANSACTION_ACTIONS.map((action) => ({
@@ -261,6 +293,53 @@ export function TransactionEditor({
             />
           </Field>
 
+          {v.action === "buy" || v.action === "sell" ? (
+            <Field label={t("portfolio.tradeFee")} colSpan={2}>
+              <input
+                type="number"
+                step="any"
+                min="0"
+                value={v.fee_amount}
+                onChange={(e) => set("fee_amount", e.target.value)}
+                className="w-full border border-border bg-input px-2 py-1.5 text-sm tabular-nums focus:border-primary focus:outline-none"
+              />
+            </Field>
+          ) : null}
+
+          {shouldOfferAvailableCash(v.action, availableCash) ? (
+            <label className="col-span-2 rounded-lg border border-primary/30 bg-primary/5 px-4 py-3">
+              <div className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={v.use_available_cash}
+                  onChange={(e) => set("use_available_cash", e.target.checked)}
+                  className="h-4 w-4"
+                />
+                <div>
+                  <div className="text-xs font-bold uppercase tracking-[0.1em]">
+                    {t("portfolio.useAvailableCash")}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {t("portfolio.availableCashAmount", {
+                      amount: fmtCurrency(availableCash, v.currency),
+                    })}
+                  </div>
+                </div>
+              </div>
+              {v.use_available_cash && hasValidTotalPreview ? (
+                <div className="mt-2 text-xs text-muted-foreground">
+                  {t("portfolio.cashUsePreview", {
+                    used: fmtCurrency(cashUsedPreview, v.currency),
+                    remaining: fmtCurrency(
+                      Math.max(0, availableCash - cashUsedPreview),
+                      v.currency,
+                    ),
+                  })}
+                </div>
+              ) : null}
+            </label>
+          ) : null}
+
           <Field label={t("portfolio.notes")} colSpan={2}>
             <textarea
               rows={2}
@@ -277,7 +356,7 @@ export function TransactionEditor({
                   {t("portfolio.totalPreview")}
                 </div>
                 <div className="mt-1 text-sm font-bold text-foreground tabular-nums">
-                  {hasValidTotalPreview ? fmtCurrency(totalPreview, v.currency) : "-"}
+                  {hasValidTotalPreview ? fmtCurrency(transactionTotal, v.currency) : "-"}
                 </div>
               </div>
 

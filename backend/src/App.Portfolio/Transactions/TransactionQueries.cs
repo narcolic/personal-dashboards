@@ -59,7 +59,8 @@ public sealed class TransactionQueries(
         var rowsCommand = new NpgsqlBatchCommand($"""
             select t.id, t.action, t.transaction_currency,
                    t.shares::numeric, t.price::numeric, t.transaction_date, t.notes, t.portfolio_id,
-                   t.security_listing_id
+                   t.security_listing_id, t.created_at,
+                   t.cash_used::numeric, t.fee_amount::numeric, t.settles_to_cash
             from public.transactions t
             join public.security_listings listing on listing.id = t.security_listing_id
             join public.securities security on security.id = listing.security_id
@@ -88,7 +89,12 @@ public sealed class TransactionQueries(
                 reader.GetFieldValue<DateOnly>(5),
                 reader.IsDBNull(6) ? null : reader.GetString(6),
                 reader.IsDBNull(7) ? null : reader.GetGuid(7),
-                reader.GetGuid(8)));
+                reader.GetGuid(8),
+                null,
+                reader.GetFieldValue<DateTimeOffset>(9),
+                reader.GetDecimal(10),
+                reader.GetDecimal(11),
+                reader.GetBoolean(12)));
         }
 
         return new TransactionListResult(rows, count);

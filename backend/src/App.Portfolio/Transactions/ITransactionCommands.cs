@@ -39,7 +39,9 @@ public sealed record TransactionMutation(
     DateOnly TransactionDate,
     string? Notes,
     Guid? PortfolioId,
-    Guid SecurityListingId);
+    Guid SecurityListingId,
+    bool UseAvailableCash = false,
+    decimal FeeAmount = 0m);
 
 public sealed record ImportedTransactionMutation(
     string Ticker,

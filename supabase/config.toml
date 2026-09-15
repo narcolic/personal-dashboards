@@ -1,5 +1,10 @@
 project_id = "xcqxfyylqtcgmugpnjzt"
 
+[auth]
+# Keep local OAuth callbacks on the Vite dev server instead of falling back to
+# the production Site URL after the provider returns to Supabase Auth.
+additional_redirect_urls = ["http://localhost:5173/**", "http://localhost:4173", "https://portfolio-terminal-tracker.vercel.app/**"]
+
 [auth.oauth_server]
 enabled = true
 authorization_url_path = "/oauth/consent"

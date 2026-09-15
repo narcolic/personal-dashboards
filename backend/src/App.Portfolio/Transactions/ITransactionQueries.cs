@@ -35,4 +35,8 @@ public sealed record TransactionListItem(
     string? Notes,
     Guid? PortfolioId,
     Guid SecurityListingId,
-    SecurityMetadataView? Security = null);
+    SecurityMetadataView? Security = null,
+    DateTimeOffset? CreatedAt = null,
+    decimal CashUsed = 0m,
+    decimal FeeAmount = 0m,
+    bool SettlesToCash = false);

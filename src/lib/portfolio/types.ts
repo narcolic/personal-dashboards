@@ -52,6 +52,9 @@ export type TransactionRow = {
   portfolio_id: string | null;
   security_listing_id: string;
   security: SecurityMetadata;
+  cash_used: number;
+  fee_amount: number;
+  settles_to_cash: boolean;
 };
 
 export type HoldingRow = {
