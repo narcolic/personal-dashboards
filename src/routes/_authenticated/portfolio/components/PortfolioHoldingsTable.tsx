@@ -50,7 +50,7 @@ export function PortfolioHoldingsTable({
   const showDayChangeColumn = isDashboardPreview;
   const [sortKey, setSortKey] = useState<SortKey>(isDashboardPreview ? "marketValue" : "ticker");
   const [sortDirection, setSortDirection] = useState<SortDirection>(
-    isDashboardPreview || showNameColumn ? "desc" : "asc",
+    isDashboardPreview ? "desc" : "asc",
   );
 
   const sortedRows = useMemo(() => {
