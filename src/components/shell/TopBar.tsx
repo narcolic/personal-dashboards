@@ -1,4 +1,4 @@
-import { Link } from "@tanstack/react-router";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { dashboards } from "@/components/shell/dashboards";
 import { useTranslation } from "react-i18next";
 import { BrandLockup } from "@/components/brand/BrandLockup";
@@ -7,22 +7,37 @@ const navItems = dashboards.filter((item) => item.path);
 
 export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
   const { t } = useTranslation();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const currentApp = navItems.find(
+    (item) => pathname === item.path || pathname.startsWith(`${item.path}/`),
+  );
 
   return (
     <div className="sticky top-0 z-10 h-10 w-full bg-background/65 px-2 pt-1 backdrop-blur-xl">
-      <div className="flex h-8 items-center justify-between gap-3 rounded-lg bg-card/45 px-3 text-xs uppercase tracking-[0.1em] shadow-[0_10px_30px_-24px_rgba(0,0,0,0.95)]">
-        <div className="flex min-w-0 items-center gap-3">
+      <div className="flex h-8 items-center justify-between gap-1 rounded-lg bg-card/45 px-1 text-[10px] uppercase tracking-[0.06em] shadow-[0_10px_30px_-24px_rgba(0,0,0,0.95)] md:gap-3 md:px-3 md:text-xs md:tracking-[0.1em]">
+        <div className="flex min-w-0 flex-1 items-center gap-1.5 md:gap-3">
           <Link
             to="/"
             aria-label={t("brand.name")}
-            className="inline-flex h-7 shrink-0 items-center rounded-md px-2 text-muted-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            title={t("shell.dashboards")}
+            className="inline-flex h-7 shrink-0 items-center rounded-md px-1 text-muted-foreground transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:px-2"
           >
             <BrandLockup compact />
           </Link>
 
+          {currentApp ? (
+            <span
+              aria-current="location"
+              title={t(currentApp.titleKey)}
+              className="inline-flex h-7 min-w-0 items-center rounded-md bg-primary/12 px-2 text-[9px] font-medium tracking-[0.04em] text-primary md:hidden"
+            >
+              <span className="truncate">{t(currentApp.titleKey)}</span>
+            </span>
+          ) : null}
+
           <nav
             aria-label={t("shell.hub")}
-            className="flex min-w-0 items-center gap-1 overflow-x-auto"
+            className="hidden min-w-0 items-center gap-1 overflow-x-auto md:flex"
           >
             {navItems.map((item) => (
               <Link
@@ -46,7 +61,7 @@ export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: 
           <button
             type="button"
             onClick={onLogout}
-            className="rounded-md px-2 py-1 text-primary transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="rounded-md px-1 py-1 text-primary transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:px-2"
           >
             {t("common.logout")}
           </button>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Area,
   AreaChart,
@@ -37,6 +37,7 @@ export function PortfolioAnalyticsChart({
   badgeLabel,
   formatMetric,
   baseline,
+  headerControls,
 }: {
   title: string;
   data: AnalyticsPoint[];
@@ -45,6 +46,7 @@ export function PortfolioAnalyticsChart({
   badgeLabel: string;
   formatMetric: (value: number) => string;
   baseline?: number;
+  headerControls?: ReactNode;
 }) {
   const [hoveredPoint, setHoveredPoint] = useState<AnalyticsPoint | null>(null);
   const latestPoint = data.at(-1) ?? null;
@@ -58,27 +60,32 @@ export function PortfolioAnalyticsChart({
 
   return (
     <section className="analytics-panel group overflow-hidden rounded-[10px] border border-border/70 bg-card shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] transition-colors duration-300 hover:border-border">
-      <header className="flex min-h-[90px] items-start justify-between gap-3 px-4 pb-1 pt-4 md:px-5">
-        <div className="min-w-0">
+      <header className="min-h-[90px] px-4 pb-1 pt-4 md:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
           <div className="flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-muted-foreground">
             <span className="text-primary">&gt;</span>
             <span>{title}</span>
           </div>
-          <div className="mt-2 text-2xl font-bold tracking-tight tabular-nums md:text-[28px]">
-            {displayPoint ? formatMetric(displayPoint[metric]) : "—"}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {displayPoint ? formatAnalyticsDate(displayPoint.date, true) : "—"}
-          </div>
+          {headerControls}
         </div>
-        <div
-          className={`mt-1 rounded-full border px-2.5 py-1 text-xs uppercase tracking-[0.1em] ${
-            tone === "negative"
-              ? "border-bear/30 bg-bear/10 text-bear"
-              : "border-bull/30 bg-bull/10 text-bull"
-          }`}
-        >
-          {tone === "negative" ? "▼" : "▲"} {badgeLabel}
+        <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-2xl font-bold tracking-tight tabular-nums md:text-[28px]">
+              {displayPoint ? formatMetric(displayPoint[metric]) : "—"}
+            </div>
+            <div className="mt-1 text-xs text-muted-foreground">
+              {displayPoint ? formatAnalyticsDate(displayPoint.date, true) : "—"}
+            </div>
+          </div>
+          <div
+            className={`mt-1 rounded-full border px-2.5 py-1 text-xs uppercase tracking-[0.1em] ${
+              tone === "negative"
+                ? "border-bear/30 bg-bear/10 text-bear"
+                : "border-bull/30 bg-bull/10 text-bull"
+            }`}
+          >
+            {tone === "negative" ? "▼" : "▲"} {badgeLabel}
+          </div>
         </div>
       </header>
 

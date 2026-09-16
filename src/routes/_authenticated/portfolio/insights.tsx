@@ -18,6 +18,14 @@ export const Route = createFileRoute("/_authenticated/portfolio/insights")({
       typeof search.metric === "string" && METRICS.has(search.metric as InsightsMetric)
         ? (search.metric as InsightsMetric)
         : "totalValue",
+    contributionYear:
+      (typeof search.contributionYear === "number" ||
+        (typeof search.contributionYear === "string" && /^\d{4}$/.test(search.contributionYear))) &&
+      Number.isInteger(Number(search.contributionYear)) &&
+      Number(search.contributionYear) >= 1000 &&
+      Number(search.contributionYear) <= new Date().getFullYear()
+        ? Number(search.contributionYear)
+        : undefined,
   }),
   component: InsightsPage,
 });
@@ -30,6 +38,7 @@ function InsightsPage() {
       to: "/portfolio/insights",
       search: { ...search, ...next },
       replace: true,
+      resetScroll: false,
     });
   };
 
@@ -39,6 +48,8 @@ function InsightsPage() {
       metric={search.metric}
       onRangeChange={(range) => updateSearch({ range })}
       onMetricChange={(metric) => updateSearch({ metric })}
+      contributionYear={search.contributionYear}
+      onContributionYearChange={(contributionYear) => updateSearch({ contributionYear })}
     />
   );
 }

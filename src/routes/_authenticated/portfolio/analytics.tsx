@@ -9,6 +9,7 @@ import {
   type AnalyticsPoint,
 } from "@/routes/_authenticated/portfolio/components/PortfolioAnalyticsChart";
 import { PortfolioSnapshotStats } from "@/routes/_authenticated/portfolio/components/PortfolioSnapshotStats";
+import { PortfolioContributions } from "@/routes/_authenticated/portfolio/components/PortfolioContributions";
 import {
   isCompletePortfolioSnapshot,
   usePortfolioSnapshots,
@@ -43,11 +44,15 @@ export function PortfolioInsights({
   metric,
   onRangeChange,
   onMetricChange,
+  contributionYear,
+  onContributionYearChange,
 }: {
   range: InsightsRange;
   metric: InsightsMetric;
   onRangeChange: (range: InsightsRange) => void;
   onMetricChange: (metric: InsightsMetric) => void;
+  contributionYear?: number;
+  onContributionYearChange: (year: number) => void;
 }) {
   const { t } = useTranslation();
   const navigate = useNavigate();
@@ -86,22 +91,12 @@ export function PortfolioInsights({
     };
   }, [convertTo, currency, rows]);
 
-  if (snapshotsQ.isLoading) return <InsightsSkeleton />;
-  if (snapshotsQ.isError) {
-    return (
-      <InsightsMessage title={t("portfolio.analytics.loadError")} body={snapshotsQ.error.message} />
-    );
-  }
-  if (!model.latest || model.points.length === 0) {
-    return (
-      <InsightsMessage
-        title={t("portfolio.analytics.noData")}
-        body={t("portfolio.noSnapshotsYet")}
-      />
-    );
-  }
-
-  const latestMetric = model.latest[metric];
+  const hasSnapshots =
+    !snapshotsQ.isLoading &&
+    !snapshotsQ.isError &&
+    Boolean(model.latest) &&
+    model.points.length > 0;
+  const latestMetric = model.latest?.[metric] ?? 0;
   const tone = latestMetric < 0 ? "negative" : "positive";
   const formatMoney = (value: number) => fmtCurrency(value, currency);
   const chartTitle =
@@ -118,137 +113,170 @@ export function PortfolioInsights({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 rounded-[10px] border border-border/70 bg-card/70 p-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <div
-            className={`text-lg font-bold tabular-nums ${model.change >= 0 ? "text-bull" : "text-bear"}`}
-          >
-            {model.change >= 0 ? "▲ +" : "▼ −"}
-            {formatMoney(Math.abs(model.change))}
-          </div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            {selectedScopeLabel} · {t("portfolio.analytics.selectedPeriod")} ·{" "}
-            {model.changePct >= 0 ? "+" : ""}
-            {model.changePct.toFixed(2)}%
-          </div>
-        </div>
-        <div className="grid grid-cols-6 bg-secondary/45 p-0.5">
-          {RANGES.map((item) => (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => onRangeChange(item.key)}
-              aria-pressed={range === item.key}
-              className={`min-w-12 px-3 py-2 text-xs font-bold tracking-[0.08em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
-                range === item.key
-                  ? "bg-card text-primary shadow-sm ring-1 ring-border"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {item.key}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <section className="space-y-3" aria-labelledby="trend-heading">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2
-            id="trend-heading"
-            className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground"
-          >
-            <span className="text-primary">&gt;</span>
-            {t("portfolio.performanceTrend")}
-          </h2>
-          <div className="inline-flex self-start border border-border bg-card p-0.5" role="group">
-            {(["totalValue", "performance", "profitLoss"] as const).map((item) => (
-              <button
-                key={item}
-                type="button"
-                onClick={() => onMetricChange(item)}
-                aria-pressed={metric === item}
-                className={`px-3 py-2 text-xs uppercase tracking-[0.08em] ${
-                  metric === item
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+      {snapshotsQ.isLoading ? (
+        <InsightsSkeleton />
+      ) : snapshotsQ.isError ? (
+        <InsightsMessage
+          title={t("portfolio.analytics.loadError")}
+          body={snapshotsQ.error.message}
+        />
+      ) : !hasSnapshots ? (
+        <InsightsMessage
+          title={t("portfolio.analytics.noData")}
+          body={t("portfolio.noSnapshotsYet")}
+        />
+      ) : (
+        <>
+          <div className="flex flex-col gap-3 rounded-[10px] border border-border/70 bg-card/70 p-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="min-w-0">
+              <div
+                className={`text-lg font-bold tabular-nums ${model.change >= 0 ? "text-bull" : "text-bear"}`}
               >
-                {item === "totalValue"
-                  ? t("portfolio.analytics.value")
-                  : item === "performance"
-                    ? t("portfolio.analytics.performance")
-                    : t("portfolio.analytics.pnlShort")}
-              </button>
-            ))}
+                {model.change >= 0 ? "▲ +" : "▼ −"}
+                {formatMoney(Math.abs(model.change))}
+              </div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {selectedScopeLabel} · {t("portfolio.analytics.selectedPeriod")} ·{" "}
+                {model.changePct >= 0 ? "+" : ""}
+                {model.changePct.toFixed(2)}%
+              </div>
+            </div>
+            <div className="grid grid-cols-6 bg-secondary/45 p-0.5">
+              {RANGES.map((item) => (
+                <button
+                  key={item.key}
+                  type="button"
+                  onClick={() => onRangeChange(item.key)}
+                  aria-pressed={range === item.key}
+                  className={`min-w-12 px-3 py-2 text-xs font-bold tracking-[0.08em] focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+                    range === item.key
+                      ? "bg-card text-primary shadow-sm ring-1 ring-border"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.key}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-        <PortfolioAnalyticsChart
-          title={chartTitle}
-          data={model.points}
-          metric={metric}
-          tone={tone}
-          badgeLabel={t("portfolio.analytics.rangePerformance")}
-          formatMetric={formatMetric}
-          baseline={baseline}
-        />
-      </section>
 
-      <div className="space-y-3">
-        <AllocationPanel
-          rows={topAllocations.rows}
-          totalValue={topAllocations.totalValue}
-          currency={currency}
-          subtitle={t("portfolio.analytics.liveTopAllocations", {
-            count: topAllocations.rows.length,
-            scope: selectedScopeLabel,
-          })}
-          title={t("portfolio.analytics.topAllocations")}
-          emptyLabel={t("portfolio.analytics.noAllocation")}
-          loading={holdingsQ.isLoading || quotesQ.isLoading}
-          loadingLabel={t("common.loading")}
-        />
-        <div id="movers" className="grid scroll-mt-28 grid-cols-1 items-start gap-3 lg:grid-cols-2">
-          <PnLBucket
-            title={t("portfolio.gainers")}
-            tone="bull"
-            totalsByCurrency={movers.gainTotals}
-            rows={movers.gainers}
-            onRowClick={(row) =>
-              void navigate({
-                to: "/portfolio/holdings/$ticker",
-                params: { ticker: row.ticker },
-              })
-            }
-          />
-          <PnLBucket
-            title={t("portfolio.losers")}
-            tone="bear"
-            totalsByCurrency={movers.lossTotals}
-            rows={movers.losers}
-            onRowClick={(row) =>
-              void navigate({
-                to: "/portfolio/holdings/$ticker",
-                params: { ticker: row.ticker },
-              })
-            }
-          />
-        </div>
-      </div>
+          <section className="space-y-3" aria-labelledby="trend-heading">
+            <h2
+              id="trend-heading"
+              className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground"
+            >
+              <span className="text-primary">&gt;</span>
+              {t("portfolio.performanceTrend")}
+            </h2>
+            <PortfolioAnalyticsChart
+              title={chartTitle}
+              data={model.points}
+              metric={metric}
+              tone={tone}
+              badgeLabel={t("portfolio.analytics.rangePerformance")}
+              formatMetric={formatMetric}
+              baseline={baseline}
+              headerControls={
+                <div
+                  className="inline-flex max-w-full rounded-lg bg-secondary/35 p-0.5"
+                  role="group"
+                  aria-label={t("portfolio.performanceTrend")}
+                >
+                  {(["totalValue", "performance", "profitLoss"] as const).map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => onMetricChange(item)}
+                      aria-pressed={metric === item}
+                      className={`rounded-md px-3 py-2 text-[10px] uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:text-xs ${
+                        metric === item
+                          ? "bg-primary/15 text-primary ring-1 ring-primary/25"
+                          : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                      }`}
+                    >
+                      {item === "totalValue"
+                        ? t("portfolio.analytics.value")
+                        : item === "performance"
+                          ? t("portfolio.analytics.performance")
+                          : t("portfolio.analytics.pnlShort")}
+                    </button>
+                  ))}
+                </div>
+              }
+            />
+          </section>
+        </>
+      )}
+      <PortfolioContributions
+        requestedYear={contributionYear}
+        onYearChange={onContributionYearChange}
+        portfolioId={selected}
+        currency={currency}
+        portfolioMap={portfolioMap}
+      />
+      {hasSnapshots ? (
+        <>
+          <div className="space-y-3">
+            <AllocationPanel
+              rows={topAllocations.rows}
+              totalValue={topAllocations.totalValue}
+              currency={currency}
+              subtitle={t("portfolio.analytics.liveTopAllocations", {
+                count: topAllocations.rows.length,
+                scope: selectedScopeLabel,
+              })}
+              title={t("portfolio.analytics.topAllocations")}
+              emptyLabel={t("portfolio.analytics.noAllocation")}
+              loading={holdingsQ.isLoading || quotesQ.isLoading}
+              loadingLabel={t("common.loading")}
+            />
+            <div
+              id="movers"
+              className="grid scroll-mt-28 grid-cols-1 items-start gap-3 lg:grid-cols-2"
+            >
+              <PnLBucket
+                title={t("portfolio.gainers")}
+                tone="bull"
+                totalsByCurrency={movers.gainTotals}
+                rows={movers.gainers}
+                onRowClick={(row) =>
+                  void navigate({
+                    to: "/portfolio/holdings/$ticker",
+                    params: { ticker: row.ticker },
+                  })
+                }
+              />
+              <PnLBucket
+                title={t("portfolio.losers")}
+                tone="bear"
+                totalsByCurrency={movers.lossTotals}
+                rows={movers.losers}
+                onRowClick={(row) =>
+                  void navigate({
+                    to: "/portfolio/holdings/$ticker",
+                    params: { ticker: row.ticker },
+                  })
+                }
+              />
+            </div>
+          </div>
 
-      <details className="analytics-panel group overflow-hidden rounded-[10px] border border-border/70 bg-card/70 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
-        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 bg-secondary/20 px-4 py-3 text-xs uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring">
-          <span
-            aria-hidden="true"
-            className="text-primary transition-transform duration-200 group-open:rotate-90"
-          >
-            &gt;
-          </span>
-          <span>{t("portfolio.historicalMilestones")}</span>
-        </summary>
-        <div className="border-t border-border/50 p-4 md:p-5">
-          <PortfolioSnapshotStats currency={currency} scopeKey={scopeKey} embedded />
-        </div>
-      </details>
+          <details className="analytics-panel group overflow-hidden rounded-[10px] border border-border/70 bg-card/70 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
+            <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 bg-secondary/20 px-4 py-3 text-xs uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring">
+              <span
+                aria-hidden="true"
+                className="text-primary transition-transform duration-200 group-open:rotate-90"
+              >
+                &gt;
+              </span>
+              <span>{t("portfolio.historicalMilestones")}</span>
+            </summary>
+            <div className="border-t border-border/50 p-4 md:p-5">
+              <PortfolioSnapshotStats currency={currency} scopeKey={scopeKey} embedded />
+            </div>
+          </details>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -483,11 +511,6 @@ function InsightsSkeleton() {
       <div className="h-20 w-72 max-w-full animate-pulse rounded-md bg-secondary/50" />
       <div className="h-14 animate-pulse rounded-[10px] bg-secondary/50" />
       <div className="h-[390px] animate-pulse rounded-[10px] bg-card" />
-      <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="h-[340px] animate-pulse rounded-[10px] bg-card" />
-        ))}
-      </div>
     </div>
   );
 }
