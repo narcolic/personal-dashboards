@@ -22,6 +22,12 @@ function signedCurrency(value: number, currency: string) {
 
 export function PortfolioSummary(values: SummaryValues) {
   const { t } = useTranslation();
+  const zeroAmount = fmtCurrency(0, values.currency);
+  const showCash = fmtCurrency(Math.abs(values.availableCash), values.currency) !== zeroAmount;
+  const showRealized = fmtCurrency(Math.abs(values.realized), values.currency) !== zeroAmount;
+  const metricCount = 1 + Number(showCash) + Number(showRealized);
+  const desktopColumns =
+    metricCount === 3 ? "sm:grid-cols-3" : metricCount === 2 ? "sm:grid-cols-2" : "sm:grid-cols-1";
   return (
     <div className="portfolio-summary overflow-hidden rounded-[20px] border border-border/45 bg-card/70 bg-[radial-gradient(ellipse_at_top_left,var(--summary-glow),transparent_65%)] p-5 font-analytics shadow-[0_16px_48px_-36px_rgba(0,0,0,0.35)] [--summary-glow:color-mix(in_oklab,var(--color-primary)_5%,transparent)] sm:p-7 lg:flex lg:items-center lg:gap-10">
       <div className="min-w-0 lg:w-[36%] lg:shrink-0">
@@ -44,15 +50,19 @@ export function PortfolioSummary(values: SummaryValues) {
           <span className="text-xs text-muted-foreground">{t("portfolio.summary.dayChange")}</span>
         </div>
       </div>
-      <dl className="mt-6 grid min-w-0 flex-1 grid-cols-2 gap-x-5 gap-y-5 border-t border-border/50 pt-5 sm:grid-cols-3 sm:grid-rows-[auto_auto_auto] sm:gap-y-2 lg:mt-0 lg:gap-x-7 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0">
-        <div className="col-span-2 flex min-w-0 flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-4 sm:col-span-1 sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:border-0 sm:pb-0">
-          <dt className="min-w-0 text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
-            {t("portfolio.summary.availableCash")}
-          </dt>
-          <dd className="min-w-0 break-words text-[22px] font-medium leading-tight tracking-tight text-foreground tabular-nums [overflow-wrap:anywhere] sm:mt-0 sm:text-[26px]">
-            {fmtCurrency(values.availableCash, values.currency)}
-          </dd>
-        </div>
+      <dl
+        className={`mt-6 grid min-w-0 flex-1 ${showRealized ? "grid-cols-2" : "grid-cols-1"} gap-x-5 gap-y-5 border-t border-border/50 pt-5 ${desktopColumns} sm:grid-rows-[auto_auto_auto] sm:gap-y-2 lg:mt-0 lg:gap-x-7 lg:border-l lg:border-t-0 lg:pl-10 lg:pt-0`}
+      >
+        {showCash ? (
+          <div className="col-span-full flex min-w-0 flex-wrap items-baseline justify-between gap-2 border-b border-border/40 pb-4 sm:col-span-1 sm:row-span-3 sm:grid sm:grid-rows-subgrid sm:border-0 sm:pb-0">
+            <dt className="min-w-0 text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
+              {t("portfolio.summary.availableCash")}
+            </dt>
+            <dd className="min-w-0 break-words text-[22px] font-medium leading-tight tracking-tight text-foreground tabular-nums [overflow-wrap:anywhere] sm:mt-0 sm:text-[26px]">
+              {fmtCurrency(values.availableCash, values.currency)}
+            </dd>
+          </div>
+        ) : null}
         <div className="min-w-0 sm:row-span-3 sm:grid sm:grid-rows-subgrid">
           <dt className="text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
             {t("portfolio.summary.unrealized")}
@@ -68,16 +78,18 @@ export function PortfolioSummary(values: SummaryValues) {
             {fmtPct(values.unrealizedPct)}
           </dd>
         </div>
-        <div className="min-w-0 sm:row-span-3 sm:grid sm:grid-rows-subgrid">
-          <dt className="text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
-            {t("portfolio.summary.realized")}
-          </dt>
-          <dd
-            className={`mt-3 break-words text-[22px] font-medium leading-tight tracking-tight tabular-nums [overflow-wrap:anywhere] sm:mt-0 sm:text-[26px] ${values.realized === 0 ? "text-foreground" : gainTone(values.realized)}`}
-          >
-            {signedCurrency(values.realized, values.currency)}
-          </dd>
-        </div>
+        {showRealized ? (
+          <div className="min-w-0 sm:row-span-3 sm:grid sm:grid-rows-subgrid">
+            <dt className="text-sm leading-5 text-muted-foreground [overflow-wrap:anywhere]">
+              {t("portfolio.summary.realized")}
+            </dt>
+            <dd
+              className={`mt-3 break-words text-[22px] font-medium leading-tight tracking-tight tabular-nums [overflow-wrap:anywhere] sm:mt-0 sm:text-[26px] ${values.realized === 0 ? "text-foreground" : gainTone(values.realized)}`}
+            >
+              {signedCurrency(values.realized, values.currency)}
+            </dd>
+          </div>
+        ) : null}
       </dl>
     </div>
   );
