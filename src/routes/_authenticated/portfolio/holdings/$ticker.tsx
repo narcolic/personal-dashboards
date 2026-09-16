@@ -7,6 +7,8 @@ import { StatCard } from "@/components/terminal/StatCard";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
+import { createPortfolio } from "@/lib/portfolio/portfolios/api";
+import { portfolioQueryKeys } from "@/lib/portfolio/queries";
 import { invalidatePortfolioData } from "@/lib/portfolio/queries";
 import { createTransaction, type TransactionInputType } from "@/lib/portfolio/transactions/api";
 import { TransactionEditor } from "@/routes/_authenticated/portfolio/components/TransactionEditor";
@@ -473,6 +475,13 @@ function HoldingDetailsPage() {
           tickerSuggestions={tickerSuggestions}
           cashBalances={cashQ.data ?? []}
           busy={createM.isPending}
+          error={createM.error?.message}
+          onCreatePortfolio={async (name) => {
+            const result = await createPortfolio({ name });
+            await qc.invalidateQueries({ queryKey: portfolioQueryKeys.portfolios });
+            invalidatePortfolioData(qc);
+            return result.id;
+          }}
           onClose={() => setEditing(null)}
           onSave={(value) => createM.mutate(value)}
         />

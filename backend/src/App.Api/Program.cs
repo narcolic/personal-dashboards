@@ -144,6 +144,7 @@ builder.Services.AddScoped<IPortfolioAnalysisService>(services => new PortfolioA
     services.GetRequiredService<IOptions<McpAuthOptions>>().Value.MaxHoldings));
 builder.Services.AddScoped<ITickerCatalogQueries, TickerCatalogQueries>();
 builder.Services.AddScoped<ITransactionQueries, TransactionQueries>();
+builder.Services.AddScoped<PortfolioTerminal.Portfolio.Activity.IActivityQueries, PortfolioTerminal.Portfolio.Activity.ActivityQueries>();
 builder.Services.AddScoped<ITransactionCommands, TransactionCommands>();
 builder.Services.AddScoped<IVehicleQueries, VehicleQueries>();
 builder.Services.AddScoped<IVehicleCommands, VehicleCommands>();

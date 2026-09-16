@@ -154,11 +154,35 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
 
         var response = await client.PutAsJsonAsync(
             $"/api/portfolio/transactions/{transactionId}",
-            TransactionBody(null, Guid.NewGuid()));
+            TransactionBody(Guid.NewGuid(), Guid.NewGuid()));
 
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
         Assert.Equal(UserId, commands.RequestedUserId);
         Assert.Equal(transactionId, commands.RequestedId);
+    }
+
+    [Theory]
+    [InlineData(false, false)]
+    [InlineData(false, true)]
+    [InlineData(true, false)]
+    [InlineData(true, true)]
+    public async Task TransactionSavesRequirePortfolio(bool update, bool emptyGuid)
+    {
+        var commands = new RecordingTransactionCommands(PortfolioMutationResult.Succeeded(Guid.NewGuid()));
+        using var host = CreateAuthenticatedFactory(services =>
+        {
+            services.RemoveAll<ITransactionCommands>();
+            services.AddSingleton<ITransactionCommands>(commands);
+        });
+        using var client = host.CreateClient();
+        var body = TransactionBody(emptyGuid ? Guid.Empty : null, Guid.NewGuid());
+        var response = update
+            ? await client.PutAsJsonAsync($"/api/portfolio/transactions/{Guid.NewGuid()}", body)
+            : await client.PostAsJsonAsync("/api/portfolio/transactions", body);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Null(commands.RequestedUserId);
+        var json = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.True(json.GetProperty("errors").TryGetProperty("portfolio_id", out _));
     }
 
     [Fact]

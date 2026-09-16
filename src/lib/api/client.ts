@@ -4,6 +4,7 @@ type ApiProblem = {
   detail?: string;
   message?: string;
   title?: string;
+  errors?: Record<string, string[]>;
 };
 
 export class ApiError extends Error {
@@ -54,6 +55,10 @@ export async function apiFetch<T>(path: string, init: RequestInit = {}): Promise
     throw new ApiError(
       problem?.detail ??
         problem?.message ??
+        (Object.values(problem?.errors ?? {})
+          .flat()
+          .join(" ") ||
+          undefined) ??
         problem?.title ??
         `API request failed with status ${response.status}.`,
       response.status,

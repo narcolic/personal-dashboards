@@ -54,6 +54,16 @@ browser secret or as the PostgreSQL password.
 
 ## Run and test
 
+`GET /api/portfolio/activity` returns authenticated, combined transaction and withdrawal
+history as `{ rows, count }`. It accepts the transaction list filters, paired `page` /
+`pageSize`, and `sort` / `direction` (`asc` or `desc`); the default is newest date first.
+Rows use `kind: transaction | withdrawal`; withdrawals have no security, shares or price.
+Transaction POST/PUT requests require a portfolio. Existing unassigned history stays readable.
+
+To run the Activity database regression against a disposable PostgreSQL instance, set
+`ACTIVITY_TEST_DATABASE` to its connection string before running the backend tests.
+The test creates and removes its own temporary database.
+
 ```powershell
 dotnet test .\PortfolioTerminal.sln
 dotnet run --project .\src\App.Api\App.Api.csproj

@@ -11,6 +11,7 @@ using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
+using PortfolioTerminal.Portfolio.Activity;
 
 namespace PortfolioTerminal.Api.Endpoints;
 
@@ -210,6 +211,8 @@ public static class PortfolioEndpoints
                 return TypedResults.Ok(TransactionListResponse.From(result));
             })
             .WithName("ListTransactions");
+
+        group.MapGet("/activity", ListActivityAsync).WithName("ListPortfolioActivity");
 
         group.MapPost("/transactions", CreateTransactionAsync)
             .WithName("CreateTransaction");
@@ -438,6 +441,8 @@ public static class PortfolioEndpoints
     private static Dictionary<string, string[]> Validate(TransactionMutationRequest request)
     {
         var errors = new Dictionary<string, string[]>();
+        if (request.PortfolioId is null || request.PortfolioId == Guid.Empty)
+            errors["portfolio_id"] = ["Portfolio is required."];
         var action = request.Action?.Trim();
         if (request.SecurityListingId == Guid.Empty)
             errors["security_listing_id"] = ["Security listing is required."];
@@ -462,6 +467,32 @@ public static class PortfolioEndpoints
         if (request.Notes?.Trim().Length > 500)
             errors["notes"] = ["Notes must not exceed 500 characters."];
         return errors;
+    }
+
+    private static async Task<IResult> ListActivityAsync(
+        int? page, int? pageSize, string? ticker, Guid? portfolioId, bool? unassignedPortfolio,
+        string? assetType, string? currency, DateOnly? dateFrom, DateOnly? dateTo,
+        string? sort, string? direction, IActivityQueries queries, ICurrentUser currentUser,
+        CancellationToken cancellationToken)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if ((page is null) != (pageSize is null) || page is < 1 || pageSize is < 1 or > 200)
+            errors["pagination"] = ["Supply page and pageSize together; page must be positive and pageSize between 1 and 200."];
+        if (unassignedPortfolio is true && portfolioId is not null)
+            errors["portfolio"] = ["portfolioId and unassignedPortfolio cannot be used together."];
+        if (dateFrom > dateTo) errors["date"] = ["Date From cannot be after Date To."];
+        sort ??= "transaction_date";
+        direction ??= "desc";
+        if (!ActivityQueries.SortColumns.ContainsKey(sort)) errors["sort"] = ["Sort column is invalid."];
+        if (direction is not ("asc" or "desc")) errors["direction"] = ["Direction must be asc or desc."];
+        var offset = page.HasValue && pageSize.HasValue ? (long)(page.Value - 1) * pageSize.Value : 0;
+        if (offset > int.MaxValue) errors["pagination"] = ["The requested page is too large."];
+        if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
+        var result = await queries.ListAsync(currentUser.UserId,
+            new ActivityListFilter(new TransactionListFilter(ticker, portfolioId,
+                unassignedPortfolio ?? false, assetType, currency, dateFrom, dateTo,
+                (int)offset, pageSize), sort, direction), cancellationToken);
+        return TypedResults.Ok(result);
     }
 
     private static async Task<IResult> ResolveSecurityListingAsync(

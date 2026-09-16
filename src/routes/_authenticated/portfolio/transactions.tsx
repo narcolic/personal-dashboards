@@ -21,13 +21,20 @@ import {
   updateTransaction,
 } from "@/lib/portfolio/transactions/api";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
+import { OptionMenu } from "@/components/ui/OptionMenu";
+import { useActivity } from "@/routes/_authenticated/portfolio/hooks/useActivity";
+import { listPortfolios } from "@/lib/portfolio/portfolios/api";
+import { useQuery } from "@tanstack/react-query";
+import { portfolioQueryKeys } from "@/lib/portfolio/queries";
+import type {
+  ActivitySortKey,
+  ActivityTransaction,
+  ActivityRow,
+} from "@/lib/portfolio/activity/api";
 import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import { TransactionsTable } from "@/routes/_authenticated/portfolio/components/TransactionsTable";
 import { TransactionEditor } from "@/routes/_authenticated/portfolio/components/TransactionEditor";
-import {
-  type PortfolioRecord,
-  usePortfolioData,
-} from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
+import { type PortfolioRecord } from "@/routes/_authenticated/portfolio/hooks/usePortfolioData";
 import { useTickerCatalog } from "@/routes/_authenticated/portfolio/hooks/useTickerCatalog";
 import { usePortfolioCash } from "@/routes/_authenticated/portfolio/hooks/usePortfolioCash";
 import { withdrawPortfolioCash, type PortfolioCashBalance } from "@/lib/portfolio/cash/api";
@@ -35,6 +42,8 @@ import { withdrawPortfolioCash, type PortfolioCashBalance } from "@/lib/portfoli
 const ASSET_TYPES = ["stock", "etf", "crypto", "bond", "fund", "other"] as const;
 const TRANSACTIONS_PAGE_SIZE = 25;
 const ALL_FILTER = "__all__";
+const EMPTY_PORTFOLIOS: PortfolioRecord[] = [];
+const EMPTY_ACTIVITY: ActivityRow[] = [];
 const today = () => new Date().toISOString().slice(0, 10);
 
 const empty = (): TransactionInputType => ({
@@ -53,25 +62,6 @@ const empty = (): TransactionInputType => ({
   use_available_cash: false,
   fee_amount: 0,
 });
-
-type TransactionTableRow = {
-  id: string;
-  ticker: string;
-  action?: TransactionInputType["action"];
-  name: string | null;
-  asset_type: string;
-  market: string | null;
-  currency: string;
-  shares: number;
-  price: number;
-  transaction_date: string;
-  notes: string | null;
-  portfolio_id: string | null;
-  security_listing_id: string;
-  cash_used: number;
-  fee_amount: number;
-  settles_to_cash: boolean;
-};
 
 type DeleteDialogState = {
   kind: "transaction" | "bulk-transactions" | "portfolio";
@@ -109,39 +99,49 @@ export function ActivityPage({
   const [showImportHelp, setShowImportHelp] = useState(false);
   const [withdrawing, setWithdrawing] = useState<PortfolioCashBalance | null>(null);
 
-  const { txQ, transactions, transactionCount, portfolios } = usePortfolioData({
-    transactionFilters: {
-      ticker: tickerFilter.trim() || undefined,
-      portfolioId: portfolioFilter === ALL_FILTER ? undefined : portfolioFilter,
-      assetType: typeFilter === ALL_FILTER ? undefined : typeFilter,
-      currency: currencyFilter === ALL_FILTER ? undefined : currencyFilter,
-      dateFrom: dateFromFilter || undefined,
-      dateTo: dateToFilter || undefined,
-    },
-    transactionPagination: { page, pageSize: TRANSACTIONS_PAGE_SIZE },
+  const [sortKey, setSortKey] = useState<ActivitySortKey>("transaction_date");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  const portfoliosQ = useQuery({
+    queryKey: portfolioQueryKeys.portfolios,
+    queryFn: ({ signal }) => listPortfolios(signal),
+  });
+  const portfolios = portfoliosQ.data ?? EMPTY_PORTFOLIOS;
+  const activityQ = useActivity({
+    ticker: tickerFilter.trim() || undefined,
+    portfolioId: portfolioFilter === ALL_FILTER ? undefined : portfolioFilter,
+    assetType: typeFilter === ALL_FILTER ? undefined : typeFilter,
+    currency: currencyFilter === ALL_FILTER ? undefined : currencyFilter,
+    dateFrom: dateFromFilter || undefined,
+    dateTo: dateToFilter || undefined,
+    page,
+    pageSize: TRANSACTIONS_PAGE_SIZE,
+    sort: sortKey,
+    direction: sortDirection,
   });
   const { tickerCatalog } = useTickerCatalog();
   const cashQ = usePortfolioCash();
-  const data = transactions.map((row) => {
-    if (!row.security) {
-      throw new Error(`Canonical security metadata is missing for transaction ${row.id}.`);
-    }
-    return {
-      ...row,
-      ticker: row.security.symbol,
-      name: row.security.name,
-      asset_type: row.security.securityType,
-      market: row.security.exchangeName ?? row.security.exchangeMic,
-    };
-  }) as TransactionTableRow[];
-  const isLoading = txQ.isLoading;
+  const data = activityQ.data?.rows ?? EMPTY_ACTIVITY;
+  const transactionData = useMemo(
+    () => data.filter((row): row is ActivityTransaction => row.kind === "transaction"),
+    [data],
+  );
+  const transactionCount = activityQ.data?.count ?? 0;
+  const isLoading = activityQ.isLoading;
+  const newDraft = () => ({
+    ...empty(),
+    portfolio_id: portfolios.some((p) => p.id === portfolioFilter)
+      ? portfolioFilter
+      : portfolios.length === 1
+        ? portfolios[0].id
+        : null,
+  });
   const pageCount = Math.max(1, Math.ceil(transactionCount / TRANSACTIONS_PAGE_SIZE));
   const pageStart = transactionCount === 0 ? 0 : (page - 1) * TRANSACTIONS_PAGE_SIZE + 1;
   const pageEnd = Math.min(page * TRANSACTIONS_PAGE_SIZE, transactionCount);
   const tickerSuggestions = useMemo(() => {
     const map = new Map<string, TickerSuggestion>();
 
-    for (const row of data) {
+    for (const row of transactionData) {
       const ticker = normalizeTicker(row.ticker);
       if (!ticker || map.has(ticker)) continue;
       map.set(ticker, {
@@ -171,7 +171,7 @@ export function ActivityPage({
     }
 
     return Array.from(map.values()).sort((a, b) => a.ticker.localeCompare(b.ticker));
-  }, [data, tickerCatalog]);
+  }, [transactionData, tickerCatalog]);
   const currencyOptions = useMemo(
     () =>
       Array.from(
@@ -350,57 +350,52 @@ export function ActivityPage({
   return (
     <div className="space-y-6">
       <div className="flex justify-end">
-        <div className="flex shrink-0 gap-2">
+        <div className="flex flex-wrap justify-end gap-2">
           {(cashQ.data ?? []).some((row) => row.availableAmount > 0) ? (
-            <details className="relative">
-              <summary className="flex h-10 cursor-pointer list-none items-center rounded-lg border border-border/70 bg-card/70 px-4 text-xs font-bold uppercase tracking-[0.1em] hover:border-primary/60">
-                {t("portfolio.withdrawCash")}
-              </summary>
-              <div className="absolute right-0 z-20 mt-2 min-w-64 overflow-hidden rounded-[10px] border border-border/70 bg-popover p-1.5 shadow-xl">
-                {(cashQ.data ?? [])
-                  .filter((row) => row.availableAmount > 0)
-                  .map((row) => (
-                    <button
-                      key={`${row.portfolioId ?? "unassigned"}-${row.currency}`}
-                      type="button"
-                      onClick={() => setWithdrawing(row)}
-                      className="block w-full rounded-md px-3 py-2.5 text-left text-xs hover:bg-secondary/60"
-                    >
+            <OptionMenu
+              label={t("portfolio.withdrawCash")}
+              width={280}
+              className="flex h-10 items-center rounded-lg border border-border/70 bg-card/70 px-4 text-xs font-bold uppercase tracking-[0.1em] hover:border-primary/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              items={(cashQ.data ?? [])
+                .filter((row) => row.availableAmount > 0)
+                .map((row) => ({
+                  label: (
+                    <>
                       <span className="font-bold">
                         {fmtCash(row.availableAmount, row.currency)}
                       </span>
                       <span className="ml-2 text-muted-foreground">
                         {portfolioName(row.portfolioId)}
                       </span>
-                    </button>
-                  ))}
-              </div>
-            </details>
+                    </>
+                  ),
+                  onSelect: () => setWithdrawing(row),
+                }))}
+            >
+              {t("portfolio.withdrawCash")}
+            </OptionMenu>
           ) : null}
-          <details className="relative">
-            <summary className="flex h-10 cursor-pointer list-none items-center rounded-lg border border-border/70 bg-card/70 px-4 text-sm font-bold tracking-[0.12em] transition-colors hover:border-primary/60 hover:bg-secondary/30 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring">
-              ••• <span className="sr-only">{t("portfolio.moreActions")}</span>
-            </summary>
-            <div className="absolute right-0 z-20 mt-2 min-w-56 overflow-hidden rounded-[10px] border border-border/70 bg-popover p-1.5 shadow-xl">
-              <button
-                type="button"
-                onClick={() => setShowImportHelp(true)}
-                className="block w-full rounded-md px-3 py-2.5 text-left text-xs uppercase tracking-[0.1em] transition-colors hover:bg-secondary/60 hover:text-primary"
-              >
-                {t("portfolio.uploadCsv")}
-              </button>
-              <button
-                type="button"
-                onClick={() => setShowPortfolios(true)}
-                className="block w-full rounded-md px-3 py-2.5 text-left text-xs uppercase tracking-[0.1em] transition-colors hover:bg-secondary/60 hover:text-primary"
-              >
-                {t("portfolio.managePortfolios")} ({portfolios.length})
-              </button>
-            </div>
-          </details>
+          <OptionMenu
+            label={t("portfolio.moreActions")}
+            className="flex h-10 items-center rounded-lg border border-border/70 bg-card/70 px-4 text-sm font-bold hover:border-primary/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            items={[
+              { label: t("portfolio.uploadCsv"), onSelect: () => setShowImportHelp(true) },
+              {
+                label: `${t("portfolio.managePortfolios")} (${portfolios.length})`,
+                onSelect: () => setShowPortfolios(true),
+              },
+            ]}
+          >
+            •••
+          </OptionMenu>
           <button
             type="button"
-            onClick={() => setEditing(empty())}
+            onClick={(event) => {
+              event.currentTarget.focus();
+              createM.reset();
+              updateM.reset();
+              setEditing(newDraft());
+            }}
             className="h-10 rounded-lg bg-primary px-4 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             {t("portfolio.addTransactionAction")}
@@ -538,13 +533,36 @@ export function ActivityPage({
         </div>
       )}
 
+      {activityQ.isError ? (
+        <div
+          role="alert"
+          className="rounded-lg border border-destructive/40 p-4 text-sm text-destructive"
+        >
+          {activityQ.error.message}
+          <button type="button" onClick={() => void activityQ.refetch()} className="ml-3 underline">
+            {t("portfolio.editor.retry")}
+          </button>
+        </div>
+      ) : null}
       <TransactionsTable
+        sortKey={sortKey}
+        sortDirection={sortDirection}
+        onSort={(key) => {
+          setSortKey(key);
+          setSortDirection(sortKey === key && sortDirection === "asc" ? "desc" : "asc");
+          setPage(1);
+          setSelected(new Set());
+        }}
         data={data}
         isLoading={isLoading}
         selected={selected}
         setSelected={setSelected}
         portfolioName={portfolioName}
-        setEditing={setEditing}
+        setEditing={(next) => {
+          createM.reset();
+          updateM.reset();
+          setEditing(next);
+        }}
         onDelete={(id, ticker, transactionDate) => {
           setDeleteDialog({
             kind: "transaction",
@@ -559,7 +577,7 @@ export function ActivityPage({
       {transactionCount > 0 && (
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-border/70 bg-card/70 px-4 py-3 text-xs uppercase tracking-[0.1em] text-muted-foreground shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
           <div>
-            {t("portfolio.transactionsRange", {
+            {t("portfolio.activityRange", {
               start: pageStart,
               end: pageEnd,
               total: transactionCount,
@@ -604,6 +622,15 @@ export function ActivityPage({
             if (openAddTransaction) onAddHandled?.();
           }}
           busy={createM.isPending || updateM.isPending}
+          error={(editing.id ? updateM.error : createM.error)?.message}
+          defaultPortfolioId={newDraft().portfolio_id}
+          portfoliosLoading={portfoliosQ.isLoading}
+          onCreatePortfolio={async (name) => {
+            const result = await createPortfolio({ name });
+            await qc.invalidateQueries({ queryKey: portfolioQueryKeys.portfolios });
+            invalidate();
+            return result.id;
+          }}
           onSave={(value) => {
             if (editing.id) updateM.mutate({ ...value, id: editing.id });
             else createM.mutate(value);
