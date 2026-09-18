@@ -221,7 +221,6 @@ public sealed class PortfolioSnapshotJob(
     private static IOrderedEnumerable<SnapshotTransaction> Ordered(
         IEnumerable<SnapshotTransaction> rows) =>
         rows.OrderBy(row => row.TransactionDate)
-            .ThenBy(row => row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase) ? 0 : 1)
             .ThenBy(row => row.CreatedAt ?? DateTimeOffset.MinValue)
             .ThenBy(row => row.Id);
 

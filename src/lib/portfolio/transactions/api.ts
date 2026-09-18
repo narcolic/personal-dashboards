@@ -43,6 +43,7 @@ export type TransactionListResult = {
 };
 
 type TransactionApiRow = {
+  created_at?: string | null;
   id: string;
   action: TransactionRow["action"];
   transaction_currency: string;

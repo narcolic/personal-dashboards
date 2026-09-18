@@ -98,6 +98,47 @@ public sealed class PortfolioHoldingCalculatorTests
     }
 
     [Fact]
+    public void LaterSameDayPurchaseDoesNotRewriteEarlierSale()
+    {
+        var date = new DateOnly(2026, 2, 1);
+        var sale = Transaction("MSFT", 5m, 120m, date, action: "sell") with
+        {
+            CreatedAt = new DateTimeOffset(2026, 2, 1, 10, 0, 0, TimeSpan.Zero),
+        };
+        var laterBuy = Transaction("MSFT", 5m, 200m, date) with
+        {
+            CreatedAt = new DateTimeOffset(2026, 2, 1, 11, 0, 0, TimeSpan.Zero),
+            CashUsed = 600m,
+        };
+        var originalBuy = Transaction("MSFT", 10m, 100m, new DateOnly(2026, 1, 1));
+        var before = PortfolioAccountingCalculator.Calculate([sale, originalBuy]);
+        var after = PortfolioAccountingCalculator.Calculate([laterBuy, sale, originalBuy]);
+
+        Assert.Equal(100m, Assert.Single(before.RealizedSales).RealizedPnl);
+        Assert.Equal(100m, Assert.Single(after.RealizedSales).RealizedPnl);
+        Assert.Equal(500m, Assert.Single(after.RealizedSales).DisposedCostBasis);
+        var holding = Assert.Single(after.Holdings);
+        Assert.Equal(10m, holding.Shares);
+        Assert.Equal(150m, holding.AvgCost);
+    }
+
+    [Fact]
+    public void SameDayPurchaseAfterSaleCannotCoverAnOversell()
+    {
+        var date = new DateOnly(2026, 2, 1);
+        var sale = Transaction("MSFT", 5m, 120m, date, action: "sell") with
+        {
+            CreatedAt = new DateTimeOffset(2026, 2, 1, 10, 0, 0, TimeSpan.Zero),
+        };
+        var buy = Transaction("MSFT", 5m, 100m, date) with
+        {
+            CreatedAt = new DateTimeOffset(2026, 2, 1, 11, 0, 0, TimeSpan.Zero),
+        };
+        Assert.Throws<PortfolioAccountingException>(() =>
+            PortfolioAccountingCalculator.Calculate([buy, sale]));
+    }
+
+    [Fact]
     public void SaleAtLossCalculatesNegativeRealizedPnl()
     {
         var result = PortfolioAccountingCalculator.Calculate([

@@ -795,7 +795,8 @@ public sealed record TransactionResponse(
     SecurityMetadataView Security,
     [property: JsonPropertyName("cash_used")] decimal CashUsed,
     [property: JsonPropertyName("fee_amount")] decimal FeeAmount,
-    [property: JsonPropertyName("settles_to_cash")] bool SettlesToCash)
+    [property: JsonPropertyName("settles_to_cash")] bool SettlesToCash,
+    [property: JsonPropertyName("created_at")] DateTimeOffset? CreatedAt = null)
 {
     public static TransactionResponse From(TransactionListItem transaction) =>
         new(
@@ -812,5 +813,6 @@ public sealed record TransactionResponse(
                 "Transaction security metadata is required."),
             transaction.CashUsed,
             transaction.FeeAmount,
-            transaction.SettlesToCash);
+            transaction.SettlesToCash,
+            transaction.CreatedAt);
 }

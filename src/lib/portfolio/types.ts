@@ -38,6 +38,7 @@ export type SecurityMetadata = {
 };
 
 export type TransactionRow = {
+  created_at?: string | null;
   id: string;
   ticker: string;
   action: "buy" | "sell" | "dividend" | "fee";

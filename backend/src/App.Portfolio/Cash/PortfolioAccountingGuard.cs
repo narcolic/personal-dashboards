@@ -91,7 +91,6 @@ internal static class PortfolioAccountingGuard
                        over (
                          partition by t.security_listing_id, t.portfolio_id, upper(t.transaction_currency)
                          order by t.transaction_date,
-                                  case when t.action = 'buy' then 0 else 1 end,
                                   t.created_at,
                                   t.id
                        ) as running_shares

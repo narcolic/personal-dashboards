@@ -13,7 +13,7 @@ import {
   usePortfolioSnapshots,
 } from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
 import type { PortfolioSnapshotRow } from "@/routes/_authenticated/portfolio/hooks/usePortfolioSnapshots";
-import type { TransactionRow } from "@/lib/portfolio/types";
+import { calculateRealizedPnl } from "@/lib/portfolio/realized";
 import {
   type RowWithNative,
   usePortfolioHoldingsView,
@@ -508,48 +508,6 @@ function findClosingSnapshotValue(
       ? Number(snapshot.total_value_usd)
       : Number(snapshot.market_value_usd);
   return convert(value, "USD");
-}
-
-function calculateRealizedPnl(
-  transactions: TransactionRow[],
-  selectedPortfolioId: string,
-  convert: ConvFn,
-) {
-  const states = new Map<string, { quantity: number; basis: number }>();
-  let realized = 0;
-  const rows = transactions
-    .filter(
-      (row) =>
-        portfolioMatchesSelection(row.portfolio_id, selectedPortfolioId) &&
-        (row.action === "buy" || row.action === "sell"),
-    )
-    .slice()
-    .sort((left, right) => {
-      const date = left.transaction_date.localeCompare(right.transaction_date);
-      if (date) return date;
-      if (left.action !== right.action) return left.action === "buy" ? -1 : 1;
-      return left.id.localeCompare(right.id);
-    });
-  for (const row of rows) {
-    const key = `${row.security_listing_id}|${row.portfolio_id ?? ""}|${row.currency}`;
-    const state = states.get(key) ?? { quantity: 0, basis: 0 };
-    if (row.action === "buy") {
-      state.quantity += Number(row.shares);
-      state.basis += Number(row.shares) * Number(row.price) + Number(row.fee_amount ?? 0);
-    } else {
-      const average = state.quantity ? state.basis / state.quantity : 0;
-      const disposed = average * Number(row.shares);
-      realized += convert(
-        Number(row.shares) * Number(row.price) - Number(row.fee_amount ?? 0) - disposed,
-        row.currency,
-      );
-      state.quantity -= Number(row.shares);
-      state.basis -= disposed;
-      if (state.quantity === 0) state.basis = 0;
-    }
-    states.set(key, state);
-  }
-  return realized;
 }
 
 function portfolioMatchesSelection(portfolioId: string | null, selectedPortfolioId: string) {

@@ -26,7 +26,6 @@ public static class PortfolioAccountingCalculator
 
             foreach (var row in group
                 .OrderBy(row => row.TransactionDate)
-                .ThenBy(row => ActionOrder(row.Action))
                 .ThenBy(row => row.CreatedAt ?? DateTimeOffset.MinValue)
                 .ThenBy(row => row.Id))
             {
@@ -109,9 +108,6 @@ public static class PortfolioAccountingCalculator
                 .ThenBy(holding => holding.Currency, StringComparer.Ordinal)],
             [.. realizedSales.OrderBy(sale => sale.TransactionDate).ThenBy(sale => sale.TransactionId)]);
     }
-
-    private static int ActionOrder(string action) =>
-        action.Equals("buy", StringComparison.OrdinalIgnoreCase) ? 0 : 1;
 
     private static string NormalizeCurrency(string? currency) =>
         string.IsNullOrWhiteSpace(currency) ? "USD" : currency.Trim().ToUpperInvariant();
