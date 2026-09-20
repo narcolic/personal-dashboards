@@ -13,10 +13,17 @@ import { Route as LoginRouteImport } from "./routes/login"
 import { Route as AuthenticatedRouteImport } from "./routes/_authenticated"
 import { Route as IndexRouteImport } from "./routes/index"
 import { Route as OauthConsentRouteImport } from "./routes/oauth.consent"
+import { Route as AuthenticatedSubscriptionsRouteImport } from "./routes/_authenticated/subscriptions"
 import { Route as AuthenticatedPortfolioRouteImport } from "./routes/_authenticated/portfolio"
 import { Route as AuthenticatedCarServiceRouteImport } from "./routes/_authenticated/car-service"
+import { Route as AuthenticatedSubscriptionsIndexRouteImport } from "./routes/_authenticated/subscriptions/index"
 import { Route as AuthenticatedPortfolioIndexRouteImport } from "./routes/_authenticated/portfolio/index"
 import { Route as AuthenticatedCarServiceIndexRouteImport } from "./routes/_authenticated/car-service/index"
+import { Route as AuthenticatedSubscriptionsSettingsRouteImport } from "./routes/_authenticated/subscriptions/settings"
+import { Route as AuthenticatedSubscriptionsOwedRouteImport } from "./routes/_authenticated/subscriptions/owed"
+import { Route as AuthenticatedSubscriptionsNewRouteImport } from "./routes/_authenticated/subscriptions/new"
+import { Route as AuthenticatedSubscriptionsListRouteImport } from "./routes/_authenticated/subscriptions/list"
+import { Route as AuthenticatedSubscriptionsSubscriptionIdRouteImport } from "./routes/_authenticated/subscriptions/$subscriptionId"
 import { Route as AuthenticatedPortfolioTransactionsRouteImport } from "./routes/_authenticated/portfolio/transactions"
 import { Route as AuthenticatedPortfolioPnlRouteImport } from "./routes/_authenticated/portfolio/pnl"
 import { Route as AuthenticatedPortfolioInsightsRouteImport } from "./routes/_authenticated/portfolio/insights"
@@ -49,6 +56,12 @@ const OauthConsentRoute = OauthConsentRouteImport.update({
   path: "/oauth/consent",
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedSubscriptionsRoute =
+  AuthenticatedSubscriptionsRouteImport.update({
+    id: "/subscriptions",
+    path: "/subscriptions",
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
   id: "/portfolio",
   path: "/portfolio",
@@ -59,6 +72,12 @@ const AuthenticatedCarServiceRoute = AuthenticatedCarServiceRouteImport.update({
   path: "/car-service",
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedSubscriptionsIndexRoute =
+  AuthenticatedSubscriptionsIndexRouteImport.update({
+    id: "/",
+    path: "/",
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
+  } as any)
 const AuthenticatedPortfolioIndexRoute =
   AuthenticatedPortfolioIndexRouteImport.update({
     id: "/",
@@ -70,6 +89,36 @@ const AuthenticatedCarServiceIndexRoute =
     id: "/",
     path: "/",
     getParentRoute: () => AuthenticatedCarServiceRoute,
+  } as any)
+const AuthenticatedSubscriptionsSettingsRoute =
+  AuthenticatedSubscriptionsSettingsRouteImport.update({
+    id: "/settings",
+    path: "/settings",
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
+  } as any)
+const AuthenticatedSubscriptionsOwedRoute =
+  AuthenticatedSubscriptionsOwedRouteImport.update({
+    id: "/owed",
+    path: "/owed",
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
+  } as any)
+const AuthenticatedSubscriptionsNewRoute =
+  AuthenticatedSubscriptionsNewRouteImport.update({
+    id: "/new",
+    path: "/new",
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
+  } as any)
+const AuthenticatedSubscriptionsListRoute =
+  AuthenticatedSubscriptionsListRouteImport.update({
+    id: "/list",
+    path: "/list",
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
+  } as any)
+const AuthenticatedSubscriptionsSubscriptionIdRoute =
+  AuthenticatedSubscriptionsSubscriptionIdRouteImport.update({
+    id: "/$subscriptionId",
+    path: "/$subscriptionId",
+    getParentRoute: () => AuthenticatedSubscriptionsRoute,
   } as any)
 const AuthenticatedPortfolioTransactionsRoute =
   AuthenticatedPortfolioTransactionsRouteImport.update({
@@ -149,6 +198,7 @@ export interface FileRoutesByFullPath {
   "/login": typeof LoginRoute
   "/car-service": typeof AuthenticatedCarServiceRouteWithChildren
   "/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
+  "/subscriptions": typeof AuthenticatedSubscriptionsRouteWithChildren
   "/oauth/consent": typeof OauthConsentRoute
   "/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
   "/car-service/add": typeof AuthenticatedCarServiceAddRoute
@@ -160,8 +210,14 @@ export interface FileRoutesByFullPath {
   "/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
   "/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
   "/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/subscriptions/$subscriptionId": typeof AuthenticatedSubscriptionsSubscriptionIdRoute
+  "/subscriptions/list": typeof AuthenticatedSubscriptionsListRoute
+  "/subscriptions/new": typeof AuthenticatedSubscriptionsNewRoute
+  "/subscriptions/owed": typeof AuthenticatedSubscriptionsOwedRoute
+  "/subscriptions/settings": typeof AuthenticatedSubscriptionsSettingsRoute
   "/car-service/": typeof AuthenticatedCarServiceIndexRoute
   "/portfolio/": typeof AuthenticatedPortfolioIndexRoute
+  "/subscriptions/": typeof AuthenticatedSubscriptionsIndexRoute
   "/portfolio/holdings/$ticker": typeof AuthenticatedPortfolioHoldingsTickerRoute
   "/portfolio/holdings/": typeof AuthenticatedPortfolioHoldingsIndexRoute
 }
@@ -179,8 +235,14 @@ export interface FileRoutesByTo {
   "/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
   "/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
   "/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/subscriptions/$subscriptionId": typeof AuthenticatedSubscriptionsSubscriptionIdRoute
+  "/subscriptions/list": typeof AuthenticatedSubscriptionsListRoute
+  "/subscriptions/new": typeof AuthenticatedSubscriptionsNewRoute
+  "/subscriptions/owed": typeof AuthenticatedSubscriptionsOwedRoute
+  "/subscriptions/settings": typeof AuthenticatedSubscriptionsSettingsRoute
   "/car-service": typeof AuthenticatedCarServiceIndexRoute
   "/portfolio": typeof AuthenticatedPortfolioIndexRoute
+  "/subscriptions": typeof AuthenticatedSubscriptionsIndexRoute
   "/portfolio/holdings/$ticker": typeof AuthenticatedPortfolioHoldingsTickerRoute
   "/portfolio/holdings": typeof AuthenticatedPortfolioHoldingsIndexRoute
 }
@@ -191,6 +253,7 @@ export interface FileRoutesById {
   "/login": typeof LoginRoute
   "/_authenticated/car-service": typeof AuthenticatedCarServiceRouteWithChildren
   "/_authenticated/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
+  "/_authenticated/subscriptions": typeof AuthenticatedSubscriptionsRouteWithChildren
   "/oauth/consent": typeof OauthConsentRoute
   "/_authenticated/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
   "/_authenticated/car-service/add": typeof AuthenticatedCarServiceAddRoute
@@ -202,8 +265,14 @@ export interface FileRoutesById {
   "/_authenticated/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
   "/_authenticated/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
   "/_authenticated/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/_authenticated/subscriptions/$subscriptionId": typeof AuthenticatedSubscriptionsSubscriptionIdRoute
+  "/_authenticated/subscriptions/list": typeof AuthenticatedSubscriptionsListRoute
+  "/_authenticated/subscriptions/new": typeof AuthenticatedSubscriptionsNewRoute
+  "/_authenticated/subscriptions/owed": typeof AuthenticatedSubscriptionsOwedRoute
+  "/_authenticated/subscriptions/settings": typeof AuthenticatedSubscriptionsSettingsRoute
   "/_authenticated/car-service/": typeof AuthenticatedCarServiceIndexRoute
   "/_authenticated/portfolio/": typeof AuthenticatedPortfolioIndexRoute
+  "/_authenticated/subscriptions/": typeof AuthenticatedSubscriptionsIndexRoute
   "/_authenticated/portfolio/holdings/$ticker": typeof AuthenticatedPortfolioHoldingsTickerRoute
   "/_authenticated/portfolio/holdings/": typeof AuthenticatedPortfolioHoldingsIndexRoute
 }
@@ -214,6 +283,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/car-service"
     | "/portfolio"
+    | "/subscriptions"
     | "/oauth/consent"
     | "/car-service/$visitId"
     | "/car-service/add"
@@ -225,8 +295,14 @@ export interface FileRouteTypes {
     | "/portfolio/insights"
     | "/portfolio/pnl"
     | "/portfolio/transactions"
+    | "/subscriptions/$subscriptionId"
+    | "/subscriptions/list"
+    | "/subscriptions/new"
+    | "/subscriptions/owed"
+    | "/subscriptions/settings"
     | "/car-service/"
     | "/portfolio/"
+    | "/subscriptions/"
     | "/portfolio/holdings/$ticker"
     | "/portfolio/holdings/"
   fileRoutesByTo: FileRoutesByTo
@@ -244,8 +320,14 @@ export interface FileRouteTypes {
     | "/portfolio/insights"
     | "/portfolio/pnl"
     | "/portfolio/transactions"
+    | "/subscriptions/$subscriptionId"
+    | "/subscriptions/list"
+    | "/subscriptions/new"
+    | "/subscriptions/owed"
+    | "/subscriptions/settings"
     | "/car-service"
     | "/portfolio"
+    | "/subscriptions"
     | "/portfolio/holdings/$ticker"
     | "/portfolio/holdings"
   id:
@@ -255,6 +337,7 @@ export interface FileRouteTypes {
     | "/login"
     | "/_authenticated/car-service"
     | "/_authenticated/portfolio"
+    | "/_authenticated/subscriptions"
     | "/oauth/consent"
     | "/_authenticated/car-service/$visitId"
     | "/_authenticated/car-service/add"
@@ -266,8 +349,14 @@ export interface FileRouteTypes {
     | "/_authenticated/portfolio/insights"
     | "/_authenticated/portfolio/pnl"
     | "/_authenticated/portfolio/transactions"
+    | "/_authenticated/subscriptions/$subscriptionId"
+    | "/_authenticated/subscriptions/list"
+    | "/_authenticated/subscriptions/new"
+    | "/_authenticated/subscriptions/owed"
+    | "/_authenticated/subscriptions/settings"
     | "/_authenticated/car-service/"
     | "/_authenticated/portfolio/"
+    | "/_authenticated/subscriptions/"
     | "/_authenticated/portfolio/holdings/$ticker"
     | "/_authenticated/portfolio/holdings/"
   fileRoutesById: FileRoutesById
@@ -309,6 +398,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof OauthConsentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    "/_authenticated/subscriptions": {
+      id: "/_authenticated/subscriptions"
+      path: "/subscriptions"
+      fullPath: "/subscriptions"
+      preLoaderRoute: typeof AuthenticatedSubscriptionsRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     "/_authenticated/portfolio": {
       id: "/_authenticated/portfolio"
       path: "/portfolio"
@@ -323,6 +419,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedCarServiceRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    "/_authenticated/subscriptions/": {
+      id: "/_authenticated/subscriptions/"
+      path: "/"
+      fullPath: "/subscriptions/"
+      preLoaderRoute: typeof AuthenticatedSubscriptionsIndexRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
+    }
     "/_authenticated/portfolio/": {
       id: "/_authenticated/portfolio/"
       path: "/"
@@ -336,6 +439,41 @@ declare module "@tanstack/react-router" {
       fullPath: "/car-service/"
       preLoaderRoute: typeof AuthenticatedCarServiceIndexRouteImport
       parentRoute: typeof AuthenticatedCarServiceRoute
+    }
+    "/_authenticated/subscriptions/settings": {
+      id: "/_authenticated/subscriptions/settings"
+      path: "/settings"
+      fullPath: "/subscriptions/settings"
+      preLoaderRoute: typeof AuthenticatedSubscriptionsSettingsRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
+    }
+    "/_authenticated/subscriptions/owed": {
+      id: "/_authenticated/subscriptions/owed"
+      path: "/owed"
+      fullPath: "/subscriptions/owed"
+      preLoaderRoute: typeof AuthenticatedSubscriptionsOwedRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
+    }
+    "/_authenticated/subscriptions/new": {
+      id: "/_authenticated/subscriptions/new"
+      path: "/new"
+      fullPath: "/subscriptions/new"
+      preLoaderRoute: typeof AuthenticatedSubscriptionsNewRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
+    }
+    "/_authenticated/subscriptions/list": {
+      id: "/_authenticated/subscriptions/list"
+      path: "/list"
+      fullPath: "/subscriptions/list"
+      preLoaderRoute: typeof AuthenticatedSubscriptionsListRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
+    }
+    "/_authenticated/subscriptions/$subscriptionId": {
+      id: "/_authenticated/subscriptions/$subscriptionId"
+      path: "/$subscriptionId"
+      fullPath: "/subscriptions/$subscriptionId"
+      preLoaderRoute: typeof AuthenticatedSubscriptionsSubscriptionIdRouteImport
+      parentRoute: typeof AuthenticatedSubscriptionsRoute
     }
     "/_authenticated/portfolio/transactions": {
       id: "/_authenticated/portfolio/transactions"
@@ -480,14 +618,42 @@ const AuthenticatedPortfolioRouteWithChildren =
     AuthenticatedPortfolioRouteChildren,
   )
 
+interface AuthenticatedSubscriptionsRouteChildren {
+  AuthenticatedSubscriptionsSubscriptionIdRoute: typeof AuthenticatedSubscriptionsSubscriptionIdRoute
+  AuthenticatedSubscriptionsListRoute: typeof AuthenticatedSubscriptionsListRoute
+  AuthenticatedSubscriptionsNewRoute: typeof AuthenticatedSubscriptionsNewRoute
+  AuthenticatedSubscriptionsOwedRoute: typeof AuthenticatedSubscriptionsOwedRoute
+  AuthenticatedSubscriptionsSettingsRoute: typeof AuthenticatedSubscriptionsSettingsRoute
+  AuthenticatedSubscriptionsIndexRoute: typeof AuthenticatedSubscriptionsIndexRoute
+}
+
+const AuthenticatedSubscriptionsRouteChildren: AuthenticatedSubscriptionsRouteChildren =
+  {
+    AuthenticatedSubscriptionsSubscriptionIdRoute:
+      AuthenticatedSubscriptionsSubscriptionIdRoute,
+    AuthenticatedSubscriptionsListRoute: AuthenticatedSubscriptionsListRoute,
+    AuthenticatedSubscriptionsNewRoute: AuthenticatedSubscriptionsNewRoute,
+    AuthenticatedSubscriptionsOwedRoute: AuthenticatedSubscriptionsOwedRoute,
+    AuthenticatedSubscriptionsSettingsRoute:
+      AuthenticatedSubscriptionsSettingsRoute,
+    AuthenticatedSubscriptionsIndexRoute: AuthenticatedSubscriptionsIndexRoute,
+  }
+
+const AuthenticatedSubscriptionsRouteWithChildren =
+  AuthenticatedSubscriptionsRoute._addFileChildren(
+    AuthenticatedSubscriptionsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
   AuthenticatedCarServiceRoute: typeof AuthenticatedCarServiceRouteWithChildren
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRouteWithChildren
+  AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRouteWithChildren
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCarServiceRoute: AuthenticatedCarServiceRouteWithChildren,
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRouteWithChildren,
+  AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRouteWithChildren,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

@@ -23,6 +23,7 @@ using PortfolioTerminal.Portfolio.SecurityMetadata;
 using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
+using PortfolioTerminal.Subscriptions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -32,6 +33,7 @@ builder.Services.ConfigureHttpJsonOptions(options =>
 });
 
 builder.Services.AddProblemDetails();
+builder.Services.AddMemoryCache();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi("v1");
 builder.Services.AddHttpContextAccessor();
@@ -154,6 +156,7 @@ builder.Services.AddScoped<ICarServiceAnalytics, CarServiceAnalyticsService>();
 builder.Services.AddScoped<IServiceReminderQueries, ServiceReminderQueries>();
 builder.Services.AddScoped<IServiceReminderService, ServiceReminderService>();
 builder.Services.AddScoped<IServiceReminderCommands, ServiceReminderCommands>();
+builder.Services.AddScoped<SubscriptionStore>();
 builder.Services.AddMcpServer(options =>
     {
         options.ServerInfo = new Implementation
@@ -204,6 +207,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
 app.MapIdentityEndpoints();
 app.MapPortfolioEndpoints();
 app.MapCarServiceEndpoints();
+app.MapSubscriptionEndpoints();
 
 string[] oauthScopes = ["openid"];
 string[] bearerMethods = ["header"];

@@ -15,5 +15,6 @@
     <ProjectReference Include="..\App.CarService\App.CarService.csproj" />
     <ProjectReference Include="..\App.Data\App.Data.csproj" />
     <ProjectReference Include="..\App.Portfolio\App.Portfolio.csproj" />
+    <ProjectReference Include="..\App.Subscriptions\App.Subscriptions.csproj" />
   </ItemGroup>
 </Project>

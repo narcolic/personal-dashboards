@@ -49,6 +49,11 @@ const TITLE_RULES: TitleRule[] = [
     translationKey: "pageTitles.editServiceVisit",
   },
   { matches: (path) => path === "/car-service", translationKey: "pageTitles.carService" },
+  { matches: (path) => path === "/subscriptions", translationKey: "pageTitles.subscriptions" },
+  {
+    matches: (path) => path.startsWith("/subscriptions/"),
+    translationKey: "pageTitles.subscriptions",
+  },
 ];
 
 function normalizePathname(pathname: string) {

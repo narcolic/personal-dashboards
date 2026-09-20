@@ -34,6 +34,7 @@ function AuthLayout() {
 
   const isPortfolio = pathname.startsWith("/portfolio");
   const isCarService = pathname.startsWith("/car-service");
+  const isSubscriptions = pathname.startsWith("/subscriptions");
 
   const desktopLinks = isPortfolio
     ? [
@@ -83,12 +84,44 @@ function AuthLayout() {
             active: pathname.startsWith("/car-service/vehicles"),
           },
         ]
-      : [];
+      : isSubscriptions
+        ? [
+            {
+              to: "/subscriptions",
+              label: t("subscriptions.overview"),
+              short: t("subscriptions.overview"),
+              active: pathname === "/subscriptions",
+            },
+            {
+              to: "/subscriptions/list",
+              label: t("subscriptions.subscriptions"),
+              short: t("subscriptions.subscriptions"),
+              active:
+                pathname.startsWith("/subscriptions/list") ||
+                pathname.startsWith("/subscriptions/new") ||
+                /^\/subscriptions\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+                  pathname,
+                ),
+            },
+            {
+              to: "/subscriptions/owed",
+              label: t("subscriptions.owed"),
+              short: t("subscriptions.owed"),
+              active: pathname.startsWith("/subscriptions/owed"),
+            },
+            {
+              to: "/subscriptions/settings",
+              label: t("subscriptions.settings"),
+              short: t("subscriptions.settings"),
+              active: pathname.startsWith("/subscriptions/settings"),
+            },
+          ]
+        : [];
 
   return (
     <div
       className={`min-h-screen overflow-x-clip bg-background text-foreground ${
-        isPortfolio || isCarService ? "workspace-ambient-bg" : ""
+        isPortfolio || isCarService || isSubscriptions ? "workspace-ambient-bg" : ""
       }`}
     >
       <TopBar userEmail={user?.email} onLogout={logout} />
@@ -96,7 +129,13 @@ function AuthLayout() {
         <div className="mx-auto hidden max-w-[1400px] px-2 md:block md:px-4">
           {desktopLinks.length > 0 ? (
             <nav
-              aria-label={isPortfolio ? t("header.portfolio") : t("header.carService")}
+              aria-label={
+                isPortfolio
+                  ? t("header.portfolio")
+                  : isCarService
+                    ? t("header.carService")
+                    : t("dashboards.subscriptionsTitle")
+              }
               className="inline-flex items-center gap-1 rounded-xl bg-card/45 p-1 text-xs uppercase tracking-[0.1em] text-muted-foreground shadow-[0_12px_32px_-28px_rgba(0,0,0,0.9)]"
             >
               {desktopLinks.map((link) => (
@@ -110,7 +149,13 @@ function AuthLayout() {
         {desktopLinks.length > 0 ? (
           <div className="mx-auto md:hidden">
             <nav
-              aria-label={isPortfolio ? t("header.portfolio") : t("header.carService")}
+              aria-label={
+                isPortfolio
+                  ? t("header.portfolio")
+                  : isCarService
+                    ? t("header.carService")
+                    : t("dashboards.subscriptionsTitle")
+              }
               className="grid w-full rounded-xl bg-card/45 p-1 text-[10px] uppercase tracking-[0.08em] text-muted-foreground shadow-[0_12px_32px_-28px_rgba(0,0,0,0.9)]"
               style={{ gridTemplateColumns: `repeat(${desktopLinks.length}, minmax(0, 1fr))` }}
             >

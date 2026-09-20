@@ -14,6 +14,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
 import { BrandLockup } from "@/components/brand/BrandLockup";
+import { useTracker, money } from "@/lib/subscriptions";
 
 const EMPTY_HOLDINGS: HoldingRow[] = [];
 
@@ -51,6 +52,9 @@ export function AppHub() {
                     {dashboard.titleKey === "dashboards.carServiceTitle" ? (
                       <CarServiceHubSummary />
                     ) : null}
+                    {dashboard.titleKey === "dashboards.subscriptionsTitle" ? (
+                      <SubscriptionHubSummary />
+                    ) : null}
                   </div>
                   <div className="mt-3 border-t border-border/70 pt-2 text-[10px] uppercase tracking-[0.25em] text-foreground">
                     {t("shell.open")}
@@ -82,6 +86,20 @@ export function AppHub() {
         </div>
       </div>
       <BottomStatusBar />
+    </div>
+  );
+}
+
+function SubscriptionHubSummary() {
+  const { t } = useTranslation();
+  const tracker = useTracker();
+  if (tracker.isPending || tracker.isError || !tracker.data) return null;
+  return (
+    <div className="mt-4 text-xl font-bold text-foreground">
+      {money(tracker.data.summary.myMonthly, tracker.data.state.homeCurrency)}
+      <span className="ml-2 text-[10px] font-normal uppercase text-muted-foreground">
+        / {t("subscriptions.month")} · {t("subscriptions.myShare")}
+      </span>
     </div>
   );
 }

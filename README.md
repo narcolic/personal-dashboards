@@ -11,6 +11,7 @@ Terminal Hub is an expandable personal command center with a clean terminal-styl
 - Multi-currency display (EUR default)
 - Live market session indicators (ATHEX, NYSE, XETR) with local-time tooltips
 - Vehicle service history, maintenance reminders, and ownership-cost analytics
+- Subscription Tracker with recurring costs, reusable shared members, dated contributions, and money owed
 - An extensible dashboard hub, with utility-bill tracking planned next
 - Supabase authentication with portfolio and car-service data accessed through the .NET API
 
@@ -18,6 +19,8 @@ Terminal Hub is an expandable personal command center with a clean terminal-styl
 
 - `src/routes/_authenticated/portfolio/` - portfolio pages, local components, and hooks
 - `src/lib/portfolio/` - portfolio domain logic (types, api, mappers, calculations)
+- `src/routes/_authenticated/subscriptions/` - subscription overview, editor, details, and payment pages
+- `backend/src/App.Subscriptions/` - recurring period and contribution data access and calculations
 - `supabase/` - Supabase related assets/config
 - `backend/` - .NET 10 API, business logic, market-data integrations, and scheduled
   portfolio snapshot worker; see [`backend/README.md`](backend/README.md)

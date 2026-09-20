@@ -9,7 +9,7 @@ public sealed class FxRateService(HttpClient httpClient) : IFxRateService
         CancellationToken cancellationToken = default)
     {
         var frankfurter = await TryGetAsync(
-                $"https://api.frankfurter.app/latest?from={Uri.EscapeDataString(baseCurrency)}",
+                $"https://api.frankfurter.dev/v1/latest?base={Uri.EscapeDataString(baseCurrency)}",
                 cancellationToken)
             .ConfigureAwait(false);
         if (frankfurter is { } frankfurterPayload)
