@@ -9,6 +9,7 @@ COPY src/App.Api/App.Api.csproj src/App.Api/
 COPY src/App.CarService/App.CarService.csproj src/App.CarService/
 COPY src/App.Data/App.Data.csproj src/App.Data/
 COPY src/App.Portfolio/App.Portfolio.csproj src/App.Portfolio/
+COPY src/App.Subscriptions/App.Subscriptions.csproj src/App.Subscriptions/
 RUN dotnet restore src/App.Api/App.Api.csproj
 
 COPY src/ src/
