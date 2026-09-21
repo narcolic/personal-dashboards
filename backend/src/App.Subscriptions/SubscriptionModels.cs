@@ -23,6 +23,8 @@ public sealed record SubscriptionInput(
     string SplitMode, bool IsActive, bool TrackCurrentPeriod,
     IReadOnlyList<SubscriptionMember> Members, string? LogoKey = null);
 
+public enum PeriodRecalculationResult { Updated, NotFound, PaidConflict }
+
 public static class SubscriptionMath
 {
     public static DateOnly Advance(DateOnly date, int months, int anchorDay)

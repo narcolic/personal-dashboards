@@ -17,6 +17,7 @@ export type SubscriptionLogoOption = {
   key: string;
   label: string;
   icon?: SimpleIcon;
+  image?: string;
   initials?: string;
   color?: string;
   special?: "microsoft" | "nintendo" | "amazon";
@@ -28,10 +29,10 @@ export type SubscriptionLogoOption = {
 export const serviceLogos: SubscriptionLogoOption[] = [
   { key: "youtube", label: "YouTube Premium", icon: siYoutube },
   { key: "spotify", label: "Spotify", icon: siSpotify },
-  { key: "chatgpt", label: "ChatGPT Plus", initials: "AI", color: "#10A37F" },
+  { key: "chatgpt", label: "ChatGPT Plus", image: "/brand/chatgpt.png" },
   { key: "torbox", label: "Torbox", initials: "TB", color: "#E69A35" },
   { key: "netflix", label: "Netflix", icon: siNetflix },
-  { key: "skroutz", label: "Skroutz Plus", initials: "S+", color: "#6ABF55" },
+  { key: "skroutz", label: "Skroutz Plus", image: "/brand/skroutz.png" },
   { key: "appletv", label: "Apple TV+", icon: siAppletv, color: "currentColor" },
   { key: "perplexity", label: "Perplexity AI Pro", icon: siPerplexity },
   { key: "tapo", label: "Tapo Care", initials: "T", color: "#49A6F6" },

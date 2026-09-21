@@ -2,15 +2,18 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { SubscriptionLogo } from "@/components/subscriptions/SubscriptionLogo";
-import { apiFetch } from "@/lib/api/client";
+import { apiFetch, ApiError } from "@/lib/api/client";
 import {
   memberShare,
   money,
   myShare,
+  recalculatePeriod,
   setContributionPaid,
   useRefreshTracker,
   useTracker,
   type Contribution,
+  type Period,
+  type Subscription,
 } from "@/lib/subscriptions";
 import {
   billingDate,
@@ -35,6 +38,7 @@ function SubscriptionDetails() {
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [periodError, setPeriodError] = useState<{ id: string; message: string } | null>(null);
   if (!tracker.data) return <LoadingState loading={tracker.isPending} error={tracker.error} />;
   const data = tracker.data;
   const subscription = data.state.subscriptions.find((item) => item.id === subscriptionId);
@@ -52,6 +56,32 @@ function SubscriptionDetails() {
       await refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : t("subscriptions.saveFailed"));
+    } finally {
+      setBusy(null);
+    }
+  }
+  async function updateBill(period: Period) {
+    if (
+      !window.confirm(
+        t("subscriptions.updateBillConfirm", { date: billingDate(period.billingDate) }),
+      )
+    )
+      return;
+    setBusy(period.id);
+    setPeriodError(null);
+    try {
+      await recalculatePeriod(subscriptionId, period.id);
+      await refresh();
+    } catch (e) {
+      setPeriodError({
+        id: period.id,
+        message:
+          e instanceof ApiError && e.status === 409
+            ? t("subscriptions.updateBillPaidConflict")
+            : e instanceof Error
+              ? e.message
+              : t("subscriptions.saveFailed"),
+      });
     } finally {
       setBusy(null);
     }
@@ -225,7 +255,7 @@ function SubscriptionDetails() {
                       </span>
                     </span>
                     <button
-                      disabled={busy === c.id}
+                      disabled={busy !== null}
                       className={buttonClass}
                       onClick={() => void changePaid(c)}
                     >
@@ -255,6 +285,28 @@ function SubscriptionDetails() {
                     <p className="mt-1 text-xs text-muted-foreground">
                       {t("subscriptions.fullCost")}: {money(period.fullAmount, period.currency)}
                     </p>
+                    {billDiffers(period, subscription) && (
+                      <div className="mt-3 rounded-md border border-primary/25 bg-primary/5 px-3 py-2">
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <p className="text-xs text-muted-foreground">
+                            {t("subscriptions.billDiffers")}
+                          </p>
+                          <button
+                            type="button"
+                            className={`${secondaryButtonClass} min-h-8 border-primary/40 px-3 text-[11px] text-primary`}
+                            disabled={busy !== null}
+                            onClick={() => void updateBill(period)}
+                          >
+                            {t("subscriptions.updateBill")}
+                          </button>
+                        </div>
+                        {periodError?.id === period.id && (
+                          <p role="alert" className="mt-2 text-xs text-destructive">
+                            {periodError.message}
+                          </p>
+                        )}
+                      </div>
+                    )}
                     <div className="mt-2 space-y-2">
                       {period.contributions.map((c) => (
                         <div
@@ -284,7 +336,7 @@ function SubscriptionDetails() {
                           {c.paymentBehavior === "manual" && (
                             <button
                               className={`${secondaryButtonClass} min-h-8 px-3 text-[11px]`}
-                              disabled={busy === c.id}
+                              disabled={busy !== null}
                               onClick={() => void changePaid(c)}
                             >
                               {c.status === "paid"
@@ -304,6 +356,25 @@ function SubscriptionDetails() {
       )}
     </div>
   );
+}
+
+function billDiffers(period: Period, subscription: Subscription): boolean {
+  const cents = (amount: number) => Math.round(amount * 100);
+  if (
+    period.currency !== subscription.currency ||
+    cents(period.fullAmount) !== cents(subscription.amount) ||
+    cents(period.myAmount) !== cents(myShare(subscription)) ||
+    period.contributions.length !== subscription.members.length
+  )
+    return true;
+  return subscription.members.some((member) => {
+    const contribution = period.contributions.find((item) => item.personId === member.personId);
+    return (
+      !contribution ||
+      contribution.paymentBehavior !== member.paymentBehavior ||
+      cents(contribution.amount) !== cents(memberShare(subscription, member))
+    );
+  });
 }
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {

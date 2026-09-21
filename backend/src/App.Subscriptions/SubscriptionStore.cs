@@ -140,6 +140,105 @@ public sealed class SubscriptionStore(AppDataSource dataSource, TimeProvider clo
             return await command.ExecuteNonQueryAsync(ct) == 1;
         }, token);
 
+    public Task<PeriodRecalculationResult> RecalculatePeriodAsync(Guid userId,
+        Guid subscriptionId, Guid periodId, CancellationToken token = default) =>
+        dataSource.ExecuteAsUserAsync(userId, async (connection, transaction, ct) =>
+        {
+            SubscriptionItem item;
+            await using (var command = Cmd(connection, transaction, """
+                select id,name,description,category,notes,amount,currency,interval_months,
+                       next_billing_date,billing_anchor_day,split_mode,is_active,logo_key
+                from public.subscriptions where user_id=$1 and id=$2 for update;
+                """, userId, subscriptionId))
+            await using (var reader = await command.ExecuteReaderAsync(ct))
+            {
+                if (!await reader.ReadAsync(ct)) return PeriodRecalculationResult.NotFound;
+                item = ReadSubscription(reader, []);
+            }
+
+            DateOnly billingDate;
+            string previousCurrency;
+            await using (var command = Cmd(connection, transaction, """
+                select billing_date,currency from public.subscription_periods
+                where user_id=$1 and subscription_id=$2 and id=$3 for update;
+                """, userId, subscriptionId, periodId))
+            await using (var reader = await command.ExecuteReaderAsync(ct))
+            {
+                if (!await reader.ReadAsync(ct)) return PeriodRecalculationResult.NotFound;
+                billingDate = reader.GetFieldValue<DateOnly>(0);
+                previousCurrency = reader.GetString(1);
+            }
+
+            var members = await ReadMembersAsync(connection, transaction, userId, subscriptionId, ct);
+            var (mine, amounts) = SubscriptionMath.Split(item.Amount, item.SplitMode, members);
+            var desired = members.Select((member, index) =>
+                (member.PersonId, member.PaymentBehavior, Amount: amounts[index]))
+                .ToDictionary(member => member.PersonId);
+            var existing = new Dictionary<Guid, (Guid Id, decimal Amount, string Behavior, string Status)>();
+            await using (var command = Cmd(connection, transaction, """
+                select id,person_id,amount,payment_behavior,status
+                from public.subscription_contributions
+                where user_id=$1 and period_id=$2 for update;
+                """, userId, periodId))
+            await using (var reader = await command.ExecuteReaderAsync(ct))
+            {
+                while (await reader.ReadAsync(ct))
+                    existing.Add(reader.GetGuid(1), (reader.GetGuid(0), reader.GetDecimal(2),
+                        reader.GetString(3), reader.GetString(4)));
+            }
+
+            // A recorded manual payment represents money actually received. Do not silently
+            // change its amount, currency, behavior, or member when correcting a period.
+            if (existing.Any(entry => entry.Value.Status == "paid" &&
+                (!desired.TryGetValue(entry.Key, out var current) ||
+                 current.Amount != entry.Value.Amount ||
+                 current.PaymentBehavior != entry.Value.Behavior ||
+                 item.Currency != previousCurrency)))
+                return PeriodRecalculationResult.PaidConflict;
+
+            await using (var update = Cmd(connection, transaction, """
+                update public.subscription_periods
+                set full_amount=$3,my_amount=$4,currency=$5 where user_id=$1 and id=$2;
+                """, userId, periodId, item.Amount, mine, item.Currency))
+                await update.ExecuteNonQueryAsync(ct);
+
+            var autoPaidAt = new DateTimeOffset(billingDate.ToDateTime(TimeOnly.MinValue),
+                TimeSpan.Zero);
+            foreach (var (personId, previous) in existing)
+            {
+                if (!desired.TryGetValue(personId, out var current))
+                {
+                    await using var remove = Cmd(connection, transaction, """
+                        delete from public.subscription_contributions where user_id=$1 and id=$2;
+                        """, userId, previous.Id);
+                    await remove.ExecuteNonQueryAsync(ct);
+                    continue;
+                }
+                if (previous.Status == "paid") continue;
+                var auto = current.PaymentBehavior == "auto";
+                await using var update = Cmd(connection, transaction, """
+                    update public.subscription_contributions
+                    set amount=$3,payment_behavior=$4,status=$5,paid_at=$6
+                    where user_id=$1 and id=$2;
+                    """, userId, previous.Id, current.Amount, current.PaymentBehavior,
+                    auto ? "auto_received" : "unpaid", auto ? autoPaidAt : null);
+                await update.ExecuteNonQueryAsync(ct);
+            }
+            foreach (var (personId, current) in desired)
+            {
+                if (existing.ContainsKey(personId)) continue;
+                var auto = current.PaymentBehavior == "auto";
+                await using var add = Cmd(connection, transaction, """
+                    insert into public.subscription_contributions
+                    (user_id,period_id,person_id,amount,payment_behavior,status,paid_at)
+                    values ($1,$2,$3,$4,$5,$6,$7);
+                    """, userId, periodId, personId, current.Amount, current.PaymentBehavior,
+                    auto ? "auto_received" : "unpaid", auto ? autoPaidAt : null);
+                await add.ExecuteNonQueryAsync(ct);
+            }
+            return PeriodRecalculationResult.Updated;
+        }, token);
+
     public Task<bool> DeleteSubscriptionAsync(Guid userId, Guid id, CancellationToken token = default) =>
         dataSource.ExecuteAsUserAsync(userId, async (connection, transaction, ct) =>
         {

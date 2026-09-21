@@ -351,6 +351,9 @@ export function SubscriptionEditor({
           {error}
         </p>
       )}
+      {initial && (
+        <p className="text-xs text-muted-foreground">{t("subscriptions.editFutureOnly")}</p>
+      )}
       <div className="flex gap-2">
         <button className={buttonClass} disabled={busy} type="submit">
           {busy ? t("common.loading") : t("common.save")}

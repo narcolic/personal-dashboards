@@ -106,6 +106,50 @@ public sealed class SubscriptionDatabaseTests
             Assert.Equal(20m, november.Periods.Single(p => p.BillingDate.Month == 10).FullAmount);
             Assert.Contains(november.Periods.Single(p => p.BillingDate.Month == 10).Contributions,
                 c => c.PersonId == friend && c.Status == "auto_received");
+
+            var novemberPeriod = november.Periods.Single(p => p.BillingDate.Month == 11);
+            await store.SaveSubscriptionAsync(user, subscription, new SubscriptionInput(
+                "Netflix", null, "Streaming", null, 30m, "EUR", 1,
+                new DateOnly(2026, 12, 1), "equal", true, false,
+                [new(dad, "manual", null), new(friend, "auto", null)]));
+            Assert.Equal(PeriodRecalculationResult.NotFound,
+                await store.RecalculatePeriodAsync(other, subscription, novemberPeriod.Id));
+            Assert.Equal(PeriodRecalculationResult.Updated,
+                await store.RecalculatePeriodAsync(user, subscription, novemberPeriod.Id));
+            var corrected = await store.GetStateAsync(user);
+            var correctedNovember = corrected.Periods.Single(p => p.Id == novemberPeriod.Id);
+            Assert.Equal(10m, correctedNovember.MyAmount);
+            Assert.Equal(2, correctedNovember.Contributions.Count);
+            Assert.Equal(10m, correctedNovember.Contributions.Single(c => c.PersonId == dad).Amount);
+            Assert.Equal("unpaid", correctedNovember.Contributions.Single(c => c.PersonId == dad).Status);
+            Assert.Equal("auto_received", correctedNovember.Contributions.Single(c => c.PersonId == friend).Status);
+            Assert.Equal(20m, corrected.Periods.Single(p => p.BillingDate.Month == 10).FullAmount);
+            Assert.Equal(6.68m, corrected.Periods.Single(p => p.BillingDate.Month == 10).MyAmount);
+            Assert.Equal("paid", corrected.Periods.Single(p => p.BillingDate.Month == 9)
+                .Contributions.Single(c => c.PersonId == dad).Status);
+
+            var novemberDad = correctedNovember.Contributions.Single(c => c.PersonId == dad);
+            Assert.True(await store.SetPaidAsync(user, novemberDad.Id, true));
+            Assert.Equal(PeriodRecalculationResult.Updated,
+                await store.RecalculatePeriodAsync(user, subscription, novemberPeriod.Id));
+            Assert.Equal(2, (await store.GetStateAsync(user)).Periods.Single(p => p.Id == novemberPeriod.Id)
+                .Contributions.Count);
+            await store.SaveSubscriptionAsync(user, subscription, new SubscriptionInput(
+                "Netflix", null, "Streaming", null, 30m, "EUR", 1,
+                new DateOnly(2026, 12, 1), "fixed", true, false,
+                [new(dad, "manual", 8m), new(friend, "auto", 0m)]));
+            Assert.Equal(PeriodRecalculationResult.PaidConflict,
+                await store.RecalculatePeriodAsync(user, subscription, novemberPeriod.Id));
+            var protectedNovember = (await store.GetStateAsync(user)).Periods.Single(p => p.Id == novemberPeriod.Id);
+            Assert.Equal(10m, protectedNovember.MyAmount);
+            Assert.Equal("paid", protectedNovember.Contributions.Single(c => c.PersonId == dad).Status);
+            Assert.Equal(10m, protectedNovember.Contributions.Single(c => c.PersonId == dad).Amount);
+            Assert.True(await store.SetPaidAsync(user, novemberDad.Id, false));
+            Assert.Equal(PeriodRecalculationResult.Updated,
+                await store.RecalculatePeriodAsync(user, subscription, novemberPeriod.Id));
+            var updatedNovember = (await store.GetStateAsync(user)).Periods.Single(p => p.Id == novemberPeriod.Id);
+            Assert.Equal(22m, updatedNovember.MyAmount);
+            Assert.Equal(8m, updatedNovember.Contributions.Single(c => c.PersonId == dad).Amount);
             Assert.Empty((await store.GetStateAsync(other)).Subscriptions);
             var visibleToOther = await source.ExecuteAsUserAsync(other, async (db, transaction, ct) =>
             {

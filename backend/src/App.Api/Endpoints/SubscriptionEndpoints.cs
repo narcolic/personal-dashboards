@@ -99,6 +99,18 @@ public static class SubscriptionEndpoints
             (await store.GetStateAsync(user.UserId, ct)).Periods
                 .Where(period => period.SubscriptionId == id))
             .WithName("ListSubscriptionPeriods");
+        group.MapPost("/{id:guid}/periods/{periodId:guid}/recalculate", async Task<IResult> (
+            Guid id, Guid periodId, SubscriptionStore store, ICurrentUser user, CancellationToken ct) =>
+            (await store.RecalculatePeriodAsync(user.UserId, id, periodId, ct)) switch
+            {
+                PeriodRecalculationResult.Updated => TypedResults.NoContent(),
+                PeriodRecalculationResult.PaidConflict => TypedResults.Conflict(new
+                {
+                    detail = "Undo affected recorded payments before updating this bill."
+                }),
+                _ => TypedResults.NotFound(),
+            })
+            .WithName("RecalculateSubscriptionPeriod");
         group.MapPatch("/contributions/{id:guid}", async Task<IResult> (
             Guid id, PaymentInput input, SubscriptionStore store,
             ICurrentUser user, CancellationToken ct) =>

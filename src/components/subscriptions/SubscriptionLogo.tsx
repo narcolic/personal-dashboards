@@ -22,15 +22,19 @@ export function SubscriptionLogo({
       className={`inline-flex shrink-0 items-center justify-center rounded-lg border font-bold tracking-tight ${sizeClass} ${
         isGeneric
           ? "border-primary/20 bg-primary/10 text-primary"
-          : special === "nintendo"
-            ? "border-[#E60012] bg-[#E60012]"
-            : special === "amazon"
-              ? "border-white bg-white"
-              : "border-border/70 bg-secondary/40"
+          : option?.image
+            ? "border-white bg-white"
+            : special === "nintendo"
+              ? "border-[#E60012] bg-[#E60012]"
+              : special === "amazon"
+                ? "border-white bg-white"
+                : "border-border/70 bg-secondary/40"
       }`}
-      style={isGeneric || special ? undefined : { color }}
+      style={isGeneric || special || option?.image ? undefined : { color }}
     >
-      {option?.special === "microsoft" ? (
+      {option?.image ? (
+        <img className="size-full rounded-lg object-contain" src={option.image} alt="" />
+      ) : option?.special === "microsoft" ? (
         <svg className="size-[58%]" viewBox="0 0 24 24" aria-hidden="true">
           <rect x="0" y="0" width="11" height="11" fill="#F25022" />
           <rect x="13" y="0" width="11" height="11" fill="#7FBA00" />

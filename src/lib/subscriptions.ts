@@ -110,6 +110,13 @@ export async function setContributionPaid(id: string, paid: boolean) {
   });
 }
 
+export async function recalculatePeriod(subscriptionId: string, periodId: string) {
+  return apiFetch<void>(
+    `/api/subscriptions/${encodeURIComponent(subscriptionId)}/periods/${encodeURIComponent(periodId)}/recalculate`,
+    { method: "POST" },
+  );
+}
+
 export function money(amount: number | null | undefined, currency: string): string {
   if (amount == null || !Number.isFinite(amount)) return "—";
   return new Intl.NumberFormat(undefined, {
