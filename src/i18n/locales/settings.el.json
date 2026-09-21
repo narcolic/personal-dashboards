@@ -1,0 +1,26 @@
+{
+  "settings": {
+    "title": "Ρυθμίσεις",
+    "openSettings": "Άνοιγμα ρυθμίσεων",
+    "profile": "Προφίλ",
+    "changeImage": "Αλλαγή φωτογραφίας",
+    "removeImage": "Αφαίρεση εικόνας",
+    "imageHint": "Δημόσια εικόνα · JPG, PNG ή WebP · έως 2 MB",
+    "name": "Όνομα",
+    "namePlaceholder": "Το όνομά σας",
+    "homeCurrency": "Προεπιλεγμένο νόμισμα",
+    "language": "Γλώσσα",
+    "colorTheme": "Χρωματικό θέμα",
+    "paletteTerminal": "Terminal",
+    "paletteOcean": "Ωκεανός",
+    "paletteViolet": "Βιολετί",
+    "paletteEmerald": "Σμαραγδί",
+    "paletteMagenta": "Ματζέντα",
+    "paletteGraphite": "Γραφίτης",
+    "saved": "Το προφίλ αποθηκεύτηκε.",
+    "saveFailed": "Δεν ήταν δυνατή η αποθήκευση του προφίλ.",
+    "uploadFailed": "Δεν ήταν δυνατή η μεταφόρτωση της εικόνας.",
+    "removeFailed": "Δεν ήταν δυνατή η αφαίρεση της εικόνας.",
+    "invalidImage": "Επιλέξτε εικόνα JPG, PNG ή WebP μικρότερη από 2 MB."
+  }
+}

@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
+import { SubscriptionLogo } from "@/components/subscriptions/SubscriptionLogo";
 import { myShare, useTracker } from "@/lib/subscriptions";
 import { billingDate, Converted, LoadingState, PageHeading } from "./components";
 import { useTranslation } from "react-i18next";
@@ -31,16 +32,19 @@ function SubscriptionList() {
           >
             <TerminalCard className="h-full hover:border-primary" bodyClassName="p-4">
               <div className="flex justify-between gap-3">
-                <div>
-                  <h2 className="font-semibold text-primary">{s.name}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {s.category || t("subscriptions.uncategorized")} ·{" "}
-                    {s.intervalMonths === 1
-                      ? t("subscriptions.monthly")
-                      : s.intervalMonths === 12
-                        ? t("subscriptions.yearly")
-                        : t("subscriptions.everyMonthsValue", { count: s.intervalMonths })}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <SubscriptionLogo logoKey={s.logoKey} name={s.name} />
+                  <div className="min-w-0">
+                    <h2 className="truncate font-semibold text-primary">{s.name}</h2>
+                    <p className="text-xs text-muted-foreground">
+                      {s.category || t("subscriptions.uncategorized")} ·{" "}
+                      {s.intervalMonths === 1
+                        ? t("subscriptions.monthly")
+                        : s.intervalMonths === 12
+                          ? t("subscriptions.yearly")
+                          : t("subscriptions.everyMonthsValue", { count: s.intervalMonths })}
+                    </p>
+                  </div>
                 </div>
                 {!s.isActive && (
                   <span className="text-xs text-muted-foreground">

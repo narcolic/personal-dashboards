@@ -5,6 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Terminal Hub</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script>
+      try {
+        const mode = localStorage.getItem("portfolio-theme-mode");
+        const dark =
+          mode === "dark" ||
+          (mode !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.classList.add(dark ? "dark" : "light");
+        const palette = localStorage.getItem("terminal-color-palette");
+        document.documentElement.dataset.palette = [
+          "ocean",
+          "violet",
+          "emerald",
+          "magenta",
+          "graphite",
+        ].includes(palette)
+          ? palette
+          : "terminal";
+      } catch {
+        // The theme provider applies the defaults when local storage is unavailable.
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

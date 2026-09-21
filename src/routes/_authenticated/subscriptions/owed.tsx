@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
+import { SubscriptionLogo } from "@/components/subscriptions/SubscriptionLogo";
 import {
   convert,
   money,
@@ -101,19 +102,29 @@ function MoneyOwed() {
                   key={contribution.id}
                   className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-3 last:border-0 last:pb-0"
                 >
-                  <div>
-                    <Link
-                      to="/subscriptions/$subscriptionId"
-                      params={{ subscriptionId: period.subscriptionId }}
-                      className="text-sm text-foreground hover:text-primary"
-                    >
-                      {subscriptions.get(period.subscriptionId)?.name ??
-                        t("subscriptions.subscription")}
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {billingDate(period.billingDate)} ·{" "}
-                      {money(contribution.amount, period.currency)}
-                    </p>
+                  <div className="flex items-center gap-3">
+                    <SubscriptionLogo
+                      logoKey={subscriptions.get(period.subscriptionId)?.logoKey}
+                      name={
+                        subscriptions.get(period.subscriptionId)?.name ??
+                        t("subscriptions.subscription")
+                      }
+                      size="sm"
+                    />
+                    <div>
+                      <Link
+                        to="/subscriptions/$subscriptionId"
+                        params={{ subscriptionId: period.subscriptionId }}
+                        className="text-sm text-foreground hover:text-primary"
+                      >
+                        {subscriptions.get(period.subscriptionId)?.name ??
+                          t("subscriptions.subscription")}
+                      </Link>
+                      <p className="text-xs text-muted-foreground">
+                        {billingDate(period.billingDate)} ·{" "}
+                        {money(contribution.amount, period.currency)}
+                      </p>
+                    </div>
                   </div>
                   <button
                     disabled={busy === contribution.id}

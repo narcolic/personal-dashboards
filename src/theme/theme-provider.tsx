@@ -2,14 +2,18 @@ import { createContext, useContext, useEffect, useMemo, useState } from "react";
 
 export type ThemeMode = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
+export type ColorPalette = "terminal" | "ocean" | "violet" | "emerald" | "magenta" | "graphite";
 
 type ThemeContextValue = {
   mode: ThemeMode;
   resolvedTheme: ResolvedTheme;
   setMode: (mode: ThemeMode) => void;
+  palette: ColorPalette;
+  setPalette: (palette: ColorPalette) => void;
 };
 
 const STORAGE_KEY = "portfolio-theme-mode";
+const PALETTE_STORAGE_KEY = "terminal-color-palette";
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
@@ -34,6 +38,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     if (typeof window === "undefined") return "dark";
     return mode === "system" ? resolveSystemTheme() : mode;
   });
+  const [palette, setPaletteState] = useState<ColorPalette>(() => {
+    if (typeof window === "undefined") return "terminal";
+    const saved = window.localStorage.getItem(PALETTE_STORAGE_KEY);
+    return saved === "ocean" ||
+      saved === "violet" ||
+      saved === "emerald" ||
+      saved === "magenta" ||
+      saved === "graphite"
+      ? saved
+      : "terminal";
+  });
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-color-scheme: dark)");
@@ -49,9 +64,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => media.removeEventListener("change", update);
   }, [mode]);
 
+  useEffect(() => {
+    document.documentElement.dataset.palette = palette;
+  }, [palette]);
+
   const setMode = (nextMode: ThemeMode) => {
     setModeState(nextMode);
     window.localStorage.setItem(STORAGE_KEY, nextMode);
+  };
+  const setPalette = (nextPalette: ColorPalette) => {
+    setPaletteState(nextPalette);
+    window.localStorage.setItem(PALETTE_STORAGE_KEY, nextPalette);
   };
 
   const value = useMemo(
@@ -59,8 +82,10 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       mode,
       resolvedTheme,
       setMode,
+      palette,
+      setPalette,
     }),
-    [mode, resolvedTheme],
+    [mode, resolvedTheme, palette],
   );
 
   return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;

@@ -109,12 +109,6 @@ function AuthLayout() {
               short: t("subscriptions.owed"),
               active: pathname.startsWith("/subscriptions/owed"),
             },
-            {
-              to: "/subscriptions/settings",
-              label: t("subscriptions.settings"),
-              short: t("subscriptions.settings"),
-              active: pathname.startsWith("/subscriptions/settings"),
-            },
           ]
         : [];
 
@@ -124,7 +118,7 @@ function AuthLayout() {
         isPortfolio || isCarService || isSubscriptions ? "workspace-ambient-bg" : ""
       }`}
     >
-      <TopBar userEmail={user?.email} onLogout={logout} />
+      <TopBar user={user} onLogout={logout} />
       <header className="sticky top-10 z-[9] w-full bg-background/55 px-4 py-2 backdrop-blur-xl md:px-2">
         <div className="mx-auto hidden max-w-[1400px] px-2 md:block md:px-4">
           {desktopLinks.length > 0 ? (

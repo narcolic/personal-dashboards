@@ -6,7 +6,7 @@ public sealed record SubscriptionItem(
     Guid Id, string Name, string? Description, string? Category, string? Notes,
     decimal Amount, string Currency, int IntervalMonths, DateOnly NextBillingDate,
     int BillingAnchorDay, string SplitMode, bool IsActive,
-    IReadOnlyList<SubscriptionMember> Members);
+    IReadOnlyList<SubscriptionMember> Members, string? LogoKey = null);
 public sealed record MemberContribution(
     Guid Id, Guid PersonId, decimal Amount, string PaymentBehavior,
     string Status, DateTimeOffset? PaidAt);
@@ -21,7 +21,7 @@ public sealed record SubscriptionInput(
     string Name, string? Description, string? Category, string? Notes,
     decimal Amount, string Currency, int IntervalMonths, DateOnly NextBillingDate,
     string SplitMode, bool IsActive, bool TrackCurrentPeriod,
-    IReadOnlyList<SubscriptionMember> Members);
+    IReadOnlyList<SubscriptionMember> Members, string? LogoKey = null);
 
 public static class SubscriptionMath
 {

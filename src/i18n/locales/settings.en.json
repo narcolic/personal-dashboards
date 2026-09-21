@@ -1,0 +1,26 @@
+{
+  "settings": {
+    "title": "Settings",
+    "openSettings": "Open settings",
+    "profile": "Profile",
+    "changeImage": "Change photo",
+    "removeImage": "Remove image",
+    "imageHint": "Public image · JPG, PNG or WebP · max 2 MB",
+    "name": "Name",
+    "namePlaceholder": "Your name",
+    "homeCurrency": "Default currency",
+    "language": "Language",
+    "colorTheme": "Color theme",
+    "paletteTerminal": "Terminal",
+    "paletteOcean": "Ocean",
+    "paletteViolet": "Violet",
+    "paletteEmerald": "Emerald",
+    "paletteMagenta": "Magenta",
+    "paletteGraphite": "Graphite",
+    "saved": "Profile saved.",
+    "saveFailed": "Could not save profile.",
+    "uploadFailed": "Could not upload image.",
+    "removeFailed": "Could not remove image.",
+    "invalidImage": "Choose a JPG, PNG or WebP image smaller than 2 MB."
+  }
+}

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent }
 import { useTranslation } from "react-i18next";
 import { useRouterState } from "@tanstack/react-router";
 import i18n from "@/i18n";
+import { supabase } from "@/integrations/supabase/client";
 import { type ThemeMode, useTheme } from "@/theme/theme-provider";
 import { MarketStatusIndicator } from "@/routes/_authenticated/portfolio/components/MarketStatusIndicator";
 
@@ -133,9 +134,17 @@ export function BottomStatusBar() {
                         role="menuitemradio"
                         aria-checked={isActive}
                         onClick={() => {
-                          void i18n.changeLanguage(language.code).catch((error: unknown) => {
-                            console.error("[i18n] changeLanguage failed", error);
-                          });
+                          void (async () => {
+                            try {
+                              await i18n.changeLanguage(language.code);
+                              const { error } = await supabase.auth.updateUser({
+                                data: { language: language.code },
+                              });
+                              if (error) throw error;
+                            } catch (error) {
+                              console.error("[i18n] language preference failed", error);
+                            }
+                          })();
                           setLanguageMenuOpen(false);
                         }}
                         className={`flex w-full items-center justify-between gap-3 rounded-md px-3 py-2 text-left text-[11px] uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${

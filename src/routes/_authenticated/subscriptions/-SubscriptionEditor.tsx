@@ -1,5 +1,8 @@
 import { useState, type FormEvent } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
+import { SubscriptionLogoPicker } from "@/components/subscriptions/SubscriptionLogoPicker";
+import { TerminalSelect } from "@/components/ui/TerminalSelect";
+import { supportedHomeCurrencies } from "@/lib/profile";
 import {
   memberShare,
   money,
@@ -38,6 +41,7 @@ export function SubscriptionEditor({
   const [description, setDescription] = useState(initial?.description ?? "");
   const [category, setCategory] = useState(initial?.category ?? "");
   const [notes, setNotes] = useState(initial?.notes ?? "");
+  const [logoKey, setLogoKey] = useState<string | null>(initial?.logoKey ?? null);
   const [amount, setAmount] = useState(initial?.amount.toString() ?? "");
   const [currency, setCurrency] = useState(initial?.currency ?? homeCurrency ?? "EUR");
   const [intervalMonths, setIntervalMonths] = useState(initial?.intervalMonths ?? 1);
@@ -92,6 +96,7 @@ export function SubscriptionEditor({
       description: description.trim() || null,
       category: category.trim() || null,
       notes: notes.trim() || null,
+      logoKey,
       amount: parsedAmount,
       currency,
       intervalMonths,
@@ -157,6 +162,7 @@ export function SubscriptionEditor({
             />
           </Field>
         </div>
+        <SubscriptionLogoPicker name={name} value={logoKey} onChange={setLogoKey} />
       </TerminalCard>
       <TerminalCard title={t("subscriptions.billing")}>
         <div className="grid gap-4 md:grid-cols-2">
@@ -171,30 +177,28 @@ export function SubscriptionEditor({
               required
             />
           </Field>
-          <Field label={t("subscriptions.currency")}>
-            <select
-              className={inputClass}
+          <SelectField label={t("subscriptions.currency")}>
+            <TerminalSelect
+              ariaLabel={t("subscriptions.currency")}
               value={currency}
-              onChange={(e) => setCurrency(e.target.value)}
-            >
-              {["EUR", "GBP", "USD", "TRY"].map((code) => (
-                <option key={code}>{code}</option>
-              ))}
-            </select>
-          </Field>
-          <Field label={t("subscriptions.frequency")}>
-            <select
-              className={inputClass}
-              value={intervalMonths === 1 || intervalMonths === 12 ? intervalMonths : "custom"}
-              onChange={(e) =>
-                setIntervalMonths(e.target.value === "custom" ? 3 : Number(e.target.value))
+              onChange={setCurrency}
+              options={supportedHomeCurrencies.map((code) => ({ value: code, label: code }))}
+            />
+          </SelectField>
+          <SelectField label={t("subscriptions.frequency")}>
+            <TerminalSelect
+              ariaLabel={t("subscriptions.frequency")}
+              value={
+                intervalMonths === 1 || intervalMonths === 12 ? String(intervalMonths) : "custom"
               }
-            >
-              <option value={1}>{t("subscriptions.monthly")}</option>
-              <option value={12}>{t("subscriptions.yearly")}</option>
-              <option value="custom">{t("subscriptions.custom")}</option>
-            </select>
-          </Field>
+              onChange={(value) => setIntervalMonths(value === "custom" ? 3 : Number(value))}
+              options={[
+                { value: "1", label: t("subscriptions.monthly") },
+                { value: "12", label: t("subscriptions.yearly") },
+                { value: "custom", label: t("subscriptions.custom") },
+              ]}
+            />
+          </SelectField>
           {intervalMonths !== 1 && intervalMonths !== 12 && (
             <Field label={t("subscriptions.everyMonths")}>
               <input
@@ -239,16 +243,17 @@ export function SubscriptionEditor({
       <TerminalCard title={t("subscriptions.members")}>
         <div className="space-y-4">
           <div className="flex flex-wrap items-end gap-3">
-            <Field label={t("subscriptions.splitMode")}>
-              <select
-                className={inputClass}
+            <SelectField label={t("subscriptions.splitMode")}>
+              <TerminalSelect
+                ariaLabel={t("subscriptions.splitMode")}
                 value={splitMode}
-                onChange={(e) => setSplitMode(e.target.value as "equal" | "fixed")}
-              >
-                <option value="equal">{t("subscriptions.equal")}</option>
-                <option value="fixed">{t("subscriptions.fixed")}</option>
-              </select>
-            </Field>
+                onChange={(value) => setSplitMode(value as "equal" | "fixed")}
+                options={[
+                  { value: "equal", label: t("subscriptions.equal") },
+                  { value: "fixed", label: t("subscriptions.fixed") },
+                ]}
+              />
+            </SelectField>
             <span className="pb-2 text-xs text-primary">
               {t("subscriptions.myShare")}:{" "}
               {money(
@@ -283,19 +288,19 @@ export function SubscriptionEditor({
                       {person.name}
                     </label>
                     {member && (
-                      <select
-                        aria-label={`${person.name} payment behavior`}
-                        className={inputClass}
+                      <TerminalSelect
+                        ariaLabel={`${person.name} payment behavior`}
                         value={member.paymentBehavior}
-                        onChange={(e) =>
+                        onChange={(value) =>
                           changeMember(person.id, {
-                            paymentBehavior: e.target.value as "manual" | "auto",
+                            paymentBehavior: value as "manual" | "auto",
                           })
                         }
-                      >
-                        <option value="manual">{t("subscriptions.manual")}</option>
-                        <option value="auto">{t("subscriptions.autoPay")}</option>
-                      </select>
+                        options={[
+                          { value: "manual", label: t("subscriptions.manual") },
+                          { value: "auto", label: t("subscriptions.autoPay") },
+                        ]}
+                      />
                     )}
                     {member &&
                       (splitMode === "fixed" ? (
@@ -366,5 +371,14 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
       <span className="mb-1.5 block">{label}</span>
       {children}
     </label>
+  );
+}
+
+function SelectField({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="min-w-0 text-xs uppercase tracking-wider text-muted-foreground">
+      <span className="mb-1.5 block">{label}</span>
+      {children}
+    </div>
   );
 }

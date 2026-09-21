@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
+import { SubscriptionLogo } from "@/components/subscriptions/SubscriptionLogo";
 import { convert, memberShare, money, myShare, useTracker } from "@/lib/subscriptions";
 import { billingDate, LoadingState, PageHeading } from "./components";
 import { useTranslation } from "react-i18next";
@@ -135,10 +136,13 @@ function SubscriptionOverview() {
                 params={{ subscriptionId: s.id }}
                 className="flex justify-between gap-3 rounded-md p-2 text-sm hover:bg-secondary/40"
               >
-                <span>
-                  {s.name}
-                  <span className="block text-xs text-muted-foreground">
-                    {billingDate(s.nextBillingDate)}
+                <span className="flex min-w-0 items-center gap-3">
+                  <SubscriptionLogo logoKey={s.logoKey} name={s.name} size="sm" />
+                  <span className="min-w-0">
+                    <span className="block truncate">{s.name}</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {billingDate(s.nextBillingDate)}
+                    </span>
                   </span>
                 </span>
                 <span className="text-right">

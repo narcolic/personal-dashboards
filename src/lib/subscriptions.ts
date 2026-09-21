@@ -13,6 +13,7 @@ export type Subscription = {
   description: string | null;
   category: string | null;
   notes: string | null;
+  logoKey: string | null;
   amount: number;
   currency: string;
   intervalMonths: number;

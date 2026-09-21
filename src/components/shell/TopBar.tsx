@@ -2,10 +2,13 @@ import { Link, useRouterState } from "@tanstack/react-router";
 import { dashboards } from "@/components/shell/dashboards";
 import { useTranslation } from "react-i18next";
 import { BrandLockup } from "@/components/brand/BrandLockup";
+import { ProfileAvatar } from "@/components/shell/ProfileAvatar";
+import { profileName } from "@/lib/profile";
+import type { User } from "@supabase/supabase-js";
 
 const navItems = dashboards.filter((item) => item.path);
 
-export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: () => void }) {
+export function TopBar({ user, onLogout }: { user: User | null; onLogout: () => void }) {
   const { t } = useTranslation();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const currentApp = navItems.find(
@@ -57,7 +60,15 @@ export function TopBar({ userEmail, onLogout }: { userEmail?: string; onLogout: 
         </div>
 
         <div className="flex shrink-0 items-center gap-2 text-muted-foreground">
-          <span className="hidden max-w-[180px] truncate md:inline">{userEmail}</span>
+          <Link
+            to="/settings"
+            aria-label={t("settings.openSettings")}
+            title={t("settings.openSettings")}
+            className="inline-flex h-8 max-w-[210px] items-center gap-2 rounded-md px-1 transition-colors hover:bg-secondary/35 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:px-2"
+          >
+            <ProfileAvatar user={user} className="size-6" />
+            <span className="hidden truncate md:inline">{profileName(user)}</span>
+          </Link>
           <button
             type="button"
             onClick={onLogout}

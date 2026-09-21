@@ -45,6 +45,11 @@ public sealed class SubscriptionDatabaseTests
             var migration = await File.ReadAllTextAsync(migrationPath);
             await using (var apply = new NpgsqlCommand(migration, connection))
                 await apply.ExecuteNonQueryAsync();
+            var logoMigrationPath = Path.Combine(directory.FullName, "supabase", "migrations",
+                "20260920223724_add_subscription_logo.sql");
+            var logoMigration = await File.ReadAllTextAsync(logoMigrationPath);
+            await using (var apply = new NpgsqlCommand(logoMigration, connection))
+                await apply.ExecuteNonQueryAsync();
             await using (var grant = new NpgsqlCommand(
                 "grant all on all tables in schema public to authenticated;", connection))
                 await grant.ExecuteNonQueryAsync();
@@ -69,10 +74,11 @@ public sealed class SubscriptionDatabaseTests
             var subscription = await store.SaveSubscriptionAsync(user, null, new SubscriptionInput(
                 "Netflix", null, "Streaming", null, 20m, "EUR", 1,
                 new DateOnly(2026, 10, 1), "equal", true, true,
-                [new(dad, "manual", null), new(friend, "auto", null)]));
+                [new(dad, "manual", null), new(friend, "auto", null)], "netflix"));
 
             var september = await store.GetStateAsync(user);
             Assert.Single(september.Periods);
+            Assert.Equal("netflix", september.Subscriptions.Single(s => s.Id == subscription).LogoKey);
             Assert.Equal(new DateOnly(2026, 9, 1), september.Periods[0].BillingDate);
             Assert.Equal(6.68m, september.Periods[0].MyAmount);
             Assert.Equal("unpaid", september.Periods[0].Contributions.Single(c => c.PersonId == dad).Status);
@@ -91,10 +97,11 @@ public sealed class SubscriptionDatabaseTests
             await store.SaveSubscriptionAsync(user, subscription, new SubscriptionInput(
                 "Netflix", null, "Streaming", null, 30m, "EUR", 1,
                 new DateOnly(2026, 11, 1), "fixed", true, false,
-                [new(dad, "manual", 8m)]));
+                [new(dad, "manual", 8m)], "generic-streaming"));
             clock.Current = new DateTimeOffset(2026, 11, 1, 12, 0, 0, TimeSpan.Zero);
             var november = await store.GetStateAsync(user);
             Assert.Equal(30m, november.Periods.Single(p => p.BillingDate.Month == 11).FullAmount);
+            Assert.Equal("generic-streaming", november.Subscriptions.Single(s => s.Id == subscription).LogoKey);
             Assert.Equal(22m, november.Periods.Single(p => p.BillingDate.Month == 11).MyAmount);
             Assert.Equal(20m, november.Periods.Single(p => p.BillingDate.Month == 10).FullAmount);
             Assert.Contains(november.Periods.Single(p => p.BillingDate.Month == 10).Contributions,

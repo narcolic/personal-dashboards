@@ -74,11 +74,12 @@ public sealed class SubscriptionStore(AppDataSource dataSource, TimeProvider clo
                 await using var create = Cmd(connection, transaction, """
                     insert into public.subscriptions
                     (user_id,name,description,category,notes,amount,currency,interval_months,
-                     next_billing_date,billing_anchor_day,split_mode,is_active)
-                    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) returning id;
+                     next_billing_date,billing_anchor_day,split_mode,is_active,logo_key)
+                    values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) returning id;
                     """, userId, input.Name.Trim(), input.Description, input.Category,
                     input.Notes, input.Amount, input.Currency, input.IntervalMonths,
-                    input.NextBillingDate, anchorDay, input.SplitMode, input.IsActive);
+                    input.NextBillingDate, anchorDay, input.SplitMode, input.IsActive,
+                    input.LogoKey);
                 savedId = (Guid)(await create.ExecuteScalarAsync(ct))!;
             }
             else
@@ -86,12 +87,13 @@ public sealed class SubscriptionStore(AppDataSource dataSource, TimeProvider clo
                 await using var update = Cmd(connection, transaction, """
                     update public.subscriptions set name=$3, description=$4, category=$5, notes=$6,
                     amount=$7, currency=$8, interval_months=$9, next_billing_date=$10,
-                    billing_anchor_day=$11, split_mode=$12, is_active=$13, updated_at=now()
+                    billing_anchor_day=$11, split_mode=$12, is_active=$13,
+                    logo_key=$14, updated_at=now()
                     where user_id=$1 and id=$2;
                     """, userId, id.Value, input.Name.Trim(), input.Description,
                     input.Category, input.Notes, input.Amount, input.Currency,
                     input.IntervalMonths, input.NextBillingDate, anchorDay,
-                    input.SplitMode, input.IsActive);
+                    input.SplitMode, input.IsActive, input.LogoKey);
                 await update.ExecuteNonQueryAsync(ct);
                 savedId = id.Value;
                 await using var remove = Cmd(connection, transaction,
@@ -155,7 +157,7 @@ public sealed class SubscriptionStore(AppDataSource dataSource, TimeProvider clo
         var due = new List<SubscriptionItem>();
         await using (var command = Cmd(connection, transaction, """
             select id,name,description,category,notes,amount,currency,interval_months,
-                   next_billing_date,billing_anchor_day,split_mode,is_active
+                   next_billing_date,billing_anchor_day,split_mode,is_active,logo_key
             from public.subscriptions
             where user_id=$1 and is_active and next_billing_date <= $2
             for update;
@@ -249,7 +251,7 @@ public sealed class SubscriptionStore(AppDataSource dataSource, TimeProvider clo
         var subscriptions = new List<SubscriptionItem>();
         await using (var command = Cmd(connection, transaction, """
             select id,name,description,category,notes,amount,currency,interval_months,
-                   next_billing_date,billing_anchor_day,split_mode,is_active
+                   next_billing_date,billing_anchor_day,split_mode,is_active,logo_key
             from public.subscriptions where user_id=$1 order by is_active desc,name,id;
             """, userId))
         await using (var reader = await command.ExecuteReaderAsync(ct))
@@ -321,7 +323,8 @@ public sealed class SubscriptionStore(AppDataSource dataSource, TimeProvider clo
             reader.IsDBNull(4) ? null : reader.GetString(4),
             reader.GetDecimal(5), reader.GetString(6), reader.GetInt32(7),
             reader.GetFieldValue<DateOnly>(8), reader.GetInt32(9),
-            reader.GetString(10), reader.GetBoolean(11), members);
+            reader.GetString(10), reader.GetBoolean(11), members,
+            reader.IsDBNull(12) ? null : reader.GetString(12));
 
     private static NpgsqlCommand Cmd(NpgsqlConnection connection, NpgsqlTransaction transaction,
         string sql, params object?[] values)

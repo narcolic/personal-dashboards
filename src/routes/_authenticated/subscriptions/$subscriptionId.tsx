@@ -1,6 +1,7 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
+import { SubscriptionLogo } from "@/components/subscriptions/SubscriptionLogo";
 import { apiFetch } from "@/lib/api/client";
 import {
   memberShare,
@@ -16,7 +17,6 @@ import {
   buttonClass,
   Converted,
   LoadingState,
-  PageHeading,
   secondaryButtonClass,
 } from "./components";
 import { SubscriptionEditor } from "./-SubscriptionEditor";
@@ -75,17 +75,30 @@ function SubscriptionDetails() {
 
   return (
     <div className="space-y-5">
-      <PageHeading title={subscription.name} />
-      {editing ? (
-        <SubscriptionEditor
-          initial={subscription}
-          people={data.state.people}
-          onSaved={() => setEditing(false)}
-          onCancel={() => setEditing(false)}
-        />
-      ) : (
-        <>
-          <div className="flex gap-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-3">
+          <SubscriptionLogo logoKey={subscription.logoKey} name={subscription.name} size="lg" />
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className="min-w-0 text-xl font-bold uppercase tracking-[0.12em] text-foreground">
+              <span className="text-primary">&gt; </span>
+              {subscription.name}
+            </h1>
+            <span
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${
+                subscription.isActive
+                  ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-400"
+                  : "border-border bg-secondary/40 text-muted-foreground"
+              }`}
+            >
+              <span
+                className={`size-1.5 rounded-full ${subscription.isActive ? "bg-emerald-400" : "bg-muted-foreground"}`}
+              />
+              {subscription.isActive ? t("subscriptions.active") : t("subscriptions.inactive")}
+            </span>
+          </div>
+        </div>
+        {!editing && (
+          <div className="flex shrink-0 gap-2">
             <button className={buttonClass} onClick={() => setEditing(true)}>
               {t("common.edit")}
             </button>
@@ -99,28 +112,47 @@ function SubscriptionDetails() {
               </button>
             )}
           </div>
+        )}
+      </div>
+      {editing ? (
+        <SubscriptionEditor
+          initial={subscription}
+          people={data.state.people}
+          onSaved={() => setEditing(false)}
+          onCancel={() => setEditing(false)}
+        />
+      ) : (
+        <>
           {error && (
             <p role="alert" className="text-sm text-red-400">
               {error}
             </p>
           )}
-          <div className="grid gap-4 lg:grid-cols-2">
+          <div className="grid items-start gap-4 lg:grid-cols-2">
             <TerminalCard title={t("subscriptions.details")}>
-              <div className="space-y-3 text-sm">
-                <Row label={t("subscriptions.fullCost")}>
-                  <Converted
-                    amount={subscription.amount}
-                    currency={subscription.currency}
-                    overview={data}
-                  />
-                </Row>
-                <Row label={t("subscriptions.myShare")}>
-                  <Converted
-                    amount={myShare(subscription)}
-                    currency={subscription.currency}
-                    overview={data}
-                  />
-                </Row>
+              <div className="grid gap-4 border-b border-border/50 pb-4 sm:grid-cols-2">
+                <div className="sm:border-r sm:border-border/50">
+                  <p className="text-xs text-muted-foreground">{t("subscriptions.myShare")}</p>
+                  <p className="mt-1 text-xl font-bold text-primary">
+                    <Converted
+                      amount={myShare(subscription)}
+                      currency={subscription.currency}
+                      overview={data}
+                    />
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs text-muted-foreground">{t("subscriptions.fullCost")}</p>
+                  <p className="mt-1 text-lg font-semibold text-foreground">
+                    <Converted
+                      amount={subscription.amount}
+                      currency={subscription.currency}
+                      overview={data}
+                    />
+                  </p>
+                </div>
+              </div>
+              <div className="mt-4 space-y-3 text-sm">
                 <Row label={t("subscriptions.frequency")}>
                   {subscription.intervalMonths === 1
                     ? t("subscriptions.monthly")
@@ -130,9 +162,6 @@ function SubscriptionDetails() {
                 </Row>
                 <Row label={t("subscriptions.nextBilling")}>
                   {billingDate(subscription.nextBillingDate)}
-                </Row>
-                <Row label={t("subscriptions.status")}>
-                  {subscription.isActive ? t("subscriptions.active") : t("subscriptions.inactive")}
                 </Row>
                 {subscription.category && (
                   <Row label={t("subscriptions.category")}>{subscription.category}</Row>
@@ -146,30 +175,40 @@ function SubscriptionDetails() {
               </div>
             </TerminalCard>
             <TerminalCard title={t("subscriptions.members")}>
-              <div className="space-y-3 text-sm">
-                <Row label={t("subscriptions.me")}>
-                  {money(myShare(subscription), subscription.currency)}
-                </Row>
+              <div className="divide-y divide-border/40 text-sm">
+                <div className="flex items-center justify-between gap-3 py-2 first:pt-0">
+                  <span className="font-semibold text-primary">{t("subscriptions.me")}</span>
+                  <strong>{money(myShare(subscription), subscription.currency)}</strong>
+                </div>
                 {subscription.members.map((member) => (
-                  <Row
+                  <div
                     key={member.personId}
-                    label={people.get(member.personId) ?? t("subscriptions.unknownPerson")}
+                    className="flex items-center justify-between gap-3 py-2"
                   >
-                    {money(memberShare(subscription, member), subscription.currency)}{" "}
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      {member.paymentBehavior === "auto"
-                        ? t("subscriptions.autoPay")
-                        : t("subscriptions.manual")}
+                    <span className="min-w-0">
+                      <span className="block truncate">
+                        {people.get(member.personId) ?? t("subscriptions.unknownPerson")}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {member.paymentBehavior === "auto"
+                          ? t("subscriptions.autoPay")
+                          : t("subscriptions.manual")}
+                      </span>
                     </span>
-                  </Row>
+                    <span className="shrink-0 font-semibold">
+                      {money(memberShare(subscription, member), subscription.currency)}
+                    </span>
+                  </div>
                 ))}
               </div>
             </TerminalCard>
           </div>
-          <TerminalCard title={t("subscriptions.currentOutstanding")}>
-            {unpaid.length === 0 ? (
-              <p className="text-sm text-muted-foreground">{t("subscriptions.nothingOwed")}</p>
-            ) : (
+          {unpaid.length === 0 ? (
+            <p className="flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 text-sm text-emerald-400">
+              <span aria-hidden="true">✓</span> {t("subscriptions.allCaughtUp")}
+            </p>
+          ) : (
+            <TerminalCard title={t("subscriptions.currentOutstanding")}>
               <div className="space-y-2">
                 {unpaid.map(({ c, period }) => (
                   <div
@@ -177,21 +216,26 @@ function SubscriptionDetails() {
                     className="flex flex-wrap items-center justify-between gap-3 border-b border-border/50 pb-2 text-sm last:border-0"
                   >
                     <span>
-                      {people.get(c.personId)} · {billingDate(period.billingDate)} ·{" "}
-                      {money(c.amount, period.currency)}
+                      <strong>{people.get(c.personId) ?? t("subscriptions.unknownPerson")}</strong>
+                      <span className="ml-2 text-muted-foreground">
+                        {billingDate(period.billingDate)}
+                      </span>
+                      <span className="ml-2 font-semibold text-destructive">
+                        {money(c.amount, period.currency)}
+                      </span>
                     </span>
                     <button
                       disabled={busy === c.id}
                       className={buttonClass}
                       onClick={() => void changePaid(c)}
                     >
-                      {t("subscriptions.markPaid")}
+                      {t("subscriptions.recordPayment")}
                     </button>
                   </div>
                 ))}
               </div>
-            )}
-          </TerminalCard>
+            </TerminalCard>
+          )}
           <TerminalCard title={t("subscriptions.paymentHistory")}>
             {periods.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t("subscriptions.noHistory")}</p>
@@ -204,37 +248,48 @@ function SubscriptionDetails() {
                   >
                     <div className="flex flex-wrap justify-between gap-2 text-sm font-semibold">
                       <span>{billingDate(period.billingDate)}</span>
-                      <span>
-                        {t("subscriptions.fullCost")}: {money(period.fullAmount, period.currency)} ·{" "}
+                      <span className="text-primary">
                         {t("subscriptions.myShare")}: {money(period.myAmount, period.currency)}
                       </span>
                     </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {t("subscriptions.fullCost")}: {money(period.fullAmount, period.currency)}
+                    </p>
                     <div className="mt-2 space-y-2">
                       {period.contributions.map((c) => (
                         <div
                           key={c.id}
-                          className="flex flex-wrap items-center justify-between gap-2 text-xs"
+                          className="flex flex-wrap items-center justify-between gap-3 rounded-md bg-secondary/20 px-3 py-2 text-sm"
                         >
-                          <span>
-                            {people.get(c.personId)} · {money(c.amount, period.currency)} ·{" "}
-                            {c.status === "auto_received"
-                              ? t("subscriptions.assumedReceived")
-                              : c.status === "paid"
-                                ? t("subscriptions.paid")
-                                : t("subscriptions.unpaid")}
-                            {c.paidAt && c.status === "paid"
-                              ? ` · ${billingDate(c.paidAt.slice(0, 10))}`
-                              : ""}
+                          <span className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+                            <span className="font-medium">
+                              {people.get(c.personId) ?? t("subscriptions.unknownPerson")}
+                            </span>
+                            <span className="font-semibold">
+                              {money(c.amount, period.currency)}
+                            </span>
+                            <span
+                              className={`text-xs ${c.status === "unpaid" ? "text-destructive" : c.status === "paid" ? "text-emerald-400" : "text-muted-foreground"}`}
+                            >
+                              {c.status === "auto_received"
+                                ? t("subscriptions.assumedReceived")
+                                : c.status === "paid"
+                                  ? t("subscriptions.paid")
+                                  : t("subscriptions.unpaid")}
+                              {c.paidAt && c.status === "paid"
+                                ? ` · ${billingDate(c.paidAt.slice(0, 10))}`
+                                : ""}
+                            </span>
                           </span>
                           {c.paymentBehavior === "manual" && (
                             <button
-                              className={secondaryButtonClass}
+                              className={`${secondaryButtonClass} min-h-8 px-3 text-[11px]`}
                               disabled={busy === c.id}
                               onClick={() => void changePaid(c)}
                             >
                               {c.status === "paid"
-                                ? t("subscriptions.markUnpaid")
-                                : t("subscriptions.markPaid")}
+                                ? t("subscriptions.undoPayment")
+                                : t("subscriptions.recordPayment")}
                             </button>
                           )}
                         </div>

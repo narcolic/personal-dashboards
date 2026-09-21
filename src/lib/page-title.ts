@@ -9,6 +9,10 @@ const TITLE_RULES: TitleRule[] = [
   { matches: (path) => path === "/login", translationKey: "pageTitles.login" },
   { matches: (path) => path === "/oauth/consent", translationKey: "pageTitles.authorize" },
   {
+    matches: (path) => path === "/settings" || path.startsWith("/settings/"),
+    translationKey: "pageTitles.settings",
+  },
+  {
     matches: (path) => /^\/portfolio\/holdings\/[^/]+$/.test(path),
     translationKey: "pageTitles.holding",
   },

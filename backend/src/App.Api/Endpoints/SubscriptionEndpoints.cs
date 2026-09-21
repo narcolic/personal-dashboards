@@ -114,6 +114,7 @@ public static class SubscriptionEndpoints
         var currency = input.Currency?.Trim().ToUpperInvariant() ?? "";
         if (string.IsNullOrWhiteSpace(input.Name) || input.Name.Trim().Length > 160 ||
             input.Amount <= 0 || decimal.Round(input.Amount, 2) != input.Amount ||
+            input.LogoKey?.Length > 64 ||
             !SupportedCurrencies.Contains(currency) || input.IntervalMonths is < 1 or > 120 ||
             input.SplitMode is not ("equal" or "fixed") ||
             (input.IsActive && input.NextBillingDate < DateOnly.FromDateTime(DateTime.UtcNow)) ||
@@ -130,7 +131,8 @@ public static class SubscriptionEndpoints
         try
         {
             var saved = await store.SaveSubscriptionAsync(user.UserId, id,
-                input with { Currency = currency }, ct);
+                input with { Currency = currency, LogoKey = string.IsNullOrWhiteSpace(input.LogoKey)
+                    ? null : input.LogoKey.Trim() }, ct);
             return saved == Guid.Empty ? TypedResults.NotFound()
                 : id is null
                     ? TypedResults.Created($"/api/subscriptions/{saved}", new { id = saved })
