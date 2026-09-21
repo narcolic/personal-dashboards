@@ -1,14 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { savePerson, useRefreshTracker, useTracker } from "@/lib/subscriptions";
-import {
-  buttonClass,
-  inputClass,
-  LoadingState,
-  secondaryButtonClass,
-} from "../subscriptions/components";
+import { LoadingState } from "../subscriptions/components";
 
 export const Route = createFileRoute("/_authenticated/settings/subscriptions")({
   component: SubscriptionSettings,
@@ -53,54 +47,60 @@ function SubscriptionSettings() {
   }
 
   return (
-    <div className="space-y-4">
+    <section className="max-w-3xl space-y-6">
+      <h2 className="text-lg font-semibold text-foreground">{t("subscriptions.people")}</h2>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}
         </p>
       )}
-      <TerminalCard title={t("subscriptions.people")}>
-        <div className="space-y-3">
-          {people.map((person) => (
-            <div
-              key={person.id}
-              className="flex flex-wrap items-center justify-between gap-2 border-b border-border/50 pb-2 text-sm last:border-0"
-            >
-              <span>
-                {person.name}{" "}
-                {!person.isActive && (
-                  <span className="text-xs text-muted-foreground">
-                    ({t("subscriptions.inactive")})
-                  </span>
-                )}
-              </span>
-              <button
-                className={secondaryButtonClass}
-                disabled={busy}
-                onClick={() => void togglePerson(person.id, person.name, person.isActive)}
-              >
-                {person.isActive ? t("subscriptions.archive") : t("subscriptions.restore")}
-              </button>
+      <form
+        onSubmit={(event) => {
+          event.preventDefault();
+          void addPerson();
+        }}
+        className="flex flex-wrap gap-3 border-b border-border/40 pb-6"
+      >
+        <input
+          className="h-11 min-w-48 flex-1 rounded-lg border border-border/60 bg-background/40 px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/60 focus:ring-1 focus:ring-primary/20"
+          placeholder={t("subscriptions.newPerson")}
+          aria-label={t("subscriptions.newPerson")}
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+        />
+        <button
+          type="submit"
+          className="inline-flex min-h-11 items-center justify-center rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground transition-opacity hover:opacity-90 disabled:opacity-50"
+          disabled={busy || !name.trim()}
+        >
+          {t("subscriptions.addPerson")}
+        </button>
+      </form>
+      <div className="divide-y divide-border/35">
+        {people.map((person) => (
+          <div
+            key={person.id}
+            className="flex min-h-14 flex-wrap items-center justify-between gap-3 py-3 text-sm"
+          >
+            <div className="min-w-0">
+              <span className="font-medium text-foreground">{person.name}</span>
+              {!person.isActive && (
+                <span className="ml-3 text-xs text-muted-foreground">
+                  {t("subscriptions.inactive")}
+                </span>
+              )}
             </div>
-          ))}
-          <div className="flex gap-2 pt-2">
-            <input
-              className={inputClass}
-              placeholder={t("subscriptions.newPerson")}
-              aria-label={t("subscriptions.newPerson")}
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-            />
             <button
-              className={buttonClass}
-              disabled={busy || !name.trim()}
-              onClick={() => void addPerson()}
+              type="button"
+              className="text-sm text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+              disabled={busy}
+              onClick={() => void togglePerson(person.id, person.name, person.isActive)}
             >
-              {t("subscriptions.addPerson")}
+              {person.isActive ? t("subscriptions.archive") : t("subscriptions.restore")}
             </button>
           </div>
-        </div>
-      </TerminalCard>
-    </div>
+        ))}
+      </div>
+    </section>
   );
 }
