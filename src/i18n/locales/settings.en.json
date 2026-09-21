@@ -17,6 +17,8 @@
     "paletteEmerald": "Emerald",
     "paletteMagenta": "Magenta",
     "paletteGraphite": "Graphite",
+    "signOut": "Sign out",
+    "signOutFailed": "Could not sign out. Try again.",
     "saved": "Profile saved.",
     "saveFailed": "Could not save profile.",
     "uploadFailed": "Could not upload image.",

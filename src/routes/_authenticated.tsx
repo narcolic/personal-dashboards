@@ -1,11 +1,4 @@
-import {
-  createFileRoute,
-  redirect,
-  Outlet,
-  Link,
-  useRouter,
-  useRouterState,
-} from "@tanstack/react-router";
+import { createFileRoute, redirect, Outlet, Link, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
 import { TopBar } from "@/components/shell/TopBar";
@@ -25,12 +18,7 @@ export const Route = createFileRoute("/_authenticated")({
 function AuthLayout() {
   const { t } = useTranslation();
   const { user } = useAuth();
-  const router = useRouter();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
-  const logout = async () => {
-    await supabase.auth.signOut();
-    router.navigate({ to: "/login" });
-  };
 
   const isPortfolio = pathname.startsWith("/portfolio");
   const isCarService = pathname.startsWith("/car-service");
@@ -118,7 +106,7 @@ function AuthLayout() {
         isPortfolio || isCarService || isSubscriptions ? "workspace-ambient-bg" : ""
       }`}
     >
-      <TopBar user={user} onLogout={logout} />
+      <TopBar user={user} />
       <header className="sticky top-10 z-[9] w-full bg-background/55 px-4 py-2 backdrop-blur-xl md:px-2">
         <div className="mx-auto hidden max-w-[1400px] px-2 md:block md:px-4">
           {desktopLinks.length > 0 ? (

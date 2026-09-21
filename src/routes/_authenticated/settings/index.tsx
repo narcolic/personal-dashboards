@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useState, type ChangeEvent, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_authenticated/settings/")({ component: P
 function ProfileSettings() {
   const { t, i18n } = useTranslation();
   const { user, loading } = useAuth();
+  const router = useRouter();
   const homeCurrency = useHomeCurrency();
   const refreshCurrency = useRefreshHomeCurrency();
   const refreshTracker = useRefreshTracker();
@@ -27,6 +28,8 @@ function ProfileSettings() {
   const [imageBusy, setImageBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [signingOut, setSigningOut] = useState(false);
+  const [signOutError, setSignOutError] = useState<string | null>(null);
 
   if (loading || !user)
     return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
@@ -119,6 +122,20 @@ function ProfileSettings() {
       setError(cause instanceof Error ? cause.message : t("settings.removeFailed"));
     } finally {
       setImageBusy(false);
+    }
+  }
+
+  async function signOut() {
+    setSigningOut(true);
+    setSignOutError(null);
+    try {
+      const { error: authError } = await supabase.auth.signOut();
+      if (authError) throw authError;
+      await router.navigate({ to: "/login" });
+    } catch (cause) {
+      setSignOutError(cause instanceof Error ? cause.message : t("settings.signOutFailed"));
+    } finally {
+      setSigningOut(false);
     }
   }
 
@@ -281,6 +298,21 @@ function ProfileSettings() {
           </div>
         </form>
       </TerminalCard>
+      <div className="flex flex-col items-end gap-2 pt-2">
+        <button
+          type="button"
+          disabled={signingOut}
+          onClick={() => void signOut()}
+          className="inline-flex min-h-9 items-center justify-center rounded-md border border-border px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground transition-colors hover:border-destructive/50 hover:text-destructive focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-50"
+        >
+          {signingOut ? t("common.loading") : t("settings.signOut")}
+        </button>
+        {signOutError && (
+          <p role="alert" className="text-sm text-destructive">
+            {signOutError}
+          </p>
+        )}
+      </div>
     </div>
   );
 }

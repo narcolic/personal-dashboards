@@ -8,7 +8,7 @@ import type { User } from "@supabase/supabase-js";
 
 const navItems = dashboards.filter((item) => item.path);
 
-export function TopBar({ user, onLogout }: { user: User | null; onLogout: () => void }) {
+export function TopBar({ user }: { user: User | null }) {
   const { t } = useTranslation();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
   const currentApp = navItems.find(
@@ -69,13 +69,6 @@ export function TopBar({ user, onLogout }: { user: User | null; onLogout: () => 
             <ProfileAvatar user={user} className="size-6" />
             <span className="hidden truncate md:inline">{profileName(user)}</span>
           </Link>
-          <button
-            type="button"
-            onClick={onLogout}
-            className="rounded-md px-1 py-1 text-primary transition-colors hover:bg-primary/10 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:px-2"
-          >
-            {t("common.logout")}
-          </button>
         </div>
       </div>
     </div>
