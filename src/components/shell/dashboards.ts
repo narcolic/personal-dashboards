@@ -19,4 +19,9 @@ export const dashboards = [
     path: null,
     descriptionKey: "dashboards.energyDescription",
   },
+  {
+    titleKey: "travel.title",
+    path: "/travel",
+    descriptionKey: "travel.subtitle",
+  },
 ];

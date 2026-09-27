@@ -6,6 +6,7 @@ type TitleRule = {
 };
 
 const TITLE_RULES: TitleRule[] = [
+  { matches: (path) => path === "/travel", translationKey: "travel.title" },
   { matches: (path) => path === "/login", translationKey: "pageTitles.login" },
   { matches: (path) => path === "/oauth/consent", translationKey: "pageTitles.authorize" },
   {

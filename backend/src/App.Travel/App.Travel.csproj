@@ -1,0 +1,4 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><RootNamespace>PortfolioTerminal.Travel</RootNamespace></PropertyGroup>
+  <ItemGroup><ProjectReference Include="..\App.Data\App.Data.csproj" /></ItemGroup>
+</Project>

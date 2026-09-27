@@ -13,6 +13,7 @@ import { Route as LoginRouteImport } from "./routes/login"
 import { Route as AuthenticatedRouteImport } from "./routes/_authenticated"
 import { Route as IndexRouteImport } from "./routes/index"
 import { Route as OauthConsentRouteImport } from "./routes/oauth.consent"
+import { Route as AuthenticatedTravelRouteImport } from "./routes/_authenticated/travel"
 import { Route as AuthenticatedSubscriptionsRouteImport } from "./routes/_authenticated/subscriptions"
 import { Route as AuthenticatedSettingsRouteImport } from "./routes/_authenticated/settings"
 import { Route as AuthenticatedPortfolioRouteImport } from "./routes/_authenticated/portfolio"
@@ -58,6 +59,11 @@ const OauthConsentRoute = OauthConsentRouteImport.update({
   id: "/oauth/consent",
   path: "/oauth/consent",
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedTravelRoute = AuthenticatedTravelRouteImport.update({
+  id: "/travel",
+  path: "/travel",
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSubscriptionsRoute =
   AuthenticatedSubscriptionsRouteImport.update({
@@ -220,6 +226,7 @@ export interface FileRoutesByFullPath {
   "/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
   "/settings": typeof AuthenticatedSettingsRouteWithChildren
   "/subscriptions": typeof AuthenticatedSubscriptionsRouteWithChildren
+  "/travel": typeof AuthenticatedTravelRoute
   "/oauth/consent": typeof OauthConsentRoute
   "/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
   "/car-service/add": typeof AuthenticatedCarServiceAddRoute
@@ -247,6 +254,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
   "/login": typeof LoginRoute
+  "/travel": typeof AuthenticatedTravelRoute
   "/oauth/consent": typeof OauthConsentRoute
   "/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
   "/car-service/add": typeof AuthenticatedCarServiceAddRoute
@@ -280,6 +288,7 @@ export interface FileRoutesById {
   "/_authenticated/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
   "/_authenticated/settings": typeof AuthenticatedSettingsRouteWithChildren
   "/_authenticated/subscriptions": typeof AuthenticatedSubscriptionsRouteWithChildren
+  "/_authenticated/travel": typeof AuthenticatedTravelRoute
   "/oauth/consent": typeof OauthConsentRoute
   "/_authenticated/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
   "/_authenticated/car-service/add": typeof AuthenticatedCarServiceAddRoute
@@ -313,6 +322,7 @@ export interface FileRouteTypes {
     | "/portfolio"
     | "/settings"
     | "/subscriptions"
+    | "/travel"
     | "/oauth/consent"
     | "/car-service/$visitId"
     | "/car-service/add"
@@ -340,6 +350,7 @@ export interface FileRouteTypes {
   to:
     | "/"
     | "/login"
+    | "/travel"
     | "/oauth/consent"
     | "/car-service/$visitId"
     | "/car-service/add"
@@ -372,6 +383,7 @@ export interface FileRouteTypes {
     | "/_authenticated/portfolio"
     | "/_authenticated/settings"
     | "/_authenticated/subscriptions"
+    | "/_authenticated/travel"
     | "/oauth/consent"
     | "/_authenticated/car-service/$visitId"
     | "/_authenticated/car-service/add"
@@ -433,6 +445,13 @@ declare module "@tanstack/react-router" {
       fullPath: "/oauth/consent"
       preLoaderRoute: typeof OauthConsentRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    "/_authenticated/travel": {
+      id: "/_authenticated/travel"
+      path: "/travel"
+      fullPath: "/travel"
+      preLoaderRoute: typeof AuthenticatedTravelRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     "/_authenticated/subscriptions": {
       id: "/_authenticated/subscriptions"
@@ -722,6 +741,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRouteWithChildren
+  AuthenticatedTravelRoute: typeof AuthenticatedTravelRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -729,6 +749,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRouteWithChildren,
+  AuthenticatedTravelRoute: AuthenticatedTravelRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(

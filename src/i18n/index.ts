@@ -6,6 +6,8 @@ import subscriptionsEn from "./locales/subscriptions.en.json";
 import subscriptionsEl from "./locales/subscriptions.el.json";
 import settingsEn from "./locales/settings.en.json";
 import settingsEl from "./locales/settings.el.json";
+import travelEn from "./locales/travel.en.json";
+import travelEl from "./locales/travel.el.json";
 
 const STORAGE_KEY = "app.language";
 const saved = typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
@@ -20,6 +22,7 @@ void i18n.use(initReactI18next).init({
         dashboards: { ...en.dashboards, ...subscriptionsEn.dashboards },
         subscriptions: subscriptionsEn.subscriptions,
         settings: settingsEn.settings,
+        travel: travelEn,
       },
     },
     el: {
@@ -29,6 +32,7 @@ void i18n.use(initReactI18next).init({
         dashboards: { ...el.dashboards, ...subscriptionsEl.dashboards },
         subscriptions: subscriptionsEl.subscriptions,
         settings: settingsEl.settings,
+        travel: travelEl,
       },
     },
   },

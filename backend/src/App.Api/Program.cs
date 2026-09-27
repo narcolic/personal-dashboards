@@ -24,6 +24,7 @@ using PortfolioTerminal.Portfolio.Snapshots;
 using PortfolioTerminal.Portfolio.TickerCatalog;
 using PortfolioTerminal.Portfolio.Transactions;
 using PortfolioTerminal.Subscriptions;
+using PortfolioTerminal.Travel;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -157,6 +158,7 @@ builder.Services.AddScoped<IServiceReminderQueries, ServiceReminderQueries>();
 builder.Services.AddScoped<IServiceReminderService, ServiceReminderService>();
 builder.Services.AddScoped<IServiceReminderCommands, ServiceReminderCommands>();
 builder.Services.AddScoped<SubscriptionStore>();
+builder.Services.AddScoped<ITravelStore, TravelStore>();
 builder.Services.AddMcpServer(options =>
     {
         options.ServerInfo = new Implementation
@@ -208,6 +210,7 @@ app.MapIdentityEndpoints();
 app.MapPortfolioEndpoints();
 app.MapCarServiceEndpoints();
 app.MapSubscriptionEndpoints();
+app.MapTravelEndpoints();
 
 string[] oauthScopes = ["openid"];
 string[] bearerMethods = ["header"];

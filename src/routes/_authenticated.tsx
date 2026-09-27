@@ -103,7 +103,9 @@ function AuthLayout() {
   return (
     <div
       className={`min-h-screen overflow-x-clip bg-background text-foreground ${
-        isPortfolio || isCarService || isSubscriptions ? "workspace-ambient-bg" : ""
+        isPortfolio || isCarService || isSubscriptions || pathname === "/travel"
+          ? "workspace-ambient-bg"
+          : ""
       }`}
     >
       <TopBar user={user} />
