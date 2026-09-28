@@ -176,7 +176,7 @@ function TravelWorkspace({ userId }: { userId: string }) {
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
               />
-              <ul className="travel-place-list">
+              <ul className="travel-place-list terminal-scrollbar">
                 {visible.map((place, index) => (
                   <li key={place.id}>
                     <button
@@ -203,7 +203,7 @@ function TravelWorkspace({ userId }: { userId: string }) {
             </>
           )}
           {nearby.length > 1 && (
-            <div className="travel-nearby">
+            <div className="travel-nearby terminal-scrollbar">
               <h3>{t("travel.nearby")}</h3>
               {places
                 .filter((place) => nearby.includes(place.id))
@@ -220,7 +220,11 @@ function TravelWorkspace({ userId }: { userId: string }) {
             </div>
           )}
           {selected ? (
-            <section className="travel-details" aria-label={t("travel.details")} aria-live="polite">
+            <section
+              className="travel-details terminal-scrollbar"
+              aria-label={t("travel.details")}
+              aria-live="polite"
+            >
               <p className="travel-eyebrow">{t("travel.selectedPlace")}</p>
               <h2>{selected.name}</h2>
               <p>{selected.country}</p>

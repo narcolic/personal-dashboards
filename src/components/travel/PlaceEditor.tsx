@@ -60,7 +60,7 @@ export function PlaceEditor({
   return (
     <div className="travel-modal-backdrop">
       <div
-        className="travel-modal"
+        className="travel-modal terminal-scrollbar"
         ref={dialog}
         role="dialog"
         aria-modal="true"
@@ -110,7 +110,10 @@ export function PlaceEditor({
               )}
             </div>
             {submitted && locations.data && (
-              <ul className="travel-search-results" aria-label={t("travel.searchResults")}>
+              <ul
+                className="travel-search-results terminal-scrollbar"
+                aria-label={t("travel.searchResults")}
+              >
                 {locations.data.map((result) => (
                   <li key={result.id}>
                     <button
