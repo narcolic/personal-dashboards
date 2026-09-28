@@ -14,8 +14,6 @@
   "reset": "Reset",
   "visited": "Visited",
   "selected": "Selected",
-  "urbanAreaHelp": "Highlights show approximate built-up areas, not municipal borders.",
-  "urbanAreaUnavailable": "No area outline here; showing the saved location.",
   "globeLabel": "Interactive Earth. Use arrow keys to rotate, plus and minus to zoom, Home to reset.",
   "globeHelp": "Drag to rotate · Scroll or pinch to zoom · Arrow keys to rotate, + / − to zoom",
   "globeUnavailable": "The 3D globe could not load. You can still browse and manage all your places in the list. Reload to try the globe again.",
