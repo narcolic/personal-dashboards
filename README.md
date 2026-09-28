@@ -49,6 +49,11 @@ at identical coordinates. No example travel history is seeded.
   The land texture is drawn from a local 257 kB Natural Earth dataset. Rendering caps pixel density,
   pauses in background tabs, and respects reduced motion for camera transitions.
   WebGL is required for the globe; CRUD and the list remain available without it.
+- Visited cities use approximate Natural Earth urban-area footprints, with a brighter
+  selected outline and closer camera view. Regional assets load on demand; flat
+  dots keep places discoverable at globe scale and where footprint coverage is missing.
+  These historical built-up areas are not current municipal boundaries. No new keys,
+  backend configuration, or database migration are needed.
 - Place search calls Open-Meteo's GeoNames geocoder on explicit submission, with
   visible provider attribution. Only the search term is sent, not saved notes or
   account details. Internet access is needed for search; manual coordinates are

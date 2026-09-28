@@ -5,8 +5,9 @@ import type { FeatureCollection } from "geojson";
 // Draw the map on a flat canvas, then wrap it around the 3D sphere. Keeping
 // land on the sphere surface avoids polar polygon meshes intersecting it.
 export function createLandTexture(land: FeatureCollection): CanvasTexture {
-  const width = 2048;
-  const height = 1024;
+  // City selection permits a closer view; retain sharper borders at that scale.
+  const width = 4096;
+  const height = 2048;
   const canvas = document.createElement("canvas");
   canvas.width = width;
   canvas.height = height;
@@ -22,7 +23,7 @@ export function createLandTexture(land: FeatureCollection): CanvasTexture {
   const path = geoPath(projection, context);
   context.fillStyle = "#285464";
   context.strokeStyle = "#52808a";
-  context.lineWidth = 0.7;
+  context.lineWidth = 1.4;
   for (const feature of land.features) {
     context.beginPath();
     path(feature);

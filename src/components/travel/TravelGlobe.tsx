@@ -2,9 +2,13 @@ import { useEffect, useRef, useState } from "react";
 import Globe, { type GlobeMethods } from "react-globe.gl";
 import { MeshPhongMaterial } from "three";
 import { useTranslation } from "react-i18next";
+import { useQueries } from "@tanstack/react-query";
 import type { TravelPlace } from "@/lib/travel";
 import type { FeatureCollection } from "geojson";
 import { createLandTexture } from "./landTexture";
+import { findUrbanArea, loadUrbanTile, urbanTile, type UrbanArea } from "./urbanAreas";
+
+type Highlight = UrbanArea & { places: TravelPlace[] };
 
 export default function TravelGlobe({
   places,
@@ -21,8 +25,40 @@ export default function TravelGlobe({
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
+  const [overview, setOverview] = useState(true);
   const [material] = useState(() => new MeshPhongMaterial({ color: "#081e2d", shininess: 8 }));
   const duration = () => (window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 650);
+  const tiles = [...new Set(places.map(urbanTile))].sort();
+  const areas = useQueries({
+    queries: tiles.map((tile) => ({
+      queryKey: ["travel-urban-area", tile],
+      queryFn: ({ signal }: { signal: AbortSignal }) => loadUrbanTile(tile, signal),
+      staleTime: Infinity,
+      gcTime: 30 * 60_000,
+      retry: 1,
+    })),
+  });
+  const highlights = new Map<number, Highlight>();
+  const covered = new Set<string>();
+  for (const place of places) {
+    const area = findUrbanArea(areas[tiles.indexOf(urbanTile(place))]?.data ?? [], place);
+    if (!area) continue;
+    covered.add(place.id);
+    const existing = highlights.get(area.id);
+    if (existing) existing.places.push(place);
+    else highlights.set(area.id, { ...area, places: [place] });
+  }
+  const selectedArea = [...highlights.values()].find((area) =>
+    area.places.some((place) => place.id === selected?.id),
+  );
+  const selectedSpan = selectedArea
+    ? Math.max(
+        selectedArea.bbox[3] - selectedArea.bbox[1],
+        (selectedArea.bbox[2] - selectedArea.bbox[0]) *
+          Math.cos(((selected?.latitude ?? 0) * Math.PI) / 180),
+      )
+    : 0;
+  const selectedAltitude = selectedArea ? Math.max(0.12, Math.min(0.6, selectedSpan * 0.07)) : 0.3;
 
   useEffect(() => {
     const element = container.current!;
@@ -58,10 +94,10 @@ export default function TravelGlobe({
   useEffect(() => {
     if (ready && selected)
       globe.current?.pointOfView(
-        { lat: selected.latitude, lng: selected.longitude, altitude: 1.25 },
+        { lat: selected.latitude, lng: selected.longitude, altitude: selectedAltitude },
         duration(),
       );
-  }, [selected, ready]);
+  }, [selected, ready, selectedAltitude]);
 
   useEffect(() => {
     if (!ready) return;
@@ -89,7 +125,7 @@ export default function TravelGlobe({
         {
           lat: Math.max(-85, Math.min(85, view.lat + lat)),
           lng: view.lng + lng,
-          altitude: Math.max(0.35, Math.min(4, view.altitude * scale)),
+          altitude: Math.max(0.035, Math.min(4, view.altitude * scale)),
         },
         duration(),
       );
@@ -138,14 +174,39 @@ export default function TravelGlobe({
                 atmosphereColor="#328aa1"
                 atmosphereAltitude={0.14}
                 showGraticules
-                pointsData={places}
+                polygonsData={[...highlights.values()]}
+                polygonCapColor={(area) =>
+                  (area as Highlight).places.some((place) => place.id === selected?.id)
+                    ? "#ffe2b7"
+                    : "#ff9d45"
+                }
+                polygonSideColor={() => "rgba(0,0,0,0)"}
+                polygonStrokeColor={(area) =>
+                  (area as Highlight).places.some((place) => place.id === selected?.id)
+                    ? "#ffffff"
+                    : "#ffc17c"
+                }
+                // Keep city caps above the sphere and finely tessellated to avoid
+                // the surface intersections previously caused by country meshes.
+                polygonAltitude={0.0005}
+                polygonCapCurvatureResolution={0.25}
+                polygonsTransitionDuration={0}
+                polygonLabel={(area) => {
+                  const el = document.createElement("span");
+                  el.textContent = (area as Highlight).places
+                    .map((place) => place.name)
+                    .join(" · ");
+                  return el.innerHTML;
+                }}
+                onPolygonClick={(area) => onSelect((area as Highlight).places[0])}
+                pointsData={places.filter((place) => overview || !covered.has(place.id))}
                 pointLat="latitude"
                 pointLng="longitude"
-                pointAltitude={0.018}
+                pointAltitude={0.0005}
                 pointColor={(point) =>
                   (point as TravelPlace).id === selected?.id ? "#ffffff" : "#ff9d45"
                 }
-                pointRadius={(point) => ((point as TravelPlace).id === selected?.id ? 1.5 : 1.1)}
+                pointRadius={overview ? 0.28 : 0.025}
                 pointsTransitionDuration={0}
                 pointLabel={(point) => {
                   const el = document.createElement("span");
@@ -153,13 +214,14 @@ export default function TravelGlobe({
                   return el.innerHTML;
                 }}
                 onPointClick={(point) => onSelect(point as TravelPlace)}
+                onZoom={({ altitude }) => setOverview(altitude > 0.35)}
                 onGlobeReady={() => {
                   const api = globe.current;
                   if (!api) return;
                   api.renderer().setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
                   const controls = api.controls();
                   controls.enablePan = false;
-                  controls.minDistance = 135;
+                  controls.minDistance = 103.5;
                   controls.maxDistance = 500;
                   controls.enableDamping = !window.matchMedia("(prefers-reduced-motion: reduce)")
                     .matches;
@@ -188,15 +250,22 @@ export default function TravelGlobe({
               {t("travel.reset")}
             </button>
           </div>
-          <div className="travel-legend">
-            <span />
-            {t("travel.visited")}
-            <span className="selected" />
-            {t("travel.selected")}
+          <div className="travel-globe-footer">
+            <div className="travel-legend">
+              <span />
+              {t("travel.visited")}
+              <span className="selected" />
+              {t("travel.selected")}
+            </div>
+            <p id="globe-help" className="travel-globe-help">
+              {t("travel.globeHelp")}
+              <br />
+              {t("travel.urbanAreaHelp")}
+              {selected && !selectedArea && !areas.some((area) => area.isPending) && (
+                <> {t("travel.urbanAreaUnavailable")}</>
+              )}
+            </p>
           </div>
-          <p id="globe-help" className="travel-globe-help">
-            {t("travel.globeHelp")}
-          </p>
         </>
       )}
       <a

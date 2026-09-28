@@ -142,10 +142,15 @@
 .travel-globe-controls button:hover {
   background: #24404f;
 }
-.travel-legend {
+.travel-globe-footer {
   position: absolute;
   left: 24px;
-  bottom: 65px;
+  right: 24px;
+  bottom: 30px;
+  max-width: 440px;
+  pointer-events: none;
+}
+.travel-legend {
   display: flex;
   align-items: center;
   gap: 9px;
@@ -163,14 +168,12 @@
   margin-left: 12px;
 }
 .travel-globe-help {
-  position: absolute;
-  bottom: 30px;
-  left: 24px;
-  right: 24px;
+  margin-top: 8px;
   font-size: 10px;
   color: #8ca7b4;
   pointer-events: none;
   max-width: 440px;
+  line-height: 1.5;
 }
 .travel-attribution {
   position: absolute;
