@@ -46,7 +46,7 @@ at identical coordinates. No example travel history is seeded.
 - Reuse the existing API database connection, Supabase auth, and frontend API URL.
   No new credentials are required. The hosted database is not migrated by a frontend build.
 - `react-globe.gl` / Three.js load only when this view opens (about 550 kB gzipped).
-  Land geometry is a local 257 kB Natural Earth asset. Rendering caps pixel density,
+  The land texture is drawn from a local 257 kB Natural Earth dataset. Rendering caps pixel density,
   pauses in background tabs, and respects reduced motion for camera transitions.
   WebGL is required for the globe; CRUD and the list remain available without it.
 - Place search calls Open-Meteo's GeoNames geocoder on explicit submission, with

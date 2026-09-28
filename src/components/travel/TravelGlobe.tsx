@@ -3,6 +3,8 @@ import Globe, { type GlobeMethods } from "react-globe.gl";
 import { MeshPhongMaterial } from "three";
 import { useTranslation } from "react-i18next";
 import type { TravelPlace } from "@/lib/travel";
+import type { FeatureCollection } from "geojson";
+import { createLandTexture } from "./landTexture";
 
 export default function TravelGlobe({
   places,
@@ -17,7 +19,6 @@ export default function TravelGlobe({
   const container = useRef<HTMLDivElement>(null);
   const globe = useRef<GlobeMethods | undefined>(undefined);
   const [size, setSize] = useState({ width: 0, height: 0 });
-  const [land, setLand] = useState<object[]>([]);
   const [failed, setFailed] = useState(false);
   const [ready, setReady] = useState(false);
   const [material] = useState(() => new MeshPhongMaterial({ color: "#081e2d", shininess: 8 }));
@@ -33,11 +34,16 @@ export default function TravelGlobe({
     );
     resize.observe(element);
     const abort = new AbortController();
+    let texture: ReturnType<typeof createLandTexture> | undefined;
     void fetch("/travel/land.geojson", { signal: abort.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error("Land could not load");
-        const data = (await response.json()) as { features: object[] };
-        setLand(data.features);
+        const data = (await response.json()) as FeatureCollection;
+        if (abort.signal.aborted) return;
+        texture = createLandTexture(data);
+        material.map = texture;
+        material.color.set("#ffffff");
+        material.needsUpdate = true;
       })
       .catch(() => {
         if (!abort.signal.aborted) setFailed(true);
@@ -45,8 +51,9 @@ export default function TravelGlobe({
     return () => {
       resize.disconnect();
       abort.abort();
+      texture?.dispose();
     };
-  }, []);
+  }, [material]);
 
   useEffect(() => {
     if (ready && selected)
@@ -131,12 +138,6 @@ export default function TravelGlobe({
                 atmosphereColor="#328aa1"
                 atmosphereAltitude={0.14}
                 showGraticules
-                polygonsData={land}
-                polygonCapColor={() => "#285464"}
-                polygonSideColor={() => "#162e3a"}
-                polygonStrokeColor={() => "#52808a"}
-                polygonAltitude={0.002}
-                polygonsTransitionDuration={0}
                 pointsData={places}
                 pointLat="latitude"
                 pointLng="longitude"
