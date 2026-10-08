@@ -18,4 +18,8 @@
     <ProjectReference Include="..\App.Subscriptions\App.Subscriptions.csproj" />
     <ProjectReference Include="..\App.Travel\App.Travel.csproj" />
   </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="App.Tests" />
+  </ItemGroup>
 </Project>

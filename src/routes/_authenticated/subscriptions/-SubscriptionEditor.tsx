@@ -91,6 +91,26 @@ export function SubscriptionEditor({
       setError(t("subscriptions.requiredFields"));
       return;
     }
+    if (Math.abs(Math.round(parsedAmount * 100) - parsedAmount * 100) > 1e-8) {
+      setError(t("subscriptions.costPrecision"));
+      return;
+    }
+    if (splitMode === "fixed") {
+      const invalidContribution = members.some(
+        (member) =>
+          member.fixedAmount == null ||
+          member.fixedAmount < 0 ||
+          Math.abs(Math.round(member.fixedAmount * 100) - member.fixedAmount * 100) > 1e-8,
+      );
+      if (invalidContribution) {
+        setError(t("subscriptions.fixedAmountsRequired"));
+        return;
+      }
+      if (members.reduce((sum, member) => sum + (member.fixedAmount ?? 0), 0) > parsedAmount) {
+        setError(t("subscriptions.memberAmountsExceedCost", { currency }));
+        return;
+      }
+    }
     const payload: SubscriptionInput = {
       name: name.trim(),
       description: description.trim() || null,

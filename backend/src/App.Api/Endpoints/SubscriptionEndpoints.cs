@@ -124,27 +124,15 @@ public static class SubscriptionEndpoints
         SubscriptionStore store, ICurrentUser user, CancellationToken ct)
     {
         var currency = input.Currency?.Trim().ToUpperInvariant() ?? "";
-        if (string.IsNullOrWhiteSpace(input.Name) || input.Name.Trim().Length > 160 ||
-            input.Amount <= 0 || decimal.Round(input.Amount, 2) != input.Amount ||
-            input.LogoKey?.Length > 64 ||
-            !SupportedCurrencies.Contains(currency) || input.IntervalMonths is < 1 or > 120 ||
-            input.SplitMode is not ("equal" or "fixed") ||
-            (input.IsActive && input.NextBillingDate < DateOnly.FromDateTime(DateTime.UtcNow)) ||
-            input.Members is null || input.Members.Any(member =>
-                member.PaymentBehavior is not ("manual" or "auto") ||
-                (input.SplitMode == "fixed" &&
-                 (member.FixedAmount is null or < 0 ||
-                  decimal.Round(member.FixedAmount.Value, 2) != member.FixedAmount.Value))) ||
-            (input.SplitMode == "fixed" &&
-             input.Members.Sum(member => member.FixedAmount ?? 0) > input.Amount))
-            return TypedResults.ValidationProblem(new Dictionary<string, string[]>
-            { ["subscription"] = ["Check name, positive two-decimal cost, currency, future renewal, interval, and member amounts."] });
+        var errors = ValidateSubscription(id, input, currency);
+        if (errors.Count > 0) return TypedResults.ValidationProblem(errors);
 
         try
         {
             var saved = await store.SaveSubscriptionAsync(user.UserId, id,
                 input with { Currency = currency, LogoKey = string.IsNullOrWhiteSpace(input.LogoKey)
-                    ? null : input.LogoKey.Trim() }, ct);
+                    ? null : input.LogoKey.Trim()
+                }, ct);
             return saved == Guid.Empty ? TypedResults.NotFound()
                 : id is null
                     ? TypedResults.Created($"/api/subscriptions/{saved}", new { id = saved })
@@ -155,6 +143,45 @@ public static class SubscriptionEndpoints
             return TypedResults.ValidationProblem(new Dictionary<string, string[]>
             { ["members"] = [error.Message] });
         }
+    }
+
+    internal static Dictionary<string, string[]> ValidateSubscription(
+        Guid? id, SubscriptionInput input, string currency)
+    {
+        var errors = new Dictionary<string, string[]>();
+        if (string.IsNullOrWhiteSpace(input.Name) || input.Name.Trim().Length > 160)
+            errors["name"] = ["Enter a name no longer than 160 characters."];
+        if (input.Amount <= 0 || decimal.Round(input.Amount, 2) != input.Amount)
+            errors["amount"] = ["Cost must be positive and use no more than two decimal places."];
+        if (input.LogoKey?.Length > 64)
+            errors["logoKey"] = ["The selected logo is invalid."];
+        if (!SupportedCurrencies.Contains(currency))
+            errors["currency"] = ["Select a supported currency."];
+        if (input.IntervalMonths is < 1 or > 120)
+            errors["intervalMonths"] = ["Billing frequency must be between 1 and 120 months."];
+        if (input.SplitMode is not ("equal" or "fixed"))
+            errors["splitMode"] = ["Select equal or custom splitting."];
+        // Existing subscriptions may need their current bill corrected. The subsequent
+        // state refresh advances the date while the period stays an explicit snapshot.
+        if (id is null && input.IsActive &&
+            input.NextBillingDate < DateOnly.FromDateTime(DateTime.UtcNow))
+            errors["nextBillingDate"] = ["Next billing date cannot be in the past."];
+        if (input.Members is null)
+        {
+            errors["members"] = ["Members are required."];
+            return errors;
+        }
+        if (input.Members.Any(member => member.PaymentBehavior is not ("manual" or "auto")))
+            errors["members"] = ["Select auto-pay or manual payment for every member."];
+        if (input.SplitMode == "fixed")
+        {
+            if (input.Members.Any(member => member.FixedAmount is null or < 0 ||
+                decimal.Round(member.FixedAmount.Value, 2) != member.FixedAmount.Value))
+                errors["members"] = ["Enter a non-negative contribution with no more than two decimal places for every member."];
+            else if (input.Members.Sum(member => member.FixedAmount ?? 0) > input.Amount)
+                errors["members"] = ["Member contributions cannot exceed the full cost in the selected currency."];
+        }
+        return errors;
     }
 
     private static async Task<IResult> SavePerson(Guid? id, PersonInput input,

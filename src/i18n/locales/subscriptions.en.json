@@ -98,6 +98,9 @@
     "restore": "Restore",
     "confirmDelete": "Delete this subscription? This is available only before its first recorded billing period.",
     "requiredFields": "Enter a name, positive cost, and billing date.",
+    "costPrecision": "Cost can use no more than two decimal places.",
+    "fixedAmountsRequired": "Enter a valid contribution for every selected member.",
+    "memberAmountsExceedCost": "Member contributions cannot exceed the full cost in {{currency}}. Update the contributions after changing currency.",
     "saveFailed": "Could not save the change."
   }
 }
