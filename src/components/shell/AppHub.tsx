@@ -4,13 +4,13 @@ import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { dashboards } from "@/components/shell/dashboards";
 import { useQuotes } from "@/routes/_authenticated/portfolio/hooks/useQuotes";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
-import { portfolioHoldingsQueryOptions } from "@/lib/portfolio/queries";
+import { portfolioFxQueryOptions, portfolioHoldingsQueryOptions } from "@/lib/portfolio/queries";
+import { totalMarketValue } from "@/lib/portfolio/holdings/value";
+import { convertContribution } from "@/lib/portfolio/contributions/calculations";
+import { useHomeCurrency } from "@/lib/profile";
 import type { HoldingRow } from "@/lib/portfolio/types";
 import { useCarServiceAnalytics } from "@/routes/_authenticated/car-service/hooks/useCarServiceAnalytics";
-import {
-  formatCurrency as formatCarCurrency,
-  formatDate as formatCarDate,
-} from "@/routes/_authenticated/car-service/utils/carServiceUtils";
+import { formatDate as formatCarDate } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
 import { useTranslation } from "react-i18next";
 import { BottomStatusBar } from "@/components/shell/BottomStatusBar";
 import { BrandLockup } from "@/components/brand/BrandLockup";
@@ -106,6 +106,9 @@ function SubscriptionHubSummary() {
 
 function PortfolioHubSummary() {
   const { t } = useTranslation();
+  const homeCurrencyQ = useHomeCurrency();
+  const fxQ = useQuery(portfolioFxQueryOptions());
+  const currency = homeCurrencyQ.data?.homeCurrency;
   const holdingsQ = useQuery(portfolioHoldingsQueryOptions());
   const { enrichedRows, quotesQ } = useQuotes(holdingsQ.data ?? EMPTY_HOLDINGS, {
     staleTime: 60_000,
@@ -113,7 +116,7 @@ function PortfolioHubSummary() {
     retry: 1,
   });
 
-  if (holdingsQ.isLoading || quotesQ.isLoading) {
+  if (holdingsQ.isLoading || quotesQ.isLoading || homeCurrencyQ.isPending || fxQ.isPending) {
     return (
       <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
         {t("common.loading")}
@@ -121,7 +124,7 @@ function PortfolioHubSummary() {
     );
   }
 
-  if (holdingsQ.isError || quotesQ.isError) {
+  if (holdingsQ.isError || quotesQ.isError || homeCurrencyQ.isError || !currency) {
     return (
       <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
         {t("common.noData")}
@@ -137,14 +140,18 @@ function PortfolioHubSummary() {
     );
   }
 
-  const totalValue = enrichedRows.reduce((sum, row) => sum + row.marketValue, 0);
+  const totalValue = totalMarketValue(
+    enrichedRows,
+    currency,
+    fxQ.isError ? {} : (fxQ.data?.rates ?? {}),
+  );
 
   return (
     <div className="mt-3 space-y-1">
       <div className="h-2" aria-hidden="true" />
       <div className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80">value</div>
       <div className="truncate text-xl font-bold leading-tight text-foreground">
-        {fmtCurrency(totalValue, "USD")}
+        {totalValue === null ? t("common.noData") : fmtCurrency(totalValue, currency)}
       </div>
     </div>
   );
@@ -152,9 +159,12 @@ function PortfolioHubSummary() {
 
 function CarServiceHubSummary() {
   const { t } = useTranslation();
+  const homeCurrencyQ = useHomeCurrency();
+  const fxQ = useQuery(portfolioFxQueryOptions());
+  const currency = homeCurrencyQ.data?.homeCurrency;
   const { analytics, isLoading, error } = useCarServiceAnalytics("all");
 
-  if (isLoading) {
+  if (isLoading || homeCurrencyQ.isPending || fxQ.isPending) {
     return (
       <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
         {t("common.loading")}
@@ -162,7 +172,7 @@ function CarServiceHubSummary() {
     );
   }
 
-  if (error) {
+  if (error || homeCurrencyQ.isError || !currency) {
     return (
       <div className="mt-3 text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
         {t("common.noData")}
@@ -177,6 +187,13 @@ function CarServiceHubSummary() {
       </div>
     );
   }
+
+  const yearlyCost = convertContribution(
+    analytics.costThisYear,
+    "EUR",
+    currency,
+    fxQ.isError ? {} : (fxQ.data?.rates ?? {}),
+  );
 
   return (
     <div className="mt-3 space-y-1.5">
@@ -194,7 +211,7 @@ function CarServiceHubSummary() {
           year
         </span>
         <span className="text-sm font-semibold text-foreground">
-          {formatCarCurrency(analytics.costThisYear)}
+          {yearlyCost === null ? t("common.noData") : fmtCurrency(yearlyCost, currency)}
         </span>
       </div>
     </div>

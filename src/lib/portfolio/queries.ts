@@ -1,5 +1,19 @@
 import { queryOptions, type QueryClient } from "@tanstack/react-query";
 import { listPortfolioHoldings } from "@/lib/portfolio/holdings/api";
+import { apiFetch } from "@/lib/api/client";
+
+export function portfolioFxQueryOptions() {
+  return queryOptions({
+    queryKey: ["fx-rates", "USD"],
+    queryFn: ({ signal }) =>
+      apiFetch<{ rates?: Record<string, number> }>("/api/portfolio/fx-rates?from=USD", {
+        signal,
+      }),
+    staleTime: 10 * 60_000,
+    gcTime: 24 * 60 * 60_000,
+    retry: 1,
+  });
+}
 
 export const portfolioQueryKeys = {
   positions: ["positions"] as const,

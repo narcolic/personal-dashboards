@@ -19,20 +19,11 @@ import {
   type ContributionMonth,
 } from "@/lib/portfolio/contributions/calculations";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
-import { useActivity } from "@/routes/_authenticated/portfolio/hooks/useActivity";
+import { usePortfolioColors } from "@/routes/_authenticated/portfolio/hooks/usePortfolioColors";
 import { useContributionFx } from "@/routes/_authenticated/portfolio/hooks/useContributionFx";
 
 const EMPTY_ACTIVITY: never[] = [];
 const EMPTY_RATES: Record<string, number> = {};
-const COLORS = [
-  "var(--color-primary)",
-  "var(--color-chart-5)",
-  "var(--color-bull)",
-  "var(--color-amber)",
-  "var(--color-chart-6)",
-  "var(--color-chart-7)",
-  "var(--color-bear)",
-];
 
 type Series = { id: string; name: string; color: string };
 
@@ -50,7 +41,7 @@ export function PortfolioContributions({
   portfolioMap: ReadonlyMap<string, string>;
 }) {
   const { t, i18n } = useTranslation();
-  const activityQ = useActivity({});
+  const { activityQ, portfolioColors } = usePortfolioColors();
   const fxQ = useContributionFx();
   const activity = activityQ.data?.rows ?? EMPTY_ACTIVITY;
   const rates = fxQ.isError ? EMPTY_RATES : (fxQ.data?.rates ?? EMPTY_RATES);
@@ -74,9 +65,8 @@ export function PortfolioContributions({
 
   const series = useMemo(() => {
     // Keep colors stable across year and scope changes, including sold-out portfolios.
-    const ids = [...new Set(activity.map((row) => row.portfolio_id ?? "__unassigned__"))].sort();
     const activeIds = new Set(model.months.flatMap((month) => Object.keys(month.byPortfolio)));
-    return ids.flatMap<Series>((id, index) =>
+    return [...portfolioColors].flatMap<Series>(([id, color]) =>
       activeIds.has(id)
         ? [
             {
@@ -85,23 +75,17 @@ export function PortfolioContributions({
                 id === "__unassigned__"
                   ? t("portfolio.unassigned")
                   : (portfolioMap.get(id) ?? t("portfolio.unknown")),
-              color: COLORS[index % COLORS.length],
+              color,
             },
           ]
         : [],
     );
-  }, [activity, model.months, portfolioMap, t]);
+  }, [portfolioColors, model.months, portfolioMap, t]);
 
   const locale = i18n.resolvedLanguage ?? i18n.language;
   const hasMissingRates = model.missingCurrencies.length > 0;
   const loading = activityQ.isPending || (hasMissingRates && fxQ.isPending);
   const ready = !loading && !activityQ.isError && !hasMissingRates;
-  const scopeLabel =
-    portfolioId === "__all__"
-      ? t("portfolio.all")
-      : portfolioId === "__unassigned__"
-        ? t("portfolio.unassigned")
-        : (portfolioMap.get(portfolioId) ?? t("portfolio.unknown"));
 
   return (
     <section
@@ -129,7 +113,7 @@ export function PortfolioContributions({
               disabled={activityQ.isPending || activityQ.isError}
             />
           </div>
-          <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
+          <div className="flex flex-wrap items-start gap-x-8 gap-y-4">
             <ContributionStat
               label={t("portfolio.contributions.freshMoney")}
               value={ready ? fmtCurrency(model.total, currency) : "—"}
@@ -146,9 +130,6 @@ export function PortfolioContributions({
               />
             ) : null}
           </div>
-          <p className="text-xs text-muted-foreground">
-            {scopeLabel} · {year} · {t("portfolio.contributions.currentRates")}
-          </p>
         </header>
 
         {loading ? (
@@ -279,10 +260,6 @@ export function PortfolioContributions({
                   ))}
                 </ul>
               ) : null}
-              <p className="text-[11px] leading-relaxed text-muted-foreground">
-                {t("portfolio.contributions.definition")}{" "}
-                {t("portfolio.contributions.averageBasis", { count: model.averageMonths })}
-              </p>
             </div>
             <details className="border-t border-border/50">
               <summary className="cursor-pointer px-4 py-3 text-xs uppercase tracking-[0.1em] text-muted-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring md:px-5">

@@ -3,7 +3,6 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { StatCard } from "@/components/terminal/StatCard";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { TerminalTable } from "@/components/terminal/TerminalTable";
 import { fmt, fmtCurrency, fmtPct } from "@/lib/portfolio/formatters";
@@ -14,13 +13,14 @@ import { createTransaction, type TransactionInputType } from "@/lib/portfolio/tr
 import { TransactionEditor } from "@/routes/_authenticated/portfolio/components/TransactionEditor";
 import { usePortfolioHoldingsView } from "@/routes/_authenticated/portfolio/hooks/usePortfolioHoldingsView";
 import { useTickerCatalog } from "@/routes/_authenticated/portfolio/hooks/useTickerCatalog";
+import { usePortfolioColors } from "@/routes/_authenticated/portfolio/hooks/usePortfolioColors";
 
 export const Route = createFileRoute("/_authenticated/portfolio/holdings/$ticker")({
   component: HoldingDetailsPage,
 });
 
 function HoldingDetailsPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const qc = useQueryClient();
   const { ticker } = Route.useParams();
   const normalizedTicker = ticker.trim().toUpperCase();
@@ -38,6 +38,7 @@ function HoldingDetailsPage() {
     convertTo,
   } = usePortfolioHoldingsView();
   const { tickerCatalog } = useTickerCatalog();
+  const { portfolioColors } = usePortfolioColors();
 
   const holdingRows = useMemo(
     () => allRows.filter((row) => row.ticker.trim().toUpperCase() === normalizedTicker),
@@ -56,6 +57,14 @@ function HoldingDetailsPage() {
     );
     return rows;
   }, [holdingTransactions, txSortDirection]);
+
+  const showTransactionPortfolio =
+    new Set(holdingTransactions.map((row) => row.portfolio_id)).size > 1;
+  const dateFormatter = new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
 
   const holdingCurrency = holdingRows[0]?._nativeCurrency ?? "USD";
 
@@ -146,13 +155,16 @@ function HoldingDetailsPage() {
       .sort((a, b) => b.marketValue - a.marketValue);
   }, [convertTo, holdingCurrency, holdingRows]);
   const showPortfolioBreakdown = breakdownRows.length > 1;
-  const holdingPortfolioNames = useMemo(() => {
-    const names = breakdownRows.map((row) =>
-      row.portfolioId ? (portfolioMap.get(row.portfolioId) ?? "-") : t("portfolio.unassigned"),
-    );
-
-    return Array.from(new Set(names)).join(", ");
-  }, [breakdownRows, portfolioMap, t]);
+  const holdingPortfolios = useMemo(
+    () =>
+      breakdownRows.map((row) => ({
+        id: row.portfolioId ?? "__unassigned__",
+        name: row.portfolioId
+          ? (portfolioMap.get(row.portfolioId) ?? "-")
+          : t("portfolio.unassigned"),
+      })),
+    [breakdownRows, portfolioMap, t],
+  );
 
   const tickerSuggestions = useMemo(() => {
     const map = new Map<
@@ -223,7 +235,7 @@ function HoldingDetailsPage() {
   const addTransactionDraft = makeTransactionDraft(summary, breakdownRows, portfolios);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-analytics">
       <Link
         to="/portfolio"
         hash="holdings"
@@ -231,105 +243,95 @@ function HoldingDetailsPage() {
       >
         ← {t("header.portfolio")} / {t("portfolio.holdings")}
       </Link>
-      <div className="analytics-panel rounded-[10px] bg-card/60 px-5 py-5 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] md:px-6">
-        <div>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight text-primary">{summary.ticker}</h1>
-                <p className="mt-1 text-sm text-muted-foreground">{summary.companyName}</p>
-              </div>
-              <div className="flex flex-wrap gap-2 text-xs uppercase tracking-[0.1em] text-muted-foreground">
-                <span className="rounded-full bg-secondary/35 px-3 py-1.5">
-                  {t("portfolio.assetType")}: {summary.assetType}
+      <section className="overflow-hidden rounded-2xl border border-border/60 bg-card/70">
+        <header className="flex flex-wrap items-start justify-between gap-5 p-5 md:p-6">
+          <div className="min-w-0 space-y-2">
+            <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+              {summary.ticker}
+            </h1>
+            <p className="text-sm text-muted-foreground">{summary.companyName}</p>
+            <div className="flex flex-wrap items-center gap-2 pt-1 font-mono text-[11px] font-semibold tracking-wide">
+              <span className="rounded-md border border-primary/25 bg-primary/10 px-2.5 py-1 text-primary">
+                {summary.assetType.toUpperCase()}
+              </span>
+              <span className="rounded-md border border-border bg-secondary/60 px-2.5 py-1 text-foreground/85">
+                {summary.currency}
+              </span>
+              {holdingPortfolios.map(({ id, name }) => (
+                <span
+                  key={id}
+                  className="inline-flex items-center gap-1.5 rounded-md border border-border bg-secondary/30 px-2.5 py-1 text-foreground/85"
+                >
+                  <span
+                    aria-hidden="true"
+                    className="h-1.5 w-1.5 rounded-full"
+                    style={{
+                      background: portfolioColors.get(id) ?? "var(--color-muted-foreground)",
+                    }}
+                  />
+                  {name}
                 </span>
-                <span className="rounded-full bg-secondary/35 px-3 py-1.5">
-                  {t("portfolio.currency")}: {summary.currency}
-                </span>
-                <span className="rounded-full bg-secondary/35 px-3 py-1.5">
-                  {t("portfolio.heldIn")}: {holdingPortfolioNames}
-                </span>
-              </div>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setEditing(addTransactionDraft)}
-                className="h-10 rounded-lg bg-primary px-4 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                {t("portfolio.addTransactionAction")}
-              </button>
+              ))}
             </div>
           </div>
+          <button
+            type="button"
+            onClick={() => setEditing(addTransactionDraft)}
+            className="rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-primary-foreground transition-colors hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          >
+            {t("portfolio.addTransactionAction")}
+          </button>
+        </header>
+        <div className="grid border-t border-border/50 sm:grid-cols-3">
+          <HoldingMetric
+            label={t("portfolio.summary.totalValue")}
+            value={fmtCurrency(summary.marketValue, summary.currency)}
+            featured
+          />
+          <HoldingMetric
+            label={t("portfolio.summary.dayChange")}
+            value={fmtCurrency(summary.dailyChange, summary.currency)}
+            sub={fmtPct(summary.dailyChangePct)}
+            tone={summary.dailyChange >= 0 ? "bull" : "bear"}
+            featured
+          />
+          <HoldingMetric
+            label={t("portfolio.summary.unrealized")}
+            value={fmtCurrency(summary.unrealized, summary.currency)}
+            sub={fmtPct(summary.unrealizedPct)}
+            tone={summary.unrealized >= 0 ? "bull" : "bear"}
+            featured
+          />
         </div>
-      </div>
-
-      <HoldingSection title={t("portfolio.performanceSection")}>
-        <TerminalCard bodyClassName="p-0">
-          <div className="grid grid-cols-1 xl:grid-cols-3">
-            <div className="bg-primary/[0.035]">
-              <StatCard
-                label={t("portfolio.marketValue")}
-                value={fmtCurrency(summary.marketValue, summary.currency)}
-                accent
-                size="featured"
-                surface="flat"
-              />
-            </div>
-            <div className="border-t border-border/50 xl:border-t-0 xl:border-l">
-              <StatCard
-                label={t("portfolio.dailyChange")}
-                value={fmtCurrency(summary.dailyChange, summary.currency)}
-                sub={fmtPct(summary.dailyChangePct)}
-                tone={summary.dailyChange >= 0 ? "bull" : "bear"}
-                size="featured"
-                surface="flat"
-              />
-            </div>
-            <div className="border-t border-border/50 xl:border-t-0 xl:border-l">
-              <StatCard
-                label={t("portfolio.unrealized")}
-                value={fmtCurrency(summary.unrealized, summary.currency)}
-                sub={fmtPct(summary.unrealizedPct)}
-                tone={summary.unrealized >= 0 ? "bull" : "bear"}
-                size="featured"
-                surface="flat"
-              />
-            </div>
-          </div>
-        </TerminalCard>
-      </HoldingSection>
+      </section>
 
       <HoldingSection title={t("portfolio.positionDetailsSection")}>
-        <TerminalCard bodyClassName="p-0">
-          <div className="grid grid-cols-1 divide-y divide-border/50 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-5">
-            <StatCard
+        <TerminalCard className="rounded-2xl bg-none shadow-none" bodyClassName="p-0">
+          <div className="grid grid-cols-2 gap-y-1 md:grid-cols-3 xl:grid-cols-5">
+            <HoldingMetric
               label={t("portfolio.quantityHeld")}
               value={fmt(summary.quantityHeld, {
                 minimumFractionDigits: 0,
                 maximumFractionDigits: 4,
               })}
-              surface="flat"
             />
-            <StatCard
+            <HoldingMetric
               label={t("portfolio.averagePrice")}
               value={fmtCurrency(summary.averagePrice, summary.currency)}
-              surface="flat"
             />
-            <StatCard
+            <HoldingMetric
               label={t("portfolio.currentPrice")}
               value={fmtCurrency(summary.currentPrice, summary.currency)}
-              surface="flat"
             />
-            <StatCard
-              label={t("portfolio.costBasis")}
+            <HoldingMetric
+              label={t("portfolio.costBasis").toLocaleLowerCase(
+                i18n.resolvedLanguage ?? i18n.language,
+              )}
               value={fmtCurrency(summary.costBasis, summary.currency)}
-              surface="flat"
             />
-            <StatCard
-              label={t("portfolio.portfolioAllocationPct")}
-              value={fmtPct(summary.allocationPct)}
-              surface="flat"
+            <HoldingMetric
+              label={t("portfolio.analytics.allocation")}
+              value={`${fmt(summary.allocationPct, { maximumFractionDigits: 2 })}%`}
             />
           </div>
         </TerminalCard>
@@ -337,10 +339,10 @@ function HoldingDetailsPage() {
 
       {showPortfolioBreakdown ? (
         <HoldingSection title={t("portfolio.portfolioBreakdown")}>
-          <TerminalCard bodyClassName="p-0">
+          <TerminalCard className="rounded-2xl bg-none shadow-none" bodyClassName="p-0">
             <div className="overflow-x-auto">
               <TerminalTable>
-                <thead className="bg-secondary/25 text-xs uppercase tracking-[0.1em] text-muted-foreground">
+                <thead className="bg-secondary/20 text-xs font-medium text-muted-foreground [&_th]:font-medium">
                   <tr>
                     <th className="px-3 py-3 text-left">{t("portfolio.portfolio")}</th>
                     <th className="px-3 py-3 text-right">{t("portfolio.quantity")}</th>
@@ -385,18 +387,16 @@ function HoldingDetailsPage() {
         </HoldingSection>
       ) : null}
 
-      <HoldingSection title={t("portfolio.transactionsSection")}>
-        <TerminalCard bodyClassName="p-0">
-          <div className="flex justify-end border-b border-border/50 bg-secondary/20 px-4 py-3">
-            <div className="text-xs uppercase tracking-[0.12em] text-muted-foreground">
-              {holdingTransactions.length} {t("header.transactions")}
-            </div>
-          </div>
+      <HoldingSection title={t("portfolio.transactionsSection")} count={holdingTransactions.length}>
+        <TerminalCard className="rounded-2xl bg-none shadow-none" bodyClassName="p-0">
           <div className="overflow-x-auto">
             <TerminalTable>
-              <thead className="bg-secondary/25 text-xs uppercase tracking-[0.1em] text-muted-foreground">
+              <thead className="bg-secondary/20 text-xs font-medium text-muted-foreground [&_th]:font-medium">
                 <tr>
-                  <th className="px-3 py-3 text-left">
+                  <th
+                    className="px-3 py-3 text-left"
+                    aria-sort={txSortDirection === "asc" ? "ascending" : "descending"}
+                  >
                     <button
                       type="button"
                       onClick={() =>
@@ -411,7 +411,9 @@ function HoldingDetailsPage() {
                     </button>
                   </th>
                   <th className="px-3 py-3 text-left">{t("portfolio.action")}</th>
-                  <th className="px-3 py-3 text-left">{t("portfolio.portfolio")}</th>
+                  {showTransactionPortfolio && (
+                    <th className="px-3 py-3 text-left">{t("portfolio.portfolio")}</th>
+                  )}
                   <th className="px-3 py-3 text-right">{t("portfolio.quantity")}</th>
                   <th className="px-3 py-3 text-right">{t("portfolio.price")}</th>
                   <th className="px-3 py-3 text-right">{t("portfolio.fees")}</th>
@@ -421,7 +423,10 @@ function HoldingDetailsPage() {
               <tbody>
                 {sortedTransactions.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                    <td
+                      colSpan={showTransactionPortfolio ? 7 : 6}
+                      className="px-3 py-6 text-center text-sm text-muted-foreground"
+                    >
                       {t("portfolio.noTransactionsYet")}
                     </td>
                   </tr>
@@ -434,15 +439,25 @@ function HoldingDetailsPage() {
                         key={transaction.id}
                         className="border-t border-border/50 transition-colors hover:bg-secondary/20"
                       >
-                        <td className="px-3 py-3 tabular-nums">{transaction.transaction_date}</td>
-                        <td className="px-3 py-3 uppercase">
-                          {t(`portfolio.action${capitalizeAction(transaction.action ?? "buy")}`)}
+                        <td className="whitespace-nowrap px-3 py-3 text-muted-foreground">
+                          {dateFormatter.format(
+                            new Date(`${transaction.transaction_date}T12:00:00`),
+                          )}
                         </td>
                         <td className="px-3 py-3">
-                          {transaction.portfolio_id
-                            ? (portfolioMap.get(transaction.portfolio_id) ?? "-")
-                            : t("portfolio.unassigned")}
+                          <span
+                            className={`inline-flex rounded-md px-2 py-1 text-xs font-medium ${transaction.action === "sell" ? "bg-bear/10 text-bear" : transaction.action === "buy" ? "bg-bull/10 text-bull" : "bg-secondary/50 text-muted-foreground"}`}
+                          >
+                            {t(`portfolio.action${capitalizeAction(transaction.action ?? "buy")}`)}
+                          </span>
                         </td>
+                        {showTransactionPortfolio && (
+                          <td className="px-3 py-3">
+                            {transaction.portfolio_id
+                              ? (portfolioMap.get(transaction.portfolio_id) ?? "-")
+                              : t("portfolio.unassigned")}
+                          </td>
+                        )}
                         <td className="px-3 py-3 text-right tabular-nums">
                           {fmt(Number(transaction.shares), {
                             minimumFractionDigits: 0,
@@ -455,7 +470,7 @@ function HoldingDetailsPage() {
                         <td className="px-3 py-3 text-right tabular-nums">
                           {feeValue == null ? "-" : fmtCurrency(feeValue, transaction.currency)}
                         </td>
-                        <td className="px-3 py-3 text-right tabular-nums">
+                        <td className="px-3 py-3 text-right font-semibold tabular-nums">
                           {fmtCurrency(totalValue, transaction.currency)}
                         </td>
                       </tr>
@@ -490,12 +505,51 @@ function HoldingDetailsPage() {
   );
 }
 
-function HoldingSection({ title, children }: { title: string; children: React.ReactNode }) {
+function HoldingMetric({
+  label,
+  value,
+  sub,
+  tone,
+  featured = false,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+  tone?: "bull" | "bear";
+  featured?: boolean;
+}) {
+  const color = tone === "bull" ? "text-bull" : tone === "bear" ? "text-bear" : "text-foreground";
+  return (
+    <dl className="min-w-0 px-4 py-4 md:px-5 md:py-5">
+      <dt className="text-xs text-muted-foreground first-letter:uppercase">{label}</dt>
+      <dd
+        className={`mt-2 break-words font-semibold tracking-tight tabular-nums ${featured ? "text-2xl lg:text-3xl" : "text-xl"} ${color}`}
+      >
+        {value}
+      </dd>
+      {sub && <dd className={`mt-1 text-xs font-medium tabular-nums ${color}`}>{sub}</dd>}
+    </dl>
+  );
+}
+
+function HoldingSection({
+  title,
+  count,
+  children,
+}: {
+  title: string;
+  count?: number;
+  children: React.ReactNode;
+}) {
   return (
     <section className="space-y-3">
-      <h2 className="flex items-center gap-2 text-xs uppercase tracking-[0.12em] text-muted-foreground">
-        <span className="text-primary">&gt;</span>
+      <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
         {title}
+        {count !== undefined && (
+          <span className="rounded-md bg-secondary/50 px-2 py-0.5 text-xs font-normal tabular-nums text-muted-foreground">
+            {count}
+          </span>
+        )}
       </h2>
       {children}
     </section>

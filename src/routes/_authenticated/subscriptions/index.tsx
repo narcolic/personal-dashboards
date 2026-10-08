@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { SubscriptionLogo } from "@/components/subscriptions/SubscriptionLogo";
-import { convert, memberShare, money, myShare, useTracker } from "@/lib/subscriptions";
+import { convert, money, myShare, useTracker } from "@/lib/subscriptions";
 import { billingDate, LoadingState, PageHeading } from "./components";
 import { useTranslation } from "react-i18next";
 
@@ -59,7 +59,6 @@ function SubscriptionOverview() {
             <p className="mt-3 text-4xl font-bold tracking-tight text-primary md:text-5xl">
               {money(summary.myMonthly, currency)}
             </p>
-            <p className="mt-2 text-xs text-muted-foreground">{t("subscriptions.myShareHint")}</p>
             <p className="mt-6 text-sm text-muted-foreground">
               {t("subscriptions.myAnnual")}:{" "}
               <strong className="font-semibold text-foreground">
@@ -80,9 +79,11 @@ function SubscriptionOverview() {
               >
                 {money(summary.outstanding, currency)}
               </strong>
-              <span className="mt-1 block text-xs text-muted-foreground">
-                {unpaidCount} {t("subscriptions.unpaidContributions")}
-              </span>
+              {unpaidCount > 0 && (
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {unpaidCount} {t("subscriptions.unpaidContributions")}
+                </span>
+              )}
             </Link>
             <p className="border-t border-border/60 pt-4 text-sm text-muted-foreground">
               {t("subscriptions.activeCount")}:{" "}
@@ -90,20 +91,25 @@ function SubscriptionOverview() {
             </p>
           </div>
         </div>
-        <div className="flex flex-wrap gap-x-8 gap-y-2 border-t border-border/60 bg-secondary/15 px-5 py-3 text-xs text-muted-foreground md:px-6">
-          <span>
-            {t("subscriptions.fullMonthly")}:{" "}
-            <strong className="font-medium text-foreground">
-              {money(summary.fullMonthly, currency)}
-            </strong>
-          </span>
-          <span>
-            {t("subscriptions.fullAnnual")}:{" "}
-            <strong className="font-medium text-foreground">
-              {money(summary.fullAnnual, currency)}
-            </strong>
-          </span>
-        </div>
+        <details className="border-t border-border/60 px-5 py-3 md:px-6">
+          <summary className="cursor-pointer text-xs uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
+            {t("subscriptions.fullCost")}
+          </summary>
+          <div className="flex flex-wrap gap-x-8 gap-y-2 pt-3 text-xs text-muted-foreground">
+            <span>
+              {t("subscriptions.fullMonthly")}:{" "}
+              <strong className="font-medium text-foreground">
+                {money(summary.fullMonthly, currency)}
+              </strong>
+            </span>
+            <span>
+              {t("subscriptions.fullAnnual")}:{" "}
+              <strong className="font-medium text-foreground">
+                {money(summary.fullAnnual, currency)}
+              </strong>
+            </span>
+          </div>
+        </details>
         {categoryMap.size > 0 && (
           <details className="border-t border-border/60 px-5 py-3 md:px-6">
             <summary className="cursor-pointer text-xs uppercase tracking-[0.12em] text-muted-foreground hover:text-foreground">
@@ -147,18 +153,9 @@ function SubscriptionOverview() {
                 </span>
                 <span className="text-right">
                   {money(s.amount, s.currency)}
-                  <span className="block text-xs text-primary">
-                    {t("subscriptions.myShare")}: {money(myShare(s), s.currency)}
-                  </span>
-                  {s.members.some((member) => member.paymentBehavior === "manual") && (
-                    <span className="block text-xs text-muted-foreground">
-                      {t("subscriptions.expectedManual")}:{" "}
-                      {money(
-                        s.members
-                          .filter((member) => member.paymentBehavior === "manual")
-                          .reduce((sum, member) => sum + memberShare(s, member), 0),
-                        s.currency,
-                      )}
+                  {myShare(s) !== s.amount && (
+                    <span className="block text-xs text-primary">
+                      {t("subscriptions.myShare")}: {money(myShare(s), s.currency)}
                     </span>
                   )}
                 </span>
@@ -167,11 +164,6 @@ function SubscriptionOverview() {
           </div>
         )}
       </TerminalCard>
-      {data.fx.asOf && (
-        <p className="text-xs text-muted-foreground">
-          {t("subscriptions.fxAsOf", { date: billingDate(data.fx.asOf) })}
-        </p>
-      )}
       {[summary.myMonthly, summary.outstanding].some((value) => value === null) && (
         <p className="text-xs text-amber-300">{t("subscriptions.fxUnavailable")}</p>
       )}

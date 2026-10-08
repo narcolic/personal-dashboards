@@ -3,6 +3,10 @@
 
 @custom-variant dark (&:is(.dark *));
 
+#contributions .recharts-surface:focus:not(:focus-visible) {
+  outline: none;
+}
+
 @keyframes option-enter {
   from {
     opacity: 0;
