@@ -134,15 +134,25 @@ public sealed class SecurityListingResolver(AppDataSource dataSource) : ISecurit
                 insert into public.security_listing_provider_identifiers(
                   listing_id, provider_code, provider_symbol, last_verified_at)
                 values ($1, 'yahoo', $2, now());
+                """;
+            AddUuid(providerCommand, listingId);
+            providerCommand.Parameters.AddWithValue(symbol);
+            await providerCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+        }
 
+        // Positional parameters require one SQL statement per NpgsqlCommand.
+        // Both writes still belong to the listing's enclosing transaction.
+        await using (var refreshCommand = connection.CreateCommand())
+        {
+            refreshCommand.Transaction = transaction;
+            refreshCommand.CommandText = """
                 insert into private.security_metadata_refresh_state(
                   listing_id, provider_code, status, next_attempt_at)
                 values ($1, 'alpha_vantage', 'pending', now())
                 on conflict (listing_id, provider_code) do nothing;
                 """;
-            AddUuid(providerCommand, listingId);
-            providerCommand.Parameters.AddWithValue(symbol);
-            await providerCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+            AddUuid(refreshCommand, listingId);
+            await refreshCommand.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
         }
 
         return new SecurityListingResolution(listingId, symbol, true);
