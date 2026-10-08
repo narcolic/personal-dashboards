@@ -8,18 +8,25 @@ const statusClassMap: Record<ReminderStatus, string> = {
   "NO DATA": "text-muted-foreground border-border/70 bg-secondary/20",
 };
 
-export function ReminderStatusBadge({ status }: { status: ReminderStatus }) {
+export function ReminderStatusBadge({
+  status,
+  variant = "default",
+}: {
+  status: ReminderStatus;
+  variant?: "default" | "readable";
+}) {
   const { t } = useTranslation();
+  const labelPrefix = variant === "readable" ? "car.vehiclePage" : "car";
   const labelMap: Record<ReminderStatus, string> = {
-    OVERDUE: t("car.statusOverdue"),
-    "DUE SOON": t("car.statusDueSoon"),
-    OK: t("car.statusOk"),
-    "NO DATA": t("car.statusNoData"),
+    OVERDUE: t(`${labelPrefix}.statusOverdue`),
+    "DUE SOON": t(`${labelPrefix}.statusDueSoon`),
+    OK: t(`${labelPrefix}.statusOk`),
+    "NO DATA": t(`${labelPrefix}.statusNoData`),
   };
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[9px] uppercase tracking-[0.12em] ${statusClassMap[status]}`}
+      className={`inline-flex items-center whitespace-nowrap border px-2 py-0.5 ${variant === "readable" ? "rounded-md text-[11px] font-medium" : "rounded-full text-[9px] uppercase tracking-[0.12em]"} ${statusClassMap[status]}`}
     >
       {labelMap[status]}
     </span>

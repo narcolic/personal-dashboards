@@ -12,6 +12,21 @@ import { useTranslation } from "react-i18next";
 type JobsSortKey = "job" | "category" | "qty" | "unit" | "subtotal" | "total";
 type JobsSortDirection = "asc" | "desc";
 
+function ExpandChevron({ expanded }: { expanded: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      aria-hidden="true"
+      className={`h-3.5 w-3.5 shrink-0 transition-transform motion-reduce:transition-none ${expanded ? "rotate-90 text-primary" : ""}`}
+    >
+      <path d="m6 3 5 5-5 5" />
+    </svg>
+  );
+}
+
 function NoteIcon() {
   return (
     <svg viewBox="0 0 12 12" aria-hidden="true" className="h-3 w-3">
@@ -73,7 +88,7 @@ export function ServiceHistoryTable({
       new Map(
         vehicles.map((vehicle) => [
           vehicle.id,
-          `${vehicle.make ?? "-"} ${vehicle.model ?? "-"}`.trim().toUpperCase(),
+          `${vehicle.make ?? "-"} ${vehicle.model ?? "-"}`.trim(),
         ]),
       ),
     [vehicles],
@@ -106,29 +121,32 @@ export function ServiceHistoryTable({
           return (
             <article
               key={visit.id}
-              className={`analytics-panel overflow-hidden rounded-[10px] border bg-card/80 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] ${
+              className={`overflow-hidden rounded-[10px] border bg-card/80 ${
                 expanded ? "border-primary/45" : "border-border/70"
               }`}
             >
               <button
                 type="button"
                 onClick={() => onToggleExpanded(visit.id)}
+                aria-controls={expanded ? `mobile-visit-${visit.id}` : undefined}
                 aria-expanded={expanded}
                 className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-start gap-3 p-3 text-left transition-colors hover:bg-secondary/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
               >
                 <span className="min-w-0">
                   <span className="flex flex-wrap items-center gap-2">
-                    <span className="font-bold text-primary">{formatDate(visit.service_date)}</span>
+                    <span className="font-semibold text-foreground">
+                      {formatDate(visit.service_date)}
+                    </span>
                     {visit.is_annual_service ? (
                       <HistoryBadge tone="primary" icon={<WrenchIcon />}>
-                        {t("car.annualServiceShort")}
+                        {t("car.historyLabels.annual")}
                       </HistoryBadge>
                     ) : null}
                     {visit.notes?.trim() ? (
-                      <HistoryBadge icon={<NoteIcon />}>{t("car.noteLabel")}</HistoryBadge>
+                      <HistoryBadge icon={<NoteIcon />}>{t("car.historyLabels.note")}</HistoryBadge>
                     ) : null}
                   </span>
-                  <span className="mt-1.5 block truncate text-[10px] uppercase tracking-[0.08em] text-muted-foreground">
+                  <span className="mt-1.5 block break-words text-xs text-muted-foreground">
                     {vehicleName} · {visit.workshop ?? "-"}
                   </span>
                 </span>
@@ -136,55 +154,62 @@ export function ServiceHistoryTable({
                   <span className="block font-bold tabular-nums text-foreground">
                     {formatCurrency(Number(visit.total_amount))}
                   </span>
-                  <span className="mt-1.5 block text-[10px] text-primary" aria-hidden="true">
-                    {expanded ? "▼" : "▶"}
+                  <span
+                    className="mt-1.5 flex justify-end text-muted-foreground"
+                    aria-hidden="true"
+                  >
+                    <ExpandChevron expanded={expanded} />
                   </span>
                 </span>
               </button>
 
-              <div className="grid grid-cols-2 border-t border-border/50 text-[10px] uppercase tracking-[0.08em]">
-                <MobileFact label={t("car.km")} value={formatKm(visit.odometer_km)} />
+              <div className="grid grid-cols-2 border-t border-border/50 text-xs text-muted-foreground">
                 <MobileFact
-                  label={t("car.jobsCount")}
+                  label={t("car.historyLabels.mileage")}
+                  value={formatKm(visit.odometer_km)}
+                />
+                <MobileFact
+                  label={t("car.historyLabels.jobs")}
                   value={`${visit.jobs.length} ${t("car.jobs")}`}
                   right
                 />
               </div>
 
               {expanded ? (
-                <div className="space-y-3 border-t border-primary/20 bg-background/35 p-3">
-                  <FinancialSummary visit={visit} />
-
+                <div
+                  id={`mobile-visit-${visit.id}`}
+                  className="space-y-4 border-t border-border/50 bg-secondary/10 p-4"
+                >
                   {visit.notes?.trim() ? (
-                    <div className="rounded-md border border-border/50 bg-secondary/20 p-3 text-[11px] text-muted-foreground">
-                      <div className="mb-1 text-[9px] uppercase tracking-[0.14em] text-primary">
-                        {t("car.noteLabel")}
+                    <div className="rounded-md border border-border/50 bg-secondary/20 p-3 text-sm text-muted-foreground">
+                      <div className="mb-1 text-xs font-medium text-primary">
+                        {t("car.historyLabels.note")}
                       </div>
                       <div className="text-foreground">{visit.notes.trim()}</div>
                     </div>
                   ) : null}
 
                   <div>
-                    <div className="mb-1.5 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
-                      {t("car.serviceJobs")}
+                    <div className="mb-1.5 text-xs font-medium text-muted-foreground">
+                      {t("car.historyLabels.serviceJobs")}
                     </div>
                     <div className="space-y-1">
                       {visit.jobs.length === 0 ? (
-                        <div className="py-2 text-[10px] uppercase text-muted-foreground">
+                        <div className="py-2 text-sm text-muted-foreground">
                           {t("car.noJobDetails")}
                         </div>
                       ) : (
                         visit.jobs.map((job) => (
                           <div
                             key={job.id}
-                            className="rounded-md px-2 py-2 text-[11px] odd:bg-secondary/20"
+                            className="rounded-md px-2 py-2 text-sm odd:bg-secondary/20"
                           >
                             <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-3">
                               <span className="min-w-0">
-                                <span className="block truncate text-foreground">
+                                <span className="block break-words text-foreground">
                                   {job.job_name_snapshot}
                                 </span>
-                                <span className="mt-0.5 block truncate text-[9px] uppercase tracking-[0.08em] text-muted-foreground">
+                                <span className="mt-0.5 block break-words text-xs text-muted-foreground">
                                   {job.category_snapshot ?? "-"} · {t("car.qty")} {job.quantity}
                                 </span>
                               </span>
@@ -195,7 +220,7 @@ export function ServiceHistoryTable({
                               </span>
                             </div>
                             {job.notes?.trim() ? (
-                              <div className="mt-1 text-[10px] text-muted-foreground">
+                              <div className="mt-1 text-xs text-muted-foreground">
                                 {job.notes.trim()}
                               </div>
                             ) : null}
@@ -205,11 +230,12 @@ export function ServiceHistoryTable({
                     </div>
                   </div>
 
+                  <FinancialSummary visit={visit} />
                   <VisitEditLink
                     visitId={visit.id}
                     serviceDate={visit.service_date}
                     selectedVehicleId={selectedVehicleId}
-                    className="inline-flex h-9 items-center gap-2 rounded-md border border-primary/35 px-3 text-[10px] uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    className="inline-flex h-9 items-center gap-2 rounded-md border border-primary/35 px-3 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   />
                 </div>
               ) : null}
@@ -219,19 +245,23 @@ export function ServiceHistoryTable({
       </div>
 
       <div className="hidden md:block">
-        <TerminalTable variant="panel" className="font-mono text-[11px]">
-          <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+        <TerminalTable variant="panel" className="font-analytics text-sm">
+          <thead className="bg-secondary/20 text-xs font-medium text-muted-foreground">
             <tr>
-              <th className="px-3 py-2.5 text-left">{t("car.date")}</th>
+              <th className="px-4 py-4 text-left font-medium">{t("car.historyLabels.date")}</th>
               {showVehicle ? (
-                <th className="px-3 py-2.5 text-left">{t("car.vehicleScope")}</th>
+                <th className="px-4 py-4 text-left font-medium">{t("car.vehicleScope")}</th>
               ) : null}
-              <th className="px-3 py-2.5 text-right">{t("car.km")}</th>
-              <th className="px-3 py-2.5 text-left">{t("car.garage")}</th>
-              <th className="px-3 py-2.5 text-right">{t("car.jobsCount")}</th>
-              <th className="px-3 py-2.5 text-right">{t("car.total")}</th>
-              <th className="w-24 px-2 py-2.5 text-right">{t("car.indicators")}</th>
-              <th className="w-20 px-2 py-2.5 text-right">{t("car.actions")}</th>
+              <th className="px-4 py-4 text-right font-medium">{t("car.historyLabels.mileage")}</th>
+              <th className="px-4 py-4 text-left font-medium">{t("car.historyLabels.garage")}</th>
+              <th className="px-4 py-4 text-right font-medium">{t("car.historyLabels.jobs")}</th>
+              <th className="px-4 py-4 text-right font-medium">{t("car.historyLabels.total")}</th>
+              <th className="w-24 px-3 py-4 text-right font-medium">
+                {t("car.historyLabels.indicators")}
+              </th>
+              <th className="w-20 px-3 py-4 text-right font-medium">
+                {t("car.historyLabels.actions")}
+              </th>
             </tr>
           </thead>
           <tbody>
@@ -250,7 +280,7 @@ export function ServiceHistoryTable({
                 </td>
               </tr>
             ) : (
-              visits.map((visit, index) => {
+              visits.map((visit) => {
                 const expanded = expandedVisitIds.has(visit.id);
                 const sort = jobsSortByVisit[visit.id] ?? {
                   key: "job" as const,
@@ -261,24 +291,18 @@ export function ServiceHistoryTable({
                       compareJobs(left, right, sort.key, sort.dir, Number(visit.vat_rate)),
                     )
                   : visit.jobs;
-                const collapsedTone = index % 2 === 0 ? "bg-transparent" : "bg-secondary/10";
 
                 return (
                   <Fragment key={visit.id}>
-                    {index > 0 ? (
-                      <tr aria-hidden="true" className="border-0 bg-background">
-                        <td colSpan={columnCount} className="h-2 p-0" />
-                      </tr>
-                    ) : null}
                     <tr
                       onClick={() => onToggleExpanded(visit.id)}
                       className={`cursor-pointer border-t transition-colors ${
                         expanded
-                          ? "border-primary/40 bg-primary/5 text-foreground/90 shadow-[inset_3px_0_0_0_rgba(255,153,0,0.75)]"
-                          : `border-border/60 text-foreground/80 hover:bg-secondary/20 ${collapsedTone}`
+                          ? "border-border/60 bg-primary/[0.06] text-foreground"
+                          : "border-border/60 text-foreground/90 hover:bg-secondary/25"
                       }`}
                     >
-                      <td className="px-3 py-2.5 text-left font-normal">
+                      <td className="px-4 py-4 text-left font-normal">
                         <button
                           type="button"
                           onClick={(event) => {
@@ -286,37 +310,38 @@ export function ServiceHistoryTable({
                             onToggleExpanded(visit.id);
                           }}
                           className="inline-flex items-center gap-2 rounded-sm text-left text-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                          aria-controls={expanded ? `desktop-visit-${visit.id}` : undefined}
                           aria-expanded={expanded}
-                          aria-label={expanded ? t("car.collapseDetails") : t("car.expandDetails")}
+                          aria-label={`${expanded ? t("car.collapseDetails") : t("car.expandDetails")}: ${formatDate(visit.service_date)}`}
                         >
-                          <span className="text-[9px] text-primary" aria-hidden="true">
-                            {expanded ? "▼" : "▶"}
+                          <span className="text-muted-foreground" aria-hidden="true">
+                            <ExpandChevron expanded={expanded} />
                           </span>
                           <span>{formatDate(visit.service_date)}</span>
                         </button>
                       </td>
                       {showVehicle ? (
-                        <td className="max-w-40 truncate px-3 py-2.5 text-left font-normal">
+                        <td className="max-w-40 px-4 py-4 text-left font-normal">
                           {vehicleNames.get(visit.vehicle_id) ?? "-"}
                         </td>
                       ) : null}
-                      <td className="px-3 py-2.5 text-right font-normal tabular-nums">
+                      <td className="px-4 py-4 text-right font-normal tabular-nums">
                         {formatKm(visit.odometer_km)}
                       </td>
-                      <td className="max-w-48 truncate px-3 py-2.5 text-left font-normal">
+                      <td className="max-w-48 px-4 py-4 text-left font-normal">
                         {visit.workshop ?? "-"}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-normal">
+                      <td className="px-4 py-4 text-right font-normal">
                         {visit.jobs.length} {t("car.jobs")}
                       </td>
-                      <td className="px-3 py-2.5 text-right font-semibold tabular-nums text-foreground">
+                      <td className="px-4 py-4 text-right font-semibold tabular-nums text-foreground">
                         {formatCurrency(Number(visit.total_amount))}
                       </td>
-                      <td className="w-24 px-2 py-2">
+                      <td className="w-24 px-3 py-3">
                         <div className="flex items-center justify-end gap-1">
                           {visit.notes?.trim() ? (
                             <HistoryBadge icon={<NoteIcon />} title={t("car.visitHasNote")}>
-                              {t("car.noteLabel")}
+                              {t("car.historyLabels.note")}
                             </HistoryBadge>
                           ) : null}
                           {visit.is_annual_service ? (
@@ -325,12 +350,12 @@ export function ServiceHistoryTable({
                               icon={<WrenchIcon />}
                               title={t("car.annualServiceLabel")}
                             >
-                              {t("car.annualServiceShort")}
+                              {t("car.historyLabels.annual")}
                             </HistoryBadge>
                           ) : null}
                         </div>
                       </td>
-                      <td className="w-20 px-2 py-2 text-right font-normal">
+                      <td className="w-20 px-3 py-3 text-right font-normal">
                         <VisitEditLink
                           visitId={visit.id}
                           serviceDate={visit.service_date}
@@ -341,44 +366,32 @@ export function ServiceHistoryTable({
                     </tr>
 
                     {expanded ? (
-                      <tr className="border-t border-primary/20 bg-background/70">
-                        <td colSpan={columnCount} className="px-3 py-2">
-                          <div className="analytics-panel overflow-hidden rounded-lg border border-primary/25 bg-card/55 shadow-[inset_0_1px_0_rgba(255,153,0,0.08)]">
-                            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-primary/15 bg-primary/[0.025] px-4 py-2 text-[10px] uppercase tracking-[0.16em]">
-                              <span className="flex items-center gap-2 text-primary">
-                                <span aria-hidden="true">&gt;</span>
-                                {t("car.serviceDetails")}
-                              </span>
-                              <span className="text-muted-foreground">
-                                {formatDate(visit.service_date)} // {visit.jobs.length}{" "}
-                                {t("car.jobs")}
-                              </span>
-                            </div>
-
-                            <div className="space-y-3 p-3">
-                              <FinancialSummary visit={visit} />
+                      <tr className="border-t border-border/50 bg-secondary/10">
+                        <td colSpan={columnCount} className="p-0">
+                          <div id={`desktop-visit-${visit.id}`} className="p-5">
+                            <div className="space-y-4">
+                              <h2 className="text-sm font-semibold text-foreground">
+                                {t("car.historyLabels.serviceJobs")}
+                              </h2>
 
                               {visit.notes?.trim() ? (
-                                <div className="rounded-md border border-border/50 bg-secondary/15 p-3 text-[11px]">
-                                  <span className="mr-2 text-[9px] uppercase tracking-[0.14em] text-primary">
-                                    {t("car.noteLabel")}:
+                                <div className="rounded-lg bg-secondary/30 px-4 py-3 text-sm">
+                                  <span className="mr-2 font-medium text-muted-foreground">
+                                    {t("car.historyLabels.note")}:
                                   </span>
                                   <span className="text-foreground">{visit.notes.trim()}</span>
                                 </div>
                               ) : null}
 
                               <div>
-                                <div className="mb-2 text-[9px] uppercase tracking-[0.16em] text-muted-foreground">
-                                  {t("car.serviceJobs")}
-                                </div>
                                 {visit.jobs.length === 0 ? (
-                                  <div className="rounded-md border border-dashed border-border/60 p-4 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+                                  <div className="rounded-md border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
                                     {t("car.noJobDetails")}
                                   </div>
                                 ) : (
-                                  <div className="overflow-x-auto rounded-md border border-border/50 bg-background/40">
-                                    <table className="w-full text-[10px] uppercase tracking-[0.12em]">
-                                      <thead className="bg-secondary/30 text-muted-foreground">
+                                  <div className="overflow-x-auto rounded-lg border border-border/60 bg-card/60">
+                                    <table className="w-full text-sm">
+                                      <thead className="bg-secondary/20 text-xs font-medium text-muted-foreground">
                                         <tr>
                                           <SortableJobHeader
                                             label={t("car.job")}
@@ -407,56 +420,52 @@ export function ServiceHistoryTable({
                                             onToggle={() => toggleJobsSort(visit.id, "unit")}
                                           />
                                           <SortableJobHeader
-                                            label={t("car.subtotal")}
+                                            label={t("car.historyLabels.subtotal")}
                                             active={sort.key === "subtotal"}
                                             direction={sort.dir}
                                             align="right"
                                             onToggle={() => toggleJobsSort(visit.id, "subtotal")}
                                           />
                                           <SortableJobHeader
-                                            label={t("car.total")}
+                                            label={t("car.historyLabels.total")}
                                             active={sort.key === "total"}
                                             direction={sort.dir}
                                             align="right"
                                             onToggle={() => toggleJobsSort(visit.id, "total")}
                                           />
-                                          <th className="px-2 py-2 text-left">
+                                          <th className="px-3 py-3 text-left font-medium">
                                             {t("portfolio.notes")}
                                           </th>
                                         </tr>
                                       </thead>
                                       <tbody>
-                                        {sortedJobs.map((job, jobIndex) => (
+                                        {sortedJobs.map((job) => (
                                           <tr
                                             key={job.id}
-                                            className={`border-t border-border/40 text-foreground/80 hover:bg-secondary/10 ${
-                                              jobIndex % 2 === 0
-                                                ? "bg-transparent"
-                                                : "bg-secondary/10"
-                                            }`}
+                                            className="border-t border-border/40 text-foreground/90 hover:bg-secondary/15"
                                           >
-                                            <td className="px-2 py-1.5 text-left font-normal">
+                                            <td className="px-3 py-3 text-left font-normal">
                                               {job.job_name_snapshot}
                                             </td>
-                                            <td className="px-2 py-1.5 text-left font-normal">
+                                            <td className="px-3 py-3 text-left font-normal text-muted-foreground">
                                               {job.category_snapshot ?? "-"}
                                             </td>
-                                            <td className="px-2 py-1.5 text-right font-normal">
+                                            <td className="px-3 py-3 text-right font-normal">
                                               {job.quantity}
                                             </td>
-                                            <td className="px-2 py-1.5 text-right font-normal tabular-nums">
+                                            <td className="px-3 py-3 text-right font-normal tabular-nums">
                                               {formatCurrency(Number(job.unit_price_ex_vat))}
                                             </td>
-                                            <td className="px-2 py-1.5 text-right font-normal tabular-nums">
+                                            <td className="px-3 py-3 text-right font-normal tabular-nums">
                                               {formatCurrency(Number(job.line_total_ex_vat))}
                                             </td>
-                                            <td className="px-2 py-1.5 text-right font-normal tabular-nums">
+                                            <td className="px-3 py-3 text-right font-normal tabular-nums">
                                               {formatCurrency(
                                                 Number(job.line_total_ex_vat) *
                                                   (1 + Number(visit.vat_rate)),
                                               )}
                                             </td>
-                                            <td className="max-w-64 px-2 py-1.5 text-left font-normal normal-case tracking-normal">
+                                            <td className="max-w-64 px-3 py-3 text-left font-normal text-muted-foreground">
                                               {job.notes ?? "-"}
                                             </td>
                                           </tr>
@@ -466,6 +475,7 @@ export function ServiceHistoryTable({
                                   </div>
                                 )}
                               </div>
+                              <FinancialSummary visit={visit} />
                             </div>
                           </div>
                         </td>
@@ -539,10 +549,10 @@ function HistoryBadge({
   return (
     <span
       title={title}
-      className={`inline-flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-[8px] uppercase tracking-[0.08em] ${
+      className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border px-2 py-1 text-[11px] font-medium ${
         tone === "primary"
           ? "border-primary/30 bg-primary/10 text-primary"
-          : "border-border/60 bg-secondary/30 text-muted-foreground"
+          : "border-border/60 bg-secondary/20 text-muted-foreground"
       }`}
     >
       {icon}
@@ -554,14 +564,14 @@ function HistoryBadge({
 function FinancialSummary({ visit }: { visit: ServiceVisitWithJobs }) {
   const { t } = useTranslation();
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-1 rounded-md border border-border/50 bg-secondary/10 px-3 py-2 sm:justify-end">
+    <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border-t border-border/50 pt-4 sm:justify-end">
       <FinancialFact
-        label={t("car.subtotal")}
+        label={t("car.historyLabels.subtotal")}
         value={formatCurrency(Number(visit.subtotal_ex_vat))}
       />
       <FinancialFact label={t("car.vatRate")} value={formatVatRate(visit.vat_rate)} />
       <FinancialFact
-        label={t("car.total")}
+        label={t("car.historyLabels.total")}
         value={formatCurrency(Number(visit.total_amount))}
         highlight
       />
@@ -580,10 +590,10 @@ function FinancialFact({
 }) {
   return (
     <span className="inline-flex items-baseline gap-2 whitespace-nowrap">
-      <span className="text-[8px] uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+      <span className="text-xs text-muted-foreground">{label}</span>
       <strong
-        className={`text-[10px] font-semibold tabular-nums ${
-          highlight ? "text-primary" : "text-foreground"
+        className={`text-sm tabular-nums ${
+          highlight ? "font-semibold text-foreground" : "font-medium text-foreground/90"
         }`}
       >
         {value}
@@ -607,7 +617,7 @@ function SortableJobHeader({
 }) {
   return (
     <th
-      className={align === "right" ? "px-2 py-2 text-right" : "px-2 py-2 text-left"}
+      className={`px-3 py-3 font-medium ${align === "right" ? "text-right" : "text-left"}`}
       aria-sort={active ? (direction === "asc" ? "ascending" : "descending") : "none"}
     >
       <button
@@ -676,12 +686,12 @@ function EmptyState({
           : "rounded-[10px] border border-dashed border-border/70 bg-card/70 px-6 py-10"
       }`}
     >
-      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{message}</div>
+      <div className="text-sm text-muted-foreground">{message}</div>
       {onClear ? (
         <button
           type="button"
           onClick={onClear}
-          className="mt-3 rounded-md border border-primary/30 px-3 py-2 text-[10px] uppercase tracking-[0.14em] text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          className="mt-3 rounded-md border border-primary/30 px-3 py-2 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
           {t("car.clearAndShowAll")}
         </button>
@@ -734,8 +744,8 @@ function MobileFact({
   right?: boolean;
 }) {
   return (
-    <div className={`px-3 py-2.5 ${right ? "border-l border-border/50 text-right" : ""}`}>
-      <div className="text-[9px] text-muted-foreground">{label}</div>
+    <div className={`px-4 py-4 ${right ? "border-l border-border/50 text-right" : ""}`}>
+      <div className="text-xs text-muted-foreground">{label}</div>
       <div className="mt-0.5 font-semibold normal-case tracking-normal tabular-nums text-foreground">
         {value}
       </div>

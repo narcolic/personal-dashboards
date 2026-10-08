@@ -1,5 +1,5 @@
 ﻿import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useCarService } from "@/routes/_authenticated/car-service/hooks/useCarService";
 import {
   createServiceReminder,
@@ -19,7 +19,21 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { TerminalSelect } from "@/components/ui/TerminalSelect";
 import type { ServiceReminderWithStatus, Vehicle } from "@/routes/_authenticated/car-service/types";
 import { useTranslation } from "react-i18next";
-import { computeAnnualServiceStatus } from "@/routes/_authenticated/car-service/utils/carServiceUtils";
+import {
+  computeAnnualServiceStatus,
+  formatKm,
+} from "@/routes/_authenticated/car-service/utils/carServiceUtils";
+
+const primaryButton =
+  "inline-flex h-10 items-center justify-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+const secondaryButton =
+  "inline-flex h-10 items-center justify-center rounded-lg border border-border/70 px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+const textButton =
+  "inline-flex items-center justify-center rounded-md px-2 py-1.5 text-sm font-medium text-primary transition-colors hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+const dangerButton =
+  "inline-flex items-center justify-center rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50";
+const fieldClass =
+  "mt-1.5 h-11 w-full rounded-lg border border-border/70 bg-background/40 px-3 text-sm text-foreground outline-none focus-visible:border-primary focus-visible:ring-1 focus-visible:ring-primary/30";
 
 export const Route = createFileRoute("/_authenticated/car-service/vehicles")({
   component: VehiclesScreen,
@@ -60,7 +74,7 @@ function emptyVehicleForm(): VehicleFormState {
 
 function VehiclesScreen() {
   const { t } = useTranslation();
-  const { vehicles, error, refetch } = useVehicles();
+  const { vehicles, isLoading, error, refetch } = useVehicles();
   const { visits } = useCarService("all");
   const [searchParams] = useState(() => new URLSearchParams(window.location.search));
   const initialExpandedVehicleId = searchParams.get("vehicleId")?.trim() || null;
@@ -129,30 +143,37 @@ function VehiclesScreen() {
   };
 
   return (
-    <div className="space-y-4 font-mono">
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <button
-          type="button"
-          onClick={onAddVehicle}
-          className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90"
-        >
-          {t("car.addVehicle")}
+    <div className="space-y-6 font-analytics">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-xl font-semibold tracking-tight">{t("car.vehiclePage.title")}</h1>
+        <button type="button" onClick={onAddVehicle} disabled={busy} className={primaryButton}>
+          {t("car.vehiclePage.addVehicle")}
         </button>
       </div>
 
       <div>
         {error ? (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-[11px] text-destructive">
+          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             {error}
           </div>
         ) : null}
         {inlineError ? (
-          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-[11px] text-destructive">
+          <div className="mb-3 rounded-lg border border-destructive/30 bg-destructive/5 px-4 py-3 text-sm text-destructive">
             {inlineError}
           </div>
         ) : null}
 
-        <div className="space-y-2">
+        <div className="space-y-4">
+          {isLoading && vehicles.length === 0 ? (
+            <div
+              className="h-24 animate-pulse rounded-[10px] border border-border/70 bg-card/70"
+              aria-label={t("common.loading")}
+            />
+          ) : !error && vehicles.length === 0 && !newVehicleForm ? (
+            <div className="rounded-[10px] border border-dashed border-border/70 p-8 text-center text-sm text-muted-foreground">
+              {t("car.vehiclePage.noVehicles")}
+            </div>
+          ) : null}
           {vehicles.map((vehicle) => (
             <VehicleAccordionItem
               key={vehicle.id}
@@ -171,15 +192,16 @@ function VehiclesScreen() {
           ))}
 
           {expandedVehicleId === "new" && newVehicleForm ? (
-            <div className="analytics-panel rounded-[10px] border border-primary/35 bg-card/70 p-4 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)]">
-              <div className="mb-3 text-[11px] uppercase tracking-[0.16em] text-primary">
-                {t("car.addVehicle")}
+            <div className="rounded-[10px] border border-border/70 bg-card/80 p-5">
+              <div className="mb-4 text-base font-semibold text-foreground">
+                {t("car.vehiclePage.addVehicle")}
               </div>
               <VehicleDetailsForm state={newVehicleForm} onChange={setNewVehicleForm} />
               <div className="mt-4 flex justify-end gap-2">
                 <button
                   onClick={() => void saveNewVehicle()}
-                  className="inline-flex h-9 items-center rounded-md bg-primary px-4 text-[10px] font-bold uppercase tracking-[0.14em] text-primary-foreground"
+                  disabled={busy}
+                  className={primaryButton}
                 >
                   {t("common.save")}
                 </button>
@@ -188,7 +210,8 @@ function VehiclesScreen() {
                     setExpandedVehicleId(null);
                     setNewVehicleForm(null);
                   }}
-                  className="inline-flex h-9 items-center rounded-md border border-border/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground"
+                  disabled={busy}
+                  className={secondaryButton}
                 >
                   {t("common.cancel")}
                 </button>
@@ -262,7 +285,7 @@ function VehicleAccordionItem({
     [vehicleVisits],
   );
 
-  const rowTitle = `${(vehicle.make ?? "-").toUpperCase()} ${(vehicle.model ?? "-").toUpperCase()} · ${vehicle.year ?? "-"} · ${(vehicle.plate ?? "-").toUpperCase()}`;
+  const rowTitle = `${vehicle.make ?? "-"} ${vehicle.model ?? "-"}`.trim();
   const primaryReminder = [...serviceReminders].sort((left, right) => {
     const priority = { OVERDUE: 0, "DUE SOON": 1, OK: 2, "NO DATA": 3 } as const;
     return priority[left.status] - priority[right.status];
@@ -402,24 +425,38 @@ function VehicleAccordionItem({
   };
 
   return (
-    <div
-      className={`analytics-panel overflow-hidden rounded-[10px] border bg-card/70 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] ${isExpanded ? "border-primary/40" : "border-border/70"}`}
-    >
-      <div className="flex items-center gap-2 p-2">
+    <div className="overflow-hidden rounded-[10px] border border-border/70 bg-card/80">
+      <div className="flex items-center gap-2 p-3 sm:p-4">
         <button
           type="button"
           onClick={onExpand}
           aria-expanded={isExpanded}
-          className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-2 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          aria-controls={isExpanded ? `vehicle-details-${vehicle.id}` : undefined}
+          className="flex min-w-0 flex-1 items-center gap-3 rounded-md p-1 text-left focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
         >
-          <span className="text-[10px] text-muted-foreground">{isExpanded ? "▼" : "▶"}</span>
+          <svg
+            viewBox="0 0 16 16"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            aria-hidden="true"
+            className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none ${isExpanded ? "rotate-90 text-primary" : ""}`}
+          >
+            <path d="m6 3 5 5-5 5" />
+          </svg>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+            <span className="block break-words text-lg font-semibold tracking-tight text-foreground">
               {rowTitle}
             </span>
-            <span className="mt-1 flex flex-wrap items-center gap-2 text-[10px] text-muted-foreground">
-              <span>{t("car.visitsCount", { count: visitCount })}</span>
-              <ReminderStatusBadge status={primaryStatus} />
+            <span className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {vehicle.year ? <span>{vehicle.year}</span> : null}
+              {vehicle.plate ? (
+                <span className="rounded-md border border-border/70 px-2 py-1 font-mono text-[11px] font-medium text-foreground/80">
+                  {vehicle.plate}
+                </span>
+              ) : null}
+              <span>{t("car.vehiclePage.visits", { count: visitCount })}</span>
+              <ReminderStatusBadge status={primaryStatus} variant="readable" />
             </span>
           </span>
         </button>
@@ -435,201 +472,244 @@ function VehicleAccordionItem({
             });
           }}
           disabled={busy}
-          className="inline-flex h-8 items-center rounded-md px-2 text-[10px] uppercase text-destructive transition-colors hover:bg-destructive/10 disabled:opacity-50"
+          className={dangerButton}
         >
-          {t("car.vehiclesLabels.delete")}
+          {t("car.vehiclePage.delete")}
         </button>
       </div>
 
       {isExpanded ? (
-        <div className="border-t border-primary/20 bg-background/25 p-3 md:p-4">
-          {error ? <div className="mb-2 text-[11px] text-destructive">{error}</div> : null}
+        <div
+          id={`vehicle-details-${vehicle.id}`}
+          className="space-y-6 border-t border-border/60 p-4 sm:p-5"
+        >
+          {error ? <div className="mb-2 text-sm text-destructive">{error}</div> : null}
 
-          <SectionHeader title={t("car.details")} />
+          <SectionHeader
+            title={t("car.vehiclePage.details")}
+            action={
+              !isEditingDetails ? (
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => setIsEditingDetails(true)}
+                  className={textButton}
+                >
+                  {t("car.vehiclePage.editDetails")}
+                </button>
+              ) : undefined
+            }
+          />
           {isEditingDetails ? (
             <div className="mt-2 rounded-lg border border-border/70 bg-card/70 p-3">
               <VehicleDetailsForm state={details} onChange={setDetails} />
               <div className="mt-3 flex gap-3">
                 <button
                   onClick={() => void saveDetails()}
-                  className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
+                  disabled={busy}
+                  className={primaryButton}
                 >
-                  [{t("common.save").toUpperCase()}]
+                  {t("common.save")}
                 </button>
                 <button
                   onClick={() => setIsEditingDetails(false)}
-                  className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline"
+                  disabled={busy}
+                  className={secondaryButton}
                 >
-                  [{t("common.cancel").toUpperCase()}]
+                  {t("common.cancel")}
                 </button>
               </div>
             </div>
           ) : (
-            <div className="grid gap-1 rounded-lg bg-secondary/15 p-3 text-[11px] text-foreground sm:grid-cols-3">
+            <dl className="grid gap-5 sm:grid-cols-2">
               <div>
-                {t("car.colour")}: {meta.colour || "-"}
+                <dt className="text-xs text-muted-foreground">{t("car.vehiclePage.colour")}</dt>
+                <dd className="mt-1 text-sm font-medium">{meta.colour || "—"}</dd>
               </div>
               <div>
-                {t("portfolio.notes")}: {meta.notes || "-"}
+                <dt className="text-xs text-muted-foreground">
+                  {t("car.vehiclePage.annualInterval")}
+                </dt>
+                <dd className="mt-1 text-sm font-medium tabular-nums">
+                  {formatKm(meta.annualServiceIntervalKm)} ·{" "}
+                  {t("car.vehiclePage.months", { count: meta.annualServiceIntervalMonths })}
+                </dd>
               </div>
-              <div>
-                {t("car.annualServiceInterval")}: {meta.annualServiceIntervalKm} km /{" "}
-                {meta.annualServiceIntervalMonths} mo
-              </div>
-              <button
-                onClick={() => setIsEditingDetails(true)}
-                className="mt-2 text-left text-[10px] uppercase tracking-[0.14em] text-primary hover:underline sm:col-span-3"
-              >
-                {t("car.editDetails")}
-              </button>
-            </div>
+              {meta.notes.trim() ? (
+                <div className="sm:col-span-2">
+                  <dt className="text-xs text-muted-foreground">{t("portfolio.notes")}</dt>
+                  <dd className="mt-1 break-words text-sm text-foreground/90">{meta.notes}</dd>
+                </div>
+              ) : null}
+            </dl>
           )}
 
-          <SectionHeader title={t("car.serviceIntervals")} />
-          <div className="space-y-2 md:hidden">
-            {serviceReminders.length === 0 ? (
-              <div className="rounded-lg border border-dashed border-border/70 p-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                {t("car.noIntervalsConfigured")}
-              </div>
-            ) : (
-              serviceReminders.map((reminder) => (
-                <ServiceIntervalCard
-                  key={reminder.id}
-                  reminder={reminder}
-                  onEdit={() => editReminder(reminder)}
-                  onDelete={() => requestDeleteReminder(reminder)}
-                />
-              ))
-            )}
-          </div>
-          <div className="hidden overflow-x-auto rounded-lg border border-border/70 md:block">
-            <table className="w-full text-[11px]">
-              <thead className="bg-secondary/40 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                <tr>
-                  <th className="px-2 py-1 text-left">{t("car.intervalStatus")}</th>
-                  <th className="px-2 py-1 text-left">{t("car.intervalJob")}</th>
-                  <th className="px-2 py-1 text-left">{t("car.intervalRule")}</th>
-                  <th className="px-2 py-1 text-left">{t("car.lastDone")}</th>
-                  <th className="px-2 py-1 text-left">{t("car.remaining")}</th>
-                  <th className="px-2 py-1 text-right">{t("car.actions")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {serviceReminders.length === 0 ? (
-                  <tr>
-                    <td
-                      className="px-2 py-2 text-muted-foreground uppercase tracking-[0.2em]"
-                      colSpan={6}
-                    >
-                      {t("car.noIntervalsConfigured")}
-                    </td>
-                  </tr>
-                ) : (
-                  serviceReminders.map((reminder) => (
-                    <ServiceIntervalRow
-                      key={reminder.id}
-                      reminder={reminder}
-                      onEdit={() => editReminder(reminder)}
-                      onDelete={async () => requestDeleteReminder(reminder)}
-                    />
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-          {intervalForm ? (
-            <div className="mt-3 rounded-lg border border-primary/25 bg-card/70 p-3">
-              <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
-                <div className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  <span>{t("car.vehiclesLabels.jobName")}</span>
-                  <TerminalSelect
-                    value={intervalForm.job_name}
-                    onChange={(value) =>
-                      setIntervalForm((prev) => (prev ? { ...prev, job_name: value } : prev))
+          <div className="space-y-3 border-t border-border/50 pt-5">
+            <SectionHeader
+              title={t("car.vehiclePage.intervals")}
+              action={
+                !intervalForm ? (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() =>
+                      setIntervalForm({
+                        job_name: "",
+                        interval_km: "",
+                        interval_months: "",
+                        warning_km: "500",
+                        warning_days: "30",
+                        notes: "",
+                      })
                     }
-                    ariaLabel={t("car.vehiclesLabels.jobName")}
-                    options={[
-                      { value: "", label: t("car.vehiclesLabels.selectJob") },
-                      ...jobNames.map((name) => ({ value: name, label: name })),
-                    ]}
-                    className="mt-1 normal-case tracking-normal"
-                    size="sm"
-                  />
-                </div>
-                <SmallField
-                  label={t("car.vehiclesLabels.intervalKm")}
-                  value={intervalForm.interval_km}
-                  onChange={(value) =>
-                    setIntervalForm((prev) => (prev ? { ...prev, interval_km: value } : prev))
-                  }
-                />
-                <SmallField
-                  label={t("car.vehiclesLabels.intervalMonths")}
-                  value={intervalForm.interval_months}
-                  onChange={(value) =>
-                    setIntervalForm((prev) => (prev ? { ...prev, interval_months: value } : prev))
-                  }
-                />
-                <SmallField
-                  label={t("car.vehiclesLabels.warningKm")}
-                  value={intervalForm.warning_km}
-                  onChange={(value) =>
-                    setIntervalForm((prev) => (prev ? { ...prev, warning_km: value } : prev))
-                  }
-                />
-                <SmallField
-                  label={t("car.vehiclesLabels.warningDays")}
-                  value={intervalForm.warning_days}
-                  onChange={(value) =>
-                    setIntervalForm((prev) => (prev ? { ...prev, warning_days: value } : prev))
-                  }
-                />
-                <label className="md:col-span-2 text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-                  {t("car.editor.notes")}
-                  <input
-                    value={intervalForm.notes}
-                    onChange={(e) =>
-                      setIntervalForm((prev) => (prev ? { ...prev, notes: e.target.value } : prev))
-                    }
-                    className="mt-1 w-full border border-border bg-input px-2 py-1"
-                  />
-                </label>
-              </div>
-              <div className="mt-3 flex gap-3">
-                <button
-                  onClick={() => void saveInterval()}
-                  className="text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
-                >
-                  [{t("common.save").toUpperCase()}]
-                </button>
-                <button
-                  onClick={() => {
-                    setIntervalForm(null);
-                    setEditingIntervalId(null);
-                  }}
-                  className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground hover:underline"
-                >
-                  [{t("common.cancel").toUpperCase()}]
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() =>
-                setIntervalForm({
-                  job_name: "",
-                  interval_km: "",
-                  interval_months: "",
-                  warning_km: "500",
-                  warning_days: "30",
-                  notes: "",
-                })
+                    className={textButton}
+                  >
+                    {t("car.vehiclePage.addInterval")}
+                  </button>
+                ) : undefined
               }
-              className="mt-2 text-[11px] uppercase tracking-[0.2em] text-primary hover:underline"
-            >
-              [{t("car.addInterval")}]
-            </button>
-          )}
+            />
+            <div className="space-y-2 md:hidden">
+              {serviceReminders.length === 0 ? (
+                <div className="rounded-lg border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
+                  {t("car.vehiclePage.noIntervals")}
+                </div>
+              ) : (
+                serviceReminders.map((reminder) => (
+                  <ServiceIntervalCard
+                    key={reminder.id}
+                    reminder={reminder}
+                    busy={busy}
+                    onEdit={() => editReminder(reminder)}
+                    onDelete={() => requestDeleteReminder(reminder)}
+                  />
+                ))
+              )}
+            </div>
+            <div className="hidden overflow-x-auto rounded-lg border border-border/70 md:block">
+              <table className="w-full text-sm">
+                <thead className="bg-secondary/20 text-xs text-muted-foreground">
+                  <tr>
+                    <th className="px-3 py-3 text-left font-medium">
+                      {t("car.vehiclePage.status")}
+                    </th>
+                    <th className="px-3 py-3 text-left font-medium">{t("car.vehiclePage.job")}</th>
+                    <th className="px-3 py-3 text-left font-medium">{t("car.vehiclePage.rule")}</th>
+                    <th className="px-3 py-3 text-left font-medium">
+                      {t("car.vehiclePage.lastDone")}
+                    </th>
+                    <th className="px-3 py-3 text-left font-medium">
+                      {t("car.vehiclePage.remaining")}
+                    </th>
+                    <th className="px-3 py-3 text-right font-medium">
+                      {t("car.vehiclePage.actions")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {serviceReminders.length === 0 ? (
+                    <tr>
+                      <td className="px-4 py-5 text-sm text-muted-foreground" colSpan={6}>
+                        {t("car.vehiclePage.noIntervals")}
+                      </td>
+                    </tr>
+                  ) : (
+                    serviceReminders.map((reminder) => (
+                      <ServiceIntervalRow
+                        key={reminder.id}
+                        reminder={reminder}
+                        busy={busy}
+                        onEdit={() => editReminder(reminder)}
+                        onDelete={() => requestDeleteReminder(reminder)}
+                      />
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {intervalForm ? (
+              <div className="rounded-lg border border-border/70 bg-secondary/10 p-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="block text-xs font-medium text-muted-foreground">
+                    <span>{t("car.vehiclePage.job")}</span>
+                    <TerminalSelect
+                      value={intervalForm.job_name}
+                      onChange={(value) =>
+                        setIntervalForm((prev) => (prev ? { ...prev, job_name: value } : prev))
+                      }
+                      ariaLabel={t("car.vehiclePage.job")}
+                      options={[
+                        { value: "", label: t("car.vehiclePage.selectJob") },
+                        ...jobNames.map((name) => ({ value: name, label: name })),
+                      ]}
+                      className="mt-1.5"
+                      modern
+                      disabled={busy}
+                    />
+                  </div>
+                  <SmallField
+                    label={t("car.vehiclePage.intervalKm")}
+                    value={intervalForm.interval_km}
+                    onChange={(value) =>
+                      setIntervalForm((prev) => (prev ? { ...prev, interval_km: value } : prev))
+                    }
+                  />
+                  <SmallField
+                    label={t("car.vehiclePage.intervalMonths")}
+                    value={intervalForm.interval_months}
+                    onChange={(value) =>
+                      setIntervalForm((prev) => (prev ? { ...prev, interval_months: value } : prev))
+                    }
+                  />
+                  <SmallField
+                    label={t("car.vehiclePage.warningKm")}
+                    value={intervalForm.warning_km}
+                    onChange={(value) =>
+                      setIntervalForm((prev) => (prev ? { ...prev, warning_km: value } : prev))
+                    }
+                  />
+                  <SmallField
+                    label={t("car.vehiclePage.warningDays")}
+                    value={intervalForm.warning_days}
+                    onChange={(value) =>
+                      setIntervalForm((prev) => (prev ? { ...prev, warning_days: value } : prev))
+                    }
+                  />
+                  <label className="md:col-span-2 text-xs font-medium text-muted-foreground">
+                    {t("portfolio.notes")}
+                    <input
+                      value={intervalForm.notes}
+                      onChange={(e) =>
+                        setIntervalForm((prev) =>
+                          prev ? { ...prev, notes: e.target.value } : prev,
+                        )
+                      }
+                      className={fieldClass}
+                    />
+                  </label>
+                </div>
+                <div className="mt-3 flex gap-3">
+                  <button
+                    onClick={() => void saveInterval()}
+                    disabled={busy}
+                    className={primaryButton}
+                  >
+                    {t("common.save")}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIntervalForm(null);
+                      setEditingIntervalId(null);
+                    }}
+                    disabled={busy}
+                    className={secondaryButton}
+                  >
+                    {t("common.cancel")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
@@ -653,37 +733,30 @@ function ServiceIntervalRow({
   reminder,
   onEdit,
   onDelete,
+  busy,
 }: {
   reminder: ServiceReminderWithStatus;
   onEdit: () => void;
-  onDelete: () => Promise<void>;
+  onDelete: () => void;
+  busy: boolean;
 }) {
-  const { t } = useTranslation();
   return (
-    <tr className="border-t border-border/60">
-      <td className="px-2 py-1">
-        <ReminderStatusBadge status={reminder.status} />
+    <tr className="border-t border-border/60 transition-colors hover:bg-secondary/15">
+      <td className="px-3 py-4">
+        <ReminderStatusBadge status={reminder.status} variant="readable" />
       </td>
-      <td className="px-2 py-1">{reminder.job_name}</td>
-      <td className="px-2 py-1">
-        {reminder.interval_km ? `${reminder.interval_km}km` : "-"}{" "}
-        {reminder.interval_months ? `/${reminder.interval_months}mo` : ""}
+      <td className="px-3 py-4 font-medium">{reminder.job_name}</td>
+      <td className="px-3 py-4">
+        <IntervalValues reminder={reminder} kind="rule" />
       </td>
-      <td className="px-2 py-1">
-        {reminder.lastDoneDate ?? "--"}{" "}
-        {reminder.lastDoneKm != null ? `· ${reminder.lastDoneKm}km` : ""}
+      <td className="px-3 py-4">
+        <IntervalValues reminder={reminder} kind="lastDone" />
       </td>
-      <td className="px-2 py-1">
-        {reminder.kmRemaining != null ? `${reminder.kmRemaining}km` : "--"}{" "}
-        {reminder.daysRemaining != null ? `· ${reminder.daysRemaining}d` : ""}
+      <td className="px-3 py-4">
+        <IntervalValues reminder={reminder} kind="remaining" />
       </td>
-      <td className="px-2 py-1 text-right">
-        <button onClick={onEdit} className="mr-2 text-primary">
-          [{t("car.vehiclesLabels.edit")}]
-        </button>
-        <button onClick={() => void onDelete()} className="text-destructive">
-          [×]
-        </button>
+      <td className="px-3 py-4 text-right">
+        <IntervalActions reminder={reminder} onEdit={onEdit} onDelete={onDelete} busy={busy} />
       </td>
     </tr>
   );
@@ -693,62 +766,134 @@ function ServiceIntervalCard({
   reminder,
   onEdit,
   onDelete,
+  busy,
 }: {
   reminder: ServiceReminderWithStatus;
   onEdit: () => void;
   onDelete: () => void;
+  busy: boolean;
 }) {
   const { t } = useTranslation();
   return (
-    <div className="rounded-lg border border-border/70 bg-card/60 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <ReminderStatusBadge status={reminder.status} />
-          <div className="mt-2 truncate text-sm font-semibold text-foreground">
-            {reminder.job_name}
-          </div>
-        </div>
-        <div className="flex gap-1">
-          <button
-            type="button"
-            onClick={onEdit}
-            className="rounded-md px-2 py-1 text-[10px] uppercase text-primary hover:bg-primary/10"
-          >
-            {t("car.vehiclesLabels.edit")}
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            className="rounded-md px-2 py-1 text-[10px] uppercase text-destructive hover:bg-destructive/10"
-          >
-            {t("car.vehiclesLabels.delete")}
-          </button>
-        </div>
+    <div className="rounded-lg border border-border/70 bg-secondary/10 p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h3 className="break-words text-sm font-semibold">{reminder.job_name}</h3>
+        <ReminderStatusBadge status={reminder.status} variant="readable" />
       </div>
-      <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border/50 pt-2 text-[10px]">
+      <dl className="mt-4 grid grid-cols-2 gap-4">
         <div>
-          <div className="uppercase text-muted-foreground">{t("car.intervalRule")}</div>
-          <div className="mt-1 text-foreground">
-            {reminder.interval_km ? `${reminder.interval_km}km` : "-"}{" "}
-            {reminder.interval_months ? `/ ${reminder.interval_months}mo` : ""}
-          </div>
+          <dt className="mb-1 text-xs text-muted-foreground">{t("car.vehiclePage.rule")}</dt>
+          <dd>
+            <IntervalValues reminder={reminder} kind="rule" />
+          </dd>
         </div>
-        <div className="text-right">
-          <div className="uppercase text-muted-foreground">{t("car.remaining")}</div>
-          <div className="mt-1 text-foreground">
-            {reminder.kmRemaining != null ? `${reminder.kmRemaining}km` : "--"}{" "}
-            {reminder.daysRemaining != null ? `· ${reminder.daysRemaining}d` : ""}
-          </div>
+        <div>
+          <dt className="mb-1 text-xs text-muted-foreground">{t("car.vehiclePage.remaining")}</dt>
+          <dd>
+            <IntervalValues reminder={reminder} kind="remaining" />
+          </dd>
         </div>
+        <div className="col-span-2">
+          <dt className="mb-1 text-xs text-muted-foreground">{t("car.vehiclePage.lastDone")}</dt>
+          <dd>
+            <IntervalValues reminder={reminder} kind="lastDone" />
+          </dd>
+        </div>
+      </dl>
+      <div className="mt-3 flex justify-end border-t border-border/50 pt-2">
+        <IntervalActions reminder={reminder} onEdit={onEdit} onDelete={onDelete} busy={busy} />
       </div>
     </div>
   );
 }
 
-function SectionHeader({ title }: { title: string }) {
+function IntervalActions({
+  reminder,
+  onEdit,
+  onDelete,
+  busy,
+}: {
+  reminder: ServiceReminderWithStatus;
+  onEdit: () => void;
+  onDelete: () => void;
+  busy: boolean;
+}) {
+  const { t } = useTranslation();
   return (
-    <div className="mt-5 mb-3 text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-      {title}
+    <div className="inline-flex items-center gap-1 whitespace-nowrap">
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onEdit}
+        className={textButton}
+        aria-label={t("car.vehiclePage.editInterval", { job: reminder.job_name })}
+      >
+        {t("car.vehiclePage.edit")}
+      </button>
+      <button
+        type="button"
+        disabled={busy}
+        onClick={onDelete}
+        className={dangerButton}
+        aria-label={t("car.vehiclePage.deleteInterval", { job: reminder.job_name })}
+      >
+        {t("common.delete")}
+      </button>
+    </div>
+  );
+}
+
+function IntervalValues({
+  reminder,
+  kind,
+}: {
+  reminder: ServiceReminderWithStatus;
+  kind: "rule" | "lastDone" | "remaining";
+}) {
+  const { t, i18n } = useTranslation();
+  const values: string[] = [];
+  if (kind === "rule") {
+    if (reminder.interval_km) values.push(formatKm(reminder.interval_km));
+    if (reminder.interval_months)
+      values.push(t("car.vehiclePage.months", { count: reminder.interval_months }));
+  } else if (kind === "lastDone") {
+    if (reminder.lastDoneDate)
+      values.push(
+        new Intl.DateTimeFormat(i18n.language === "el" ? "el-GR" : "en-GB", {
+          day: "numeric",
+          month: "short",
+          year: "numeric",
+        }).format(new Date(reminder.lastDoneDate)),
+      );
+    if (reminder.lastDoneKm != null) values.push(formatKm(reminder.lastDoneKm));
+  } else {
+    if (reminder.kmRemaining != null) values.push(formatKm(reminder.kmRemaining));
+    if (reminder.daysRemaining != null)
+      values.push(t("car.vehiclePage.days", { count: reminder.daysRemaining }));
+  }
+  return (
+    <div className="space-y-1 text-sm tabular-nums">
+      {values.length ? (
+        values.map((value, index) => (
+          <div
+            key={index}
+            className={index ? "text-xs text-muted-foreground" : "text-foreground/90"}
+          >
+            {value}
+          </div>
+        ))
+      ) : (
+        <span className="text-muted-foreground">—</span>
+      )}
+    </div>
+  );
+}
+
+function SectionHeader({ title, action }: { title: string; action?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <h2 className="text-sm font-semibold text-foreground">{title}</h2>
+      {action}
     </div>
   );
 }
@@ -763,13 +908,9 @@ function SmallField({
   onChange: (value: string) => void;
 }) {
   return (
-    <label className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
+    <label className="text-xs font-medium text-muted-foreground">
       {label}
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="mt-1 w-full border border-border bg-input px-2 py-1"
-      />
+      <input value={value} onChange={(e) => onChange(e.target.value)} className={fieldClass} />
     </label>
   );
 }
@@ -785,42 +926,42 @@ function VehicleDetailsForm({
   return (
     <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
       <SmallField
-        label={t("car.make")}
+        label={t("car.vehiclePage.make")}
         value={state.make}
         onChange={(value) => onChange({ ...state, make: value })}
       />
       <SmallField
-        label={t("car.model")}
+        label={t("car.vehiclePage.model")}
         value={state.model}
         onChange={(value) => onChange({ ...state, model: value })}
       />
       <SmallField
-        label={t("car.year")}
+        label={t("car.vehiclePage.year")}
         value={state.year}
         onChange={(value) => onChange({ ...state, year: value })}
       />
       <SmallField
-        label={t("car.licensePlate")}
+        label={t("car.vehiclePage.plate")}
         value={state.plate}
         onChange={(value) => onChange({ ...state, plate: value })}
       />
       <SmallField
-        label={t("car.colour")}
+        label={t("car.vehiclePage.colour")}
         value={state.colour}
         onChange={(value) => onChange({ ...state, colour: value })}
       />
       <SmallField
-        label={t("car.annualServiceIntervalKm")}
+        label={t("car.vehiclePage.annualKm")}
         value={state.annualServiceIntervalKm}
         onChange={(value) => onChange({ ...state, annualServiceIntervalKm: value })}
       />
       <SmallField
-        label={t("car.annualServiceIntervalMonths")}
+        label={t("car.vehiclePage.annualMonths")}
         value={state.annualServiceIntervalMonths}
         onChange={(value) => onChange({ ...state, annualServiceIntervalMonths: value })}
       />
       <SmallField
-        label={t("car.editor.notes")}
+        label={t("portfolio.notes")}
         value={state.notes}
         onChange={(value) => onChange({ ...state, notes: value })}
       />

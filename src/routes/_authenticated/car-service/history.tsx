@@ -202,7 +202,7 @@ function CarServiceHistory() {
   };
 
   return (
-    <div className="space-y-6 font-mono">
+    <div className="space-y-6 font-analytics">
       <section
         className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between"
         aria-labelledby="service-history-heading"
@@ -210,21 +210,20 @@ function CarServiceHistory() {
         <div>
           <h1
             id="service-history-heading"
-            className="flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-muted-foreground"
+            className="text-xl font-semibold tracking-tight text-foreground"
           >
-            <span className="text-primary">&gt;</span>
             <span>{t("car.historyTitle")}</span>
           </h1>
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-muted-foreground">
             <span>
-              {t("car.totalVisits")}:{" "}
+              {t("car.historyLabels.visits")}:{" "}
               <strong className="font-semibold tabular-nums text-foreground">
                 {isLoading ? "..." : scopedVisits.length}
               </strong>
             </span>
             <span className="hidden h-3 w-px bg-border/70 sm:block" aria-hidden="true" />
             <span>
-              {t("car.historySpend")}:{" "}
+              {t("car.historyLabels.spend")}:{" "}
               <strong className="font-semibold tabular-nums text-foreground">
                 {isLoading ? "..." : formatCurrency(scopedSpend)}
               </strong>
@@ -237,14 +236,14 @@ function CarServiceHistory() {
             <button
               type="button"
               onClick={toggleAllExpanded}
-              className="hidden h-10 items-center rounded-lg border border-border/70 bg-card/70 px-3 text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:inline-flex"
+              className="hidden h-10 items-center rounded-lg border border-border/70 bg-card/70 px-3 text-sm font-medium text-muted-foreground transition-colors hover:border-primary/60 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:inline-flex"
             >
               {allExpanded ? t("car.collapseAll") : t("car.expandAll")}
             </button>
           ) : null}
           <Link
             to="/car-service/add"
-            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-xs font-bold uppercase tracking-[0.14em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+            className="inline-flex h-10 items-center rounded-lg bg-primary px-4 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
             + {t("car.new")}
           </Link>
@@ -259,7 +258,16 @@ function CarServiceHistory() {
               aria-hidden="true"
               className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-xs text-primary"
             >
-              &gt;
+              <svg
+                viewBox="0 0 20 20"
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+              >
+                <circle cx="8.5" cy="8.5" r="5.5" />
+                <path d="m13 13 4 4" />
+              </svg>
             </span>
             <input
               type="search"
@@ -283,7 +291,7 @@ function CarServiceHistory() {
             type="button"
             onClick={() => setShowFilters((visible) => !visible)}
             aria-expanded={showFilters}
-            className={`h-10 rounded-lg border px-4 text-xs uppercase tracking-[0.12em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
+            className={`h-10 rounded-lg border px-4 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
               showFilters || structuredFilterCount
                 ? "border-primary/40 bg-primary/10 text-primary"
                 : "border-border/70 bg-card/70 text-muted-foreground hover:border-primary/60 hover:text-foreground"
@@ -294,7 +302,7 @@ function CarServiceHistory() {
         </div>
 
         {showFilters ? (
-          <div className="analytics-panel grid grid-cols-1 gap-3 rounded-[10px] border border-border/70 bg-card/70 p-4 shadow-[0_16px_45px_-38px_rgba(0,0,0,0.9)] sm:grid-cols-2">
+          <div className="analytics-panel grid grid-cols-1 gap-3 rounded-[10px] border border-border/70 bg-card/70 p-4 sm:grid-cols-2">
             <HistoryFilterSelect
               label={t("car.job")}
               value={jobFilter}
@@ -314,7 +322,7 @@ function CarServiceHistory() {
                 type="button"
                 onClick={clearFilters}
                 disabled={!filtersActive}
-                className="rounded-md px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-default disabled:opacity-35"
+                className="rounded-md px-2 py-1 text-sm font-medium text-muted-foreground transition-colors hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-default disabled:opacity-35"
               >
                 {t("car.clearAll")}
               </button>
@@ -322,7 +330,7 @@ function CarServiceHistory() {
           </div>
         ) : null}
 
-        <div className="flex min-h-6 flex-wrap items-center justify-between gap-2 text-[10px] text-muted-foreground">
+        <div className="flex min-h-6 flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
           <span>
             {t("car.showingVisits", { shown: visits.length, total: scopedVisits.length })}
           </span>
@@ -343,7 +351,7 @@ function CarServiceHistory() {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="px-1.5 py-1 uppercase tracking-[0.12em] text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="px-1.5 py-1 font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
               >
                 {t("car.clearAll")}
               </button>
@@ -353,7 +361,7 @@ function CarServiceHistory() {
       </section>
 
       {error ? (
-        <div className="rounded-lg border border-bear/30 bg-bear/5 px-4 py-3 text-[11px] uppercase tracking-[0.16em] text-bear">
+        <div className="rounded-lg border border-bear/30 bg-bear/5 px-4 py-3 text-sm text-bear">
           {t("car.error")}: {error}
         </div>
       ) : null}
@@ -388,7 +396,7 @@ function HistoryFilterSelect({
 }) {
   return (
     <label className="space-y-1">
-      <span className="text-[10px] uppercase tracking-[0.12em] text-muted-foreground">{label}</span>
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
       <TerminalSelect
         value={value}
         onChange={onChange}
@@ -409,7 +417,7 @@ function FilterChip({ label, onClear }: { label: string; onClear: () => void }) 
       type="button"
       onClick={onClear}
       aria-label={`${t("car.clearFilters")}: ${label}`}
-      className="inline-flex max-w-44 items-center gap-1.5 rounded-full border border-primary/30 bg-primary/[0.07] px-2 py-1 text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+      className="inline-flex max-w-44 items-center gap-1.5 rounded-md border border-primary/30 bg-primary/[0.07] px-2 py-1 text-primary transition-colors hover:bg-primary/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
     >
       <span className="truncate">{label}</span>
       <span aria-hidden="true">×</span>
