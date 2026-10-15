@@ -100,7 +100,8 @@ public sealed class PortfolioSnapshotQueries(AppDataSource dataSource) : IPortfo
                 reader.GetInt16(28)));
         }
 
-        return items;
+        await reader.CloseAsync().ConfigureAwait(false);
+        return await ExcludeFeesAsync(connection, transaction, userId, items, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<IReadOnlyList<PortfolioSnapshotListItem>> ReadRangeAsync(
@@ -146,7 +147,37 @@ public sealed class PortfolioSnapshotQueries(AppDataSource dataSource) : IPortfo
         {
             items.Add(ReadItem(reader));
         }
-        return items;
+        await reader.CloseAsync().ConfigureAwait(false);
+        return await ExcludeFeesAsync(connection, transaction, userId, items, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<IReadOnlyList<PortfolioSnapshotListItem>> ExcludeFeesAsync(
+        NpgsqlConnection connection, NpgsqlTransaction transaction, Guid userId,
+        IReadOnlyList<PortfolioSnapshotListItem> items, CancellationToken cancellationToken)
+    {
+        var legacy = items.Where(row => row.AccountingVersion == 2).ToArray();
+        if (legacy.Length == 0) return items;
+        await using var command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText = """
+            select id, security_listing_id, portfolio_id, upper(transaction_currency), action,
+                   shares, price, fee_amount, cash_used, settles_to_cash, transaction_date, created_at
+            from public.transactions
+            where user_id = $1 and transaction_date <= $2 and action in ('buy', 'sell')
+            order by transaction_date, created_at, id;
+            """;
+        command.Parameters.AddWithValue(userId);
+        command.Parameters.AddWithValue(legacy.Max(row => row.SnapshotDate));
+        var history = new List<SnapshotTransaction>();
+        await using var reader = await command.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+        while (await reader.ReadAsync(cancellationToken).ConfigureAwait(false))
+            history.Add(new SnapshotTransaction(
+                reader.GetGuid(0), userId, reader.GetGuid(1), "", reader.GetString(3),
+                reader.GetDecimal(5), reader.GetDecimal(6), reader.GetFieldValue<DateOnly>(10),
+                reader.IsDBNull(2) ? null : reader.GetGuid(2), null, reader.GetString(4),
+                reader.GetDecimal(8), reader.GetDecimal(7), reader.GetBoolean(9),
+                reader.IsDBNull(11) ? null : reader.GetFieldValue<DateTimeOffset>(11)));
+        return items.Select(row => PortfolioSnapshotFeeAdjustment.Apply(row, history)).ToArray();
     }
 
     private static PortfolioSnapshotListItem ReadItem(NpgsqlDataReader reader) => new(

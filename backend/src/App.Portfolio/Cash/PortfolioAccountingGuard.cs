@@ -35,8 +35,8 @@ internal static class PortfolioAccountingGuard
             from (
               select case
                        when t.action = 'sell' and t.settles_to_cash
-                         then (t.shares * t.price) - t.fee_amount
-                       when t.action = 'buy' then -t.cash_used
+                         then (t.shares * t.price)
+                       when t.action = 'buy' then -least(t.cash_used, t.shares * t.price)
                        else 0
                      end::numeric as amount
               from public.transactions t
@@ -128,8 +128,8 @@ internal static class PortfolioAccountingGuard
                        t.transaction_date as event_date,
                        case
                          when t.action = 'sell' and t.settles_to_cash
-                           then (t.shares * t.price) - t.fee_amount
-                         when t.action = 'buy' then -t.cash_used
+                           then (t.shares * t.price)
+                         when t.action = 'buy' then -least(t.cash_used, t.shares * t.price)
                          else 0
                        end::numeric as amount
                 from public.transactions t

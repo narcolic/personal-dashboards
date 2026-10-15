@@ -126,7 +126,7 @@ public sealed class PortfolioSnapshotJob(
                 if (row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
                 {
                     shares += row.Shares;
-                    costBasis += row.Shares * row.Price + row.FeeAmount;
+                    costBasis += row.Shares * row.Price;
                     continue;
                 }
                 if (row.Shares > shares)
@@ -163,7 +163,7 @@ public sealed class PortfolioSnapshotJob(
                 if (row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
                 {
                     quantity += row.Shares;
-                    basis += row.Shares * row.Price + row.FeeAmount;
+                    basis += row.Shares * row.Price;
                     continue;
                 }
                 var average = quantity == 0m ? 0m : basis / quantity;
@@ -171,7 +171,7 @@ public sealed class PortfolioSnapshotJob(
                 var key = new AccountingKey(
                     row.UserId, row.PortfolioId, row.PortfolioName, NormalizeCurrency(row.Currency));
                 realized[key] = realized.GetValueOrDefault(key) +
-                    (row.Shares * row.Price - row.FeeAmount - disposed);
+                    (row.Shares * row.Price - disposed);
                 quantity -= row.Shares;
                 basis -= disposed;
                 if (quantity == 0m) basis = 0m;
@@ -187,13 +187,12 @@ public sealed class PortfolioSnapshotJob(
             var value = rows.GetValueOrDefault(key) ?? new AccountingAmounts();
             if (transaction.Action.Equals("sell", StringComparison.OrdinalIgnoreCase) &&
                 transaction.SettlesToCash)
-                value.Cash += transaction.Shares * transaction.Price - transaction.FeeAmount;
+                value.Cash += transaction.Shares * transaction.Price;
             if (transaction.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
             {
-                value.Cash -= transaction.CashUsed;
+                value.Cash -= Math.Min(transaction.CashUsed, transaction.Shares * transaction.Price);
                 if (transaction.TransactionDate == snapshotDate)
-                    value.ExternalFlow += transaction.Shares * transaction.Price +
-                        transaction.FeeAmount - transaction.CashUsed;
+                    value.ExternalFlow += Math.Max(0m, transaction.Shares * transaction.Price - transaction.CashUsed);
             }
             rows[key] = value;
         }
@@ -362,8 +361,7 @@ public sealed class PortfolioSnapshotJob(
             realizedEur + unrealizedEur,
             realizedUsd + unrealizedUsd,
             externalFlowEur,
-            externalFlowUsd,
-            2);
+            externalFlowUsd);
     }
 
     private static Dictionary<string, decimal> ReadRates(JsonElement payload)

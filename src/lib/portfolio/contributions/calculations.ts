@@ -41,12 +41,7 @@ export function resolveContributionYear(requested: number | undefined, years: re
 
 export function freshMoneyInvested(row: ContributionActivity) {
   if (row.kind !== "transaction" || row.action !== "buy") return 0;
-  return Math.max(
-    0,
-    Number(row.shares ?? 0) * Number(row.price ?? 0) +
-      Number(row.fee_amount ?? 0) -
-      Number(row.cash_used ?? 0),
-  );
+  return Math.max(0, Number(row.shares ?? 0) * Number(row.price ?? 0) - Number(row.cash_used ?? 0));
 }
 
 // Rates from the FX endpoint are units of each currency per USD.

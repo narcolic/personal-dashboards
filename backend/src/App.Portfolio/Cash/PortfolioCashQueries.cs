@@ -38,12 +38,12 @@ public sealed class PortfolioCashQueries(AppDataSource dataSource) : IPortfolioC
                      upper(t.transaction_currency) as currency,
                      case
                        when t.action = 'sell' and t.settles_to_cash
-                         then (t.shares * t.price) - t.fee_amount
-                       when t.action = 'buy' then -t.cash_used
+                         then (t.shares * t.price)
+                       when t.action = 'buy' then -least(t.cash_used, t.shares * t.price)
                        else 0
                      end::numeric as amount,
                      case when t.transaction_date = $2 and t.action = 'buy'
-                       then (t.shares * t.price) + t.fee_amount - t.cash_used
+                       then greatest(0, (t.shares * t.price) - t.cash_used)
                        else 0 end::numeric as external_flow
               from public.transactions t
               where t.user_id = $1 and t.transaction_date <= $2

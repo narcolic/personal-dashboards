@@ -197,7 +197,7 @@ export function TransactionEditor({
   const price = Number(v.price);
   const subtotal = shares * price;
   const fee = v.action === "buy" || v.action === "sell" ? Number(v.fee_amount || 0) : 0;
-  const total = v.action === "sell" ? subtotal - fee : subtotal + fee;
+  const total = subtotal;
   const validPreview =
     v.shares !== "" &&
     v.price !== "" &&
@@ -216,8 +216,10 @@ export function TransactionEditor({
     value.currency.toUpperCase() === v.currency.toUpperCase();
   const availableCash =
     Number(matchingCash?.availableAmount ?? 0) +
-    (returnsExistingCash ? Number(value.cash_used ?? 0) : 0);
-  const cashUsed = v.use_available_cash ? Math.min(availableCash, subtotal + fee) : 0;
+    (returnsExistingCash
+      ? Math.min(Number(value.cash_used ?? 0), Number(value.shares) * Number(value.price))
+      : 0);
+  const cashUsed = v.use_available_cash ? Math.min(availableCash, subtotal) : 0;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/75 p-3 backdrop-blur-sm sm:p-6">
@@ -687,9 +689,7 @@ export function TransactionEditor({
                 {validPreview ? (
                   <p className="mt-1 text-[11px] text-muted-foreground tabular-nums">
                     {t("portfolio.editor.subtotal")}: {fmtCurrency(subtotal, v.currency)}
-                    {fee
-                      ? ` · ${t("portfolio.tradeFee")}: ${v.action === "sell" ? "−" : "+"}${fmtCurrency(fee, v.currency)}`
-                      : ""}
+                    {fee ? ` · ${t("portfolio.tradeFee")}: ${fmtCurrency(fee, v.currency)}` : ""}
                   </p>
                 ) : null}
               </div>

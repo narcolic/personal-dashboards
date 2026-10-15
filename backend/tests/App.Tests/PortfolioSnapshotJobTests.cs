@@ -13,8 +13,8 @@ public sealed class PortfolioSnapshotJobTests
         var portfolioId = Guid.Parse("df912e75-1c7b-4767-a798-110a636aa3c8");
         var store = new RecordingStore(
         [
-            Transaction(userId, portfolioId, 2m, 100m, new DateOnly(2026, 1, 1)),
-            Transaction(userId, portfolioId, 3m, 120m, new DateOnly(2026, 2, 1)),
+            Transaction(userId, portfolioId, 2m, 100m, new DateOnly(2026, 1, 1)) with { FeeAmount = 7m },
+            Transaction(userId, portfolioId, 3m, 120m, new DateOnly(2026, 2, 1)) with { FeeAmount = 9m },
         ]);
         var quotes = new FixedQuoteService(new QuoteLookupResult(
         [
@@ -51,6 +51,32 @@ public sealed class PortfolioSnapshotJobTests
         var portfolio = Assert.Single(store.Upserted, record => record.Scope == "portfolio");
         Assert.Equal(portfolioId, portfolio.PortfolioId);
         Assert.Equal("Main", portfolio.PortfolioName);
+    }
+
+    [Fact]
+    public async Task LegacyCashUsedForFeesDoesNotReduceFeeFreeSnapshotCash()
+    {
+        var userId = Guid.NewGuid();
+        var portfolioId = Guid.NewGuid();
+        var date = new DateOnly(2026, 8, 10);
+        var store = new RecordingStore([
+            Transaction(userId, portfolioId, 10m, 100m, new DateOnly(2026, 1, 1)) with { FeeAmount = 10m },
+            Transaction(userId, portfolioId, 10m, 120m, date.AddDays(-1), "sell", true) with { FeeAmount = 20m },
+            Transaction(userId, portfolioId, 10m, 100m, date, cashUsed: 1050m) with { FeeAmount = 50m },
+        ]);
+        var job = new PortfolioSnapshotJob(store,
+            new FixedQuoteService(new QuoteLookupResult(
+                [new MarketQuote("ABC", "ABC", "ABC Fund", 150m, 145m, "EUR", null, null, null, "ETF")], [])),
+            new FixedFxRateService(JsonSerializer.SerializeToElement(new { rates = new { USD = 1m, EUR = 1m } })),
+            new FixedTimeProvider(new DateTimeOffset(2026, 8, 10, 22, 0, 0, TimeSpan.Zero)));
+        await job.RunAsync(new PortfolioSnapshotRunRequest(Force: true, Date: date));
+        var total = Assert.Single(store.Upserted, row => row.Scope == "total");
+        Assert.Equal(1000m, total.CostBasisEur);
+        Assert.Equal(200m, total.CashBalanceEur);
+        Assert.Equal(1700m, total.TotalValueEur);
+        Assert.Equal(700m, total.TotalPnlEur);
+        Assert.Equal(0m, total.ExternalFlowEur);
+        Assert.Equal(3, total.AccountingVersion);
     }
 
     [Fact]
@@ -98,8 +124,8 @@ public sealed class PortfolioSnapshotJobTests
         var userId = Guid.NewGuid();
         var portfolioId = Guid.NewGuid();
         var store = new RecordingStore([
-            Transaction(userId, portfolioId, 10m, 100m, new DateOnly(2026, 1, 1)),
-            Transaction(userId, portfolioId, 4m, 150m, new DateOnly(2026, 8, 10), "sell", true),
+            Transaction(userId, portfolioId, 10m, 100m, new DateOnly(2026, 1, 1)) with { FeeAmount = 10m },
+            Transaction(userId, portfolioId, 4m, 150m, new DateOnly(2026, 8, 10), "sell", true) with { FeeAmount = 5m },
         ]);
         var quotes = new FixedQuoteService(new QuoteLookupResult(
             [new MarketQuote("ABC", "ABC", "ABC Fund", 150m, 145m, "EUR", null, null, null, "ETF")], []));

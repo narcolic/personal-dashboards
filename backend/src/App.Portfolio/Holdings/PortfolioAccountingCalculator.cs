@@ -42,7 +42,7 @@ public static class PortfolioAccountingCalculator
                 if (row.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
                 {
                     quantity += row.Shares;
-                    costBasis += row.Shares * row.Price + row.FeeAmount;
+                    costBasis += row.Shares * row.Price;
                     continue;
                 }
 
@@ -56,7 +56,7 @@ public static class PortfolioAccountingCalculator
                 var averageCost = quantity == 0m ? 0m : costBasis / quantity;
                 var disposedCost = averageCost * row.Shares;
                 var grossProceeds = row.Shares * row.Price;
-                var netProceeds = grossProceeds - row.FeeAmount;
+                var netProceeds = grossProceeds;
                 quantity -= row.Shares;
                 costBasis -= disposedCost;
                 if (quantity == 0m)

@@ -30,14 +30,11 @@ export function calculateRealizedPnl(
     const state = states.get(key) ?? { quantity: 0, basis: 0 };
     if (row.action === "buy") {
       state.quantity += Number(row.shares);
-      state.basis += Number(row.shares) * Number(row.price) + Number(row.fee_amount ?? 0);
+      state.basis += Number(row.shares) * Number(row.price);
     } else {
       const average = state.quantity ? state.basis / state.quantity : 0;
       const disposed = average * Number(row.shares);
-      realized += convert(
-        Number(row.shares) * Number(row.price) - Number(row.fee_amount ?? 0) - disposed,
-        row.currency,
-      );
+      realized += convert(Number(row.shares) * Number(row.price) - disposed, row.currency);
       state.quantity -= Number(row.shares);
       state.basis -= disposed;
       if (state.quantity === 0) state.basis = 0;

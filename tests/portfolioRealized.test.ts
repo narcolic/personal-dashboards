@@ -49,9 +49,9 @@ test("later same-day cash-funded buy leaves earlier realized gain unchanged", ()
   assert.equal(calculateRealizedPnl([close, later, sale, initial], "__all__", identity), 100);
 });
 
-test("same-day fees and loss reduce cumulative realized gain in recorded sequence", () => {
+test("same-day gains and losses exclude fees in recorded sequence", () => {
   const initial = trade("3", "buy", 10, 100, "2026-01-01", "2026-01-01T09:00:00Z", 10);
   const gain = trade("2", "sell", 5, 120, "2026-02-01", "2026-02-01T10:00:00Z", 5);
   const loss = trade("1", "sell", 5, 80, "2026-02-01", "2026-02-01T11:00:00Z", 5);
-  assert.equal(calculateRealizedPnl([loss, initial, gain], "__all__", identity), -20);
+  assert.equal(calculateRealizedPnl([loss, initial, gain], "__all__", identity), 0);
 });

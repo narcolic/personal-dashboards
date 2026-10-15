@@ -151,18 +151,18 @@ public sealed class PortfolioHoldingCalculatorTests
     }
 
     [Fact]
-    public void TradeFeesEnterBuyBasisAndReduceSellProceeds()
+    public void TradeFeesDoNotAffectBuyBasisOrRealizedPerformance()
     {
         var result = PortfolioAccountingCalculator.Calculate([
             Transaction("MSFT", 10m, 100m, new DateOnly(2026, 1, 1), feeAmount: 10m),
             Transaction("MSFT", 4m, 150m, new DateOnly(2026, 2, 1), action: "sell", feeAmount: 5m),
         ]);
 
-        Assert.Equal(101m, Assert.Single(result.Holdings).AvgCost);
+        Assert.Equal(100m, Assert.Single(result.Holdings).AvgCost);
         var sale = Assert.Single(result.RealizedSales);
-        Assert.Equal(595m, sale.NetProceeds);
-        Assert.Equal(404m, sale.DisposedCostBasis);
-        Assert.Equal(191m, sale.RealizedPnl);
+        Assert.Equal(600m, sale.NetProceeds);
+        Assert.Equal(400m, sale.DisposedCostBasis);
+        Assert.Equal(200m, sale.RealizedPnl);
     }
 
     [Fact]

@@ -1,3 +1,4 @@
+import { PortfolioFees } from "@/routes/_authenticated/portfolio/components/PortfolioFees";
 import { createFileRoute, redirect, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
@@ -214,6 +215,7 @@ export function PortfolioInsights({
         currency={currency}
         portfolioMap={portfolioMap}
       />
+      <PortfolioFees portfolioId={selected} currency={currency} />
       {hasSnapshots ? (
         <>
           <div className="space-y-3">

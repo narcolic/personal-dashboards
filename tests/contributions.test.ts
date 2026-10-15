@@ -36,10 +36,10 @@ const calculate = (
     ...overrides,
   });
 
-test("fresh money includes purchase fees and excludes reused cash", () => {
+test("fresh money excludes purchase fees and reused cash", () => {
   assert.equal(freshMoneyInvested(buy), 100);
-  assert.equal(freshMoneyInvested({ ...buy, fee_amount: 5 }), 105);
-  assert.equal(freshMoneyInvested({ ...buy, fee_amount: 5, cash_used: 40 }), 65);
+  assert.equal(freshMoneyInvested({ ...buy, fee_amount: 5 }), 100);
+  assert.equal(freshMoneyInvested({ ...buy, fee_amount: 5, cash_used: 40 }), 60);
   assert.equal(freshMoneyInvested({ ...buy, fee_amount: 5, cash_used: 105 }), 0);
   assert.equal(freshMoneyInvested({ ...buy, cash_used: 110 }), 0);
 });

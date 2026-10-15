@@ -44,7 +44,7 @@ public sealed class TransactionCommands(
                     : 0m;
                 var cashUsed = PortfolioCashCalculator.FundPurchase(
                     availableCash,
-                    mutation.Shares * mutation.Price + mutation.FeeAmount,
+                    mutation.Shares * mutation.Price,
                     mutation.UseAvailableCash).CashUsed;
                 var id = await InsertTransactionAsync(
                     connection,
@@ -117,7 +117,7 @@ public sealed class TransactionCommands(
                     : 0m;
                 var cashUsed = PortfolioCashCalculator.FundPurchase(
                     availableCash,
-                    mutation.Shares * mutation.Price + mutation.FeeAmount,
+                    mutation.Shares * mutation.Price,
                     mutation.UseAvailableCash).CashUsed;
                 var settlesToCash = action == "sell" &&
                     (oldState.Action != "sell" || oldState.SettlesToCash);
