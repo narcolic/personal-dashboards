@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
 import { fmtCurrency } from "@/lib/portfolio/formatters";
 import { useTranslation } from "react-i18next";
@@ -15,6 +16,7 @@ const COLORS = [
 
 export function PortfolioChart({
   title,
+  headerControls,
   data,
   total,
   chart,
@@ -26,6 +28,7 @@ export function PortfolioChart({
   pieOuterRadius = 84,
 }: {
   title: string;
+  headerControls?: ReactNode;
   data: { name: string; value: number }[];
   total: number;
   chart: "pie" | "bar";
@@ -46,7 +49,16 @@ export function PortfolioChart({
   };
 
   return (
-    <TerminalCard title={title} bodyClassName="p-3">
+    <TerminalCard bodyClassName="p-4 md:p-5">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+        <h2 className="flex items-center gap-2 text-xs uppercase tracking-[0.1em] text-muted-foreground">
+          <span aria-hidden="true" className="text-primary">
+            &gt;
+          </span>
+          <span>{title}</span>
+        </h2>
+        {headerControls}
+      </div>
       {data.length === 0 ? (
         <div className="text-muted-foreground text-xs">{t("common.noData")}</div>
       ) : isBarChart ? (

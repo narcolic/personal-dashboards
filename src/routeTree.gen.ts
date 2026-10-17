@@ -28,6 +28,7 @@ import { Route as AuthenticatedSubscriptionsNewRouteImport } from "./routes/_aut
 import { Route as AuthenticatedSubscriptionsListRouteImport } from "./routes/_authenticated/subscriptions/list"
 import { Route as AuthenticatedSubscriptionsSubscriptionIdRouteImport } from "./routes/_authenticated/subscriptions/$subscriptionId"
 import { Route as AuthenticatedSettingsSubscriptionsRouteImport } from "./routes/_authenticated/settings/subscriptions"
+import { Route as AuthenticatedSettingsPortfoliosRouteImport } from "./routes/_authenticated/settings/portfolios"
 import { Route as AuthenticatedPortfolioTransactionsRouteImport } from "./routes/_authenticated/portfolio/transactions"
 import { Route as AuthenticatedPortfolioPnlRouteImport } from "./routes/_authenticated/portfolio/pnl"
 import { Route as AuthenticatedPortfolioInsightsRouteImport } from "./routes/_authenticated/portfolio/insights"
@@ -146,6 +147,12 @@ const AuthenticatedSettingsSubscriptionsRoute =
     path: "/subscriptions",
     getParentRoute: () => AuthenticatedSettingsRoute,
   } as any)
+const AuthenticatedSettingsPortfoliosRoute =
+  AuthenticatedSettingsPortfoliosRouteImport.update({
+    id: "/portfolios",
+    path: "/portfolios",
+    getParentRoute: () => AuthenticatedSettingsRoute,
+  } as any)
 const AuthenticatedPortfolioTransactionsRoute =
   AuthenticatedPortfolioTransactionsRouteImport.update({
     id: "/transactions",
@@ -238,6 +245,7 @@ export interface FileRoutesByFullPath {
   "/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
   "/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
   "/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/settings/portfolios": typeof AuthenticatedSettingsPortfoliosRoute
   "/settings/subscriptions": typeof AuthenticatedSettingsSubscriptionsRoute
   "/subscriptions/$subscriptionId": typeof AuthenticatedSubscriptionsSubscriptionIdRoute
   "/subscriptions/list": typeof AuthenticatedSubscriptionsListRoute
@@ -266,6 +274,7 @@ export interface FileRoutesByTo {
   "/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
   "/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
   "/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/settings/portfolios": typeof AuthenticatedSettingsPortfoliosRoute
   "/settings/subscriptions": typeof AuthenticatedSettingsSubscriptionsRoute
   "/subscriptions/$subscriptionId": typeof AuthenticatedSubscriptionsSubscriptionIdRoute
   "/subscriptions/list": typeof AuthenticatedSubscriptionsListRoute
@@ -300,6 +309,7 @@ export interface FileRoutesById {
   "/_authenticated/portfolio/insights": typeof AuthenticatedPortfolioInsightsRoute
   "/_authenticated/portfolio/pnl": typeof AuthenticatedPortfolioPnlRoute
   "/_authenticated/portfolio/transactions": typeof AuthenticatedPortfolioTransactionsRoute
+  "/_authenticated/settings/portfolios": typeof AuthenticatedSettingsPortfoliosRoute
   "/_authenticated/settings/subscriptions": typeof AuthenticatedSettingsSubscriptionsRoute
   "/_authenticated/subscriptions/$subscriptionId": typeof AuthenticatedSubscriptionsSubscriptionIdRoute
   "/_authenticated/subscriptions/list": typeof AuthenticatedSubscriptionsListRoute
@@ -334,6 +344,7 @@ export interface FileRouteTypes {
     | "/portfolio/insights"
     | "/portfolio/pnl"
     | "/portfolio/transactions"
+    | "/settings/portfolios"
     | "/settings/subscriptions"
     | "/subscriptions/$subscriptionId"
     | "/subscriptions/list"
@@ -362,6 +373,7 @@ export interface FileRouteTypes {
     | "/portfolio/insights"
     | "/portfolio/pnl"
     | "/portfolio/transactions"
+    | "/settings/portfolios"
     | "/settings/subscriptions"
     | "/subscriptions/$subscriptionId"
     | "/subscriptions/list"
@@ -395,6 +407,7 @@ export interface FileRouteTypes {
     | "/_authenticated/portfolio/insights"
     | "/_authenticated/portfolio/pnl"
     | "/_authenticated/portfolio/transactions"
+    | "/_authenticated/settings/portfolios"
     | "/_authenticated/settings/subscriptions"
     | "/_authenticated/subscriptions/$subscriptionId"
     | "/_authenticated/subscriptions/list"
@@ -551,6 +564,13 @@ declare module "@tanstack/react-router" {
       preLoaderRoute: typeof AuthenticatedSettingsSubscriptionsRouteImport
       parentRoute: typeof AuthenticatedSettingsRoute
     }
+    "/_authenticated/settings/portfolios": {
+      id: "/_authenticated/settings/portfolios"
+      path: "/portfolios"
+      fullPath: "/settings/portfolios"
+      preLoaderRoute: typeof AuthenticatedSettingsPortfoliosRouteImport
+      parentRoute: typeof AuthenticatedSettingsRoute
+    }
     "/_authenticated/portfolio/transactions": {
       id: "/_authenticated/portfolio/transactions"
       path: "/transactions"
@@ -695,11 +715,13 @@ const AuthenticatedPortfolioRouteWithChildren =
   )
 
 interface AuthenticatedSettingsRouteChildren {
+  AuthenticatedSettingsPortfoliosRoute: typeof AuthenticatedSettingsPortfoliosRoute
   AuthenticatedSettingsSubscriptionsRoute: typeof AuthenticatedSettingsSubscriptionsRoute
   AuthenticatedSettingsIndexRoute: typeof AuthenticatedSettingsIndexRoute
 }
 
 const AuthenticatedSettingsRouteChildren: AuthenticatedSettingsRouteChildren = {
+  AuthenticatedSettingsPortfoliosRoute: AuthenticatedSettingsPortfoliosRoute,
   AuthenticatedSettingsSubscriptionsRoute:
     AuthenticatedSettingsSubscriptionsRoute,
   AuthenticatedSettingsIndexRoute: AuthenticatedSettingsIndexRoute,

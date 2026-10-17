@@ -5,11 +5,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { mapCsvRows, parseCSV } from "@/lib/csv";
 import { normalizeTicker, type TickerSuggestion } from "@/lib/portfolio/tickerCatalog";
-import {
-  createPortfolio,
-  deletePortfolio,
-  type PortfolioInputType,
-} from "@/lib/portfolio/portfolios/api";
+import { createPortfolio } from "@/lib/portfolio/portfolios/api";
 import { invalidatePortfolioData } from "@/lib/portfolio/queries";
 import {
   createTransaction,
@@ -64,7 +60,7 @@ const empty = (): TransactionInputType => ({
 });
 
 type DeleteDialogState = {
-  kind: "transaction" | "bulk-transactions" | "portfolio";
+  kind: "transaction" | "bulk-transactions";
   title: string;
   description: string;
   confirmLabel: string;
@@ -85,7 +81,6 @@ export function ActivityPage({
   const [editing, setEditing] = useState<
     (TransactionInputType & { id?: string; cash_used?: number }) | null
   >(() => (openAddTransaction ? empty() : null));
-  const [showPortfolios, setShowPortfolios] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteDialog, setDeleteDialog] = useState<DeleteDialogState | null>(null);
   const [page, setPage] = useState(1);
@@ -252,29 +247,6 @@ export function ActivityPage({
     onError: (e: Error) => toast.error(e.message),
   });
 
-  const createP = useMutation({
-    mutationFn: async (value: PortfolioInputType) => {
-      await createPortfolio(value);
-    },
-    onSuccess: () => {
-      invalidate();
-      toast.success(t("portfolio.portfolioAdded"));
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
-  const delP = useMutation({
-    mutationFn: async (id: string) => {
-      await deletePortfolio(id);
-    },
-    onSuccess: () => {
-      invalidate();
-      setDeleteDialog(null);
-      toast.success(t("portfolio.portfolioRemoved"));
-    },
-    onError: (e: Error) => toast.error(e.message),
-  });
-
   const importM = useMutation({
     mutationFn: async (file: File) => {
       const text = await file.text();
@@ -375,19 +347,31 @@ export function ActivityPage({
               {t("portfolio.withdrawCash")}
             </OptionMenu>
           ) : null}
-          <OptionMenu
-            label={t("portfolio.moreActions")}
-            className="flex h-10 items-center rounded-lg border border-border/70 bg-card/70 px-4 text-sm font-bold hover:border-primary/60 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-            items={[
-              { label: t("portfolio.uploadCsv"), onSelect: () => setShowImportHelp(true) },
-              {
-                label: `${t("portfolio.managePortfolios")} (${portfolios.length})`,
-                onSelect: () => setShowPortfolios(true),
-              },
-            ]}
+          <button
+            type="button"
+            onClick={() => setShowImportHelp(true)}
+            aria-label={t("portfolio.uploadCsv")}
+            title={t("portfolio.uploadCsv")}
+            aria-haspopup="dialog"
+            aria-expanded={showImportHelp}
+            aria-controls={showImportHelp ? "csv-import-dialog" : undefined}
+            className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-border/70 bg-card/70 text-muted-foreground transition-colors hover:border-primary/60 hover:text-primary focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
           >
-            •••
-          </OptionMenu>
+            <svg
+              aria-hidden="true"
+              focusable="false"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M12 16V3m-5 5 5-5 5 5M4 16v4a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-4" />
+            </svg>
+          </button>
           <button
             type="button"
             onClick={(event) => {
@@ -667,42 +651,13 @@ export function ActivityPage({
         />
       ) : null}
 
-      {showPortfolios && (
-        <PortfoliosModal
-          portfolios={portfolios}
-          onClose={() => setShowPortfolios(false)}
-          onCreate={async (value) => {
-            try {
-              await createP.mutateAsync(value);
-            } catch (e) {
-              toast.error((e as Error).message);
-            }
-          }}
-          onRequestDelete={(portfolio) =>
-            setDeleteDialog({
-              kind: "portfolio",
-              title: t("common.delete"),
-              description: t("portfolio.deletePortfolioConfirm", { name: portfolio.name }),
-              confirmLabel: t("common.delete"),
-              onConfirm: () => delP.mutate(portfolio.id),
-            })
-          }
-        />
-      )}
-
       <ConfirmDialog
         open={deleteDialog != null}
         title={deleteDialog?.title ?? t("common.delete")}
         description={deleteDialog?.description ?? ""}
         confirmLabel={deleteDialog?.confirmLabel ?? t("common.delete")}
         isConfirming={
-          deleteDialog?.kind === "transaction"
-            ? deleteM.isPending
-            : deleteDialog?.kind === "bulk-transactions"
-              ? bulkDeleteM.isPending
-              : deleteDialog?.kind === "portfolio"
-                ? delP.isPending
-                : false
+          deleteDialog?.kind === "transaction" ? deleteM.isPending : bulkDeleteM.isPending
         }
         onCancel={() => setDeleteDialog(null)}
         onConfirm={() => deleteDialog?.onConfirm()}
@@ -846,6 +801,7 @@ function ImportCsvDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="csv-import-title"
+      id="csv-import-dialog"
     >
       <div className="analytics-panel w-full max-w-2xl overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xl">
         <div className="flex items-center justify-between border-b border-border/60 bg-secondary/25 px-5 py-4">
@@ -896,111 +852,6 @@ function ImportCsvDialog({
             >
               {busy ? t("portfolio.importing") : t("portfolio.chooseCsv")}
             </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PortfoliosModal({
-  portfolios,
-  onClose,
-  onCreate,
-  onRequestDelete,
-}: {
-  portfolios: PortfolioRecord[];
-  onClose: () => void;
-  onCreate: (v: PortfolioInputType) => Promise<void>;
-  onRequestDelete: (portfolio: PortfolioRecord) => void;
-}) {
-  const { t } = useTranslation();
-  const [name, setName] = useState("");
-  const [broker, setBroker] = useState("");
-  const [notes, setNotes] = useState("");
-
-  return (
-    <div className="fixed inset-0 z-20 flex items-start justify-center overflow-y-auto bg-background/80 p-4 backdrop-blur md:items-center">
-      <div className="analytics-panel w-full max-w-md overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xl">
-        <div className="flex justify-between border-b border-border/60 bg-secondary/25 px-5 py-4 text-xs uppercase tracking-[0.12em] text-primary">
-          <span>{t("portfolio.portfoliosTitle")}</span>
-          <button onClick={onClose} className="text-muted-foreground hover:text-foreground">
-            x
-          </button>
-        </div>
-
-        <div className="space-y-4 p-4">
-          <form
-            onSubmit={async (e) => {
-              e.preventDefault();
-              if (!name.trim()) return;
-              await onCreate({
-                name: name.trim(),
-                broker: broker.trim() || null,
-                notes: notes.trim() || null,
-              });
-              setName("");
-              setBroker("");
-              setNotes("");
-            }}
-            className="grid grid-cols-2 gap-2"
-          >
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder={t("portfolio.portfolioNamePlaceholder")}
-              className="col-span-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-            />
-            <input
-              value={broker}
-              onChange={(e) => setBroker(e.target.value)}
-              placeholder={t("portfolio.portfolioBrokerPlaceholder")}
-              className="col-span-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-            />
-            <textarea
-              rows={2}
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder={t("portfolio.portfolioNotesPlaceholder")}
-              className="col-span-2 rounded-lg border border-border/70 bg-background/70 px-3 py-2.5 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary/30"
-            />
-            <button
-              type="submit"
-              className="col-span-2 rounded-lg bg-primary px-3 py-2.5 text-xs font-bold uppercase tracking-[0.12em] text-primary-foreground shadow-[0_10px_28px_-16px_var(--color-primary)] transition-all hover:-translate-y-0.5 hover:opacity-90"
-            >
-              {t("portfolio.addPortfolio")}
-            </button>
-          </form>
-
-          <div className="overflow-hidden rounded-lg border border-border/70 bg-background/30">
-            {portfolios.length === 0 && (
-              <div className="p-3 text-center text-xs text-muted-foreground">
-                {t("portfolio.noPortfoliosYet")}
-              </div>
-            )}
-            {portfolios.map((p) => (
-              <div
-                key={p.id}
-                className="flex items-center justify-between border-t border-border/50 px-4 py-3 text-xs transition-colors first:border-t-0 hover:bg-secondary/25"
-              >
-                <div>
-                  <div className="font-bold">{p.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("portfolio.broker")}: {p.broker || "-"}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {t("portfolio.notes")}: {p.notes || "-"}
-                  </div>
-                </div>
-                <button
-                  onClick={() => onRequestDelete(p)}
-                  className="text-xs text-destructive hover:underline"
-                >
-                  [x]
-                </button>
-              </div>
-            ))}
           </div>
         </div>
       </div>

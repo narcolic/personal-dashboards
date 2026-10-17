@@ -308,33 +308,32 @@ function PortfolioPage() {
       </section>
 
       <section className="space-y-3" aria-labelledby="allocation-heading">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <SectionHeading id="allocation-heading">
-            {t("portfolio.allocationSection")}
-          </SectionHeading>
-          <div
-            className="inline-flex self-start rounded-lg border border-border/70 bg-secondary/45 p-1"
-            role="group"
-          >
-            {(["assetType", "region", "currency"] as const).map((kind) => (
-              <button
-                key={kind}
-                type="button"
-                aria-pressed={allocationKind === kind}
-                onClick={() => setAllocationKind(kind)}
-                className={`rounded-md px-3 py-2 text-xs uppercase tracking-[0.1em] transition-colors ${
-                  allocationKind === kind
-                    ? "bg-card text-primary shadow-sm ring-1 ring-border/80"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                {t(`portfolio.allocation${capitalize(kind)}`)}
-              </button>
-            ))}
-          </div>
-        </div>
+        <SectionHeading id="allocation-heading">{t("portfolio.allocationSection")}</SectionHeading>
         <PortfolioChart
           title={t(`portfolio.allocationBy${capitalize(allocationKind)}`)}
+          headerControls={
+            <div
+              className="inline-flex max-w-full rounded-lg bg-secondary/35 p-0.5"
+              role="group"
+              aria-label={t("portfolio.allocationSection")}
+            >
+              {(["assetType", "region", "currency"] as const).map((kind) => (
+                <button
+                  key={kind}
+                  type="button"
+                  aria-pressed={allocationKind === kind}
+                  onClick={() => setAllocationKind(kind)}
+                  className={`rounded-md px-3 py-2 text-[10px] uppercase tracking-[0.08em] transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring sm:text-xs ${
+                    allocationKind === kind
+                      ? "bg-primary/15 text-primary ring-1 ring-primary/25"
+                      : "text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                  }`}
+                >
+                  {t(`portfolio.allocation${capitalize(kind)}`)}
+                </button>
+              ))}
+            </div>
+          }
           data={allocationData}
           total={totals.marketValue}
           chart={allocationKind === "region" ? "bar" : "pie"}

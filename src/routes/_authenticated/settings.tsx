@@ -15,6 +15,11 @@ function SettingsLayout() {
   const links = [
     { to: "/settings", label: t("settings.profile"), active: pathname === "/settings" },
     {
+      to: "/settings/portfolios",
+      label: t("portfolio.portfolios"),
+      active: pathname === "/settings/portfolios",
+    },
+    {
       to: "/settings/subscriptions",
       label: t("dashboards.subscriptionsTitle"),
       active: pathname.startsWith("/settings/subscriptions"),
@@ -42,7 +47,10 @@ function SettingsLayout() {
       </h1>
       <div className="grid items-start gap-8 md:grid-cols-[12rem_minmax(0,1fr)] lg:gap-12">
         <aside className="min-w-0 md:min-h-72 md:border-r md:border-border/40 md:pr-5">
-          <nav aria-label={t("settings.title")} className="flex gap-4 md:flex-col md:gap-1">
+          <nav
+            aria-label={t("settings.title")}
+            className="flex gap-4 overflow-x-auto md:flex-col md:gap-1 md:overflow-visible"
+          >
             {links.map((link) => (
               <Link
                 key={link.to}

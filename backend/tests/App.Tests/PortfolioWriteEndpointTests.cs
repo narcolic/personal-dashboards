@@ -81,6 +81,28 @@ public sealed class PortfolioWriteEndpointTests(ApiFactory factory) : IClassFixt
     }
 
     [Fact]
+    public async Task PortfolioWithTransactionsDeleteReturnsConflict()
+    {
+        const string message = "Delete all transactions in this portfolio before deleting it.";
+        var commands = new RecordingPortfolioCommands(PortfolioMutationResult.Conflicted(message));
+        using var authenticatedFactory = CreateAuthenticatedFactory(services =>
+        {
+            services.RemoveAll<IPortfolioCommands>();
+            services.AddSingleton<IPortfolioCommands>(commands);
+        });
+        using var client = authenticatedFactory.CreateClient();
+        var id = Guid.NewGuid();
+
+        var response = await client.DeleteAsync($"/api/portfolio/portfolios/{id}");
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(message, problem.GetProperty("detail").GetString());
+        Assert.Equal(UserId, commands.RequestedUserId);
+        Assert.Equal(id, commands.RequestedId);
+    }
+
+    [Fact]
     public async Task TransactionCreateForwardsFinancialValuesAndReturnsCreatedId()
     {
         var portfolioId = Guid.NewGuid();

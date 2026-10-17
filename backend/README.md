@@ -76,6 +76,10 @@ The local API listens on `http://localhost:5080` by default.
 - `GET /openapi/v1.json` exposes the OpenAPI document.
 - `GET /api/me` is the first protected smoke-test endpoint.
 - `GET /api/portfolio/portfolios` lists the authenticated user's portfolios.
+- `DELETE /api/portfolio/portfolios/{id}` returns `409 Conflict` while any transaction
+  belongs to that portfolio. All transactions must be deleted first, including
+  those for sold-out positions, dividends, and fees. A database foreign key also
+  restricts direct and concurrent deletion.
 - `GET /api/portfolio/transactions` lists the authenticated user's transactions. It supports Activity-page pagination and the existing ticker, portfolio, asset-type, currency, and date filters.
 - `GET /api/portfolio/holdings` returns server-aggregated holdings and weighted average costs.
 - `GET /api/portfolio/ticker-catalog` lists the authenticated user's ticker catalogue.
