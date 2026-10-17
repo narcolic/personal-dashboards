@@ -20,6 +20,8 @@ public sealed class MarketDataServiceTests
                     "fullExchangeName": "NasdaqGS",
                     "instrumentType": "EQUITY",
                     "regularMarketPrice": 503.24,
+                    "regularMarketTime": 1792180800,
+                    "exchangeTimezoneName": "America/New_York",
                     "chartPreviousClose": 492.81,
                     "longName": "Microsoft Corporation",
                     "shortName": "Microsoft Corporation"
@@ -40,6 +42,7 @@ public sealed class MarketDataServiceTests
         Assert.Equal(492.81m, quote.RegularMarketPreviousClose);
         Assert.Equal("NasdaqGS", quote.FullExchangeName);
         Assert.Equal("EQUITY", quote.QuoteType);
+        Assert.Equal(1792180800L, quote.RegularMarketTime);
     }
 
     [Fact]

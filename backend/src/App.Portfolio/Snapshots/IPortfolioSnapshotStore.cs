@@ -68,4 +68,4 @@ public sealed record PortfolioSnapshotRecord(
     decimal TotalPnlUsd = 0m,
     decimal ExternalFlowEur = 0m,
     decimal ExternalFlowUsd = 0m,
-    short AccountingVersion = 3);
+    short AccountingVersion = 4);

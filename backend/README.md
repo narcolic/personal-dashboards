@@ -193,6 +193,21 @@ during the Athens midnight hour, allowing the UTC schedule to cover both standar
 time and daylight-saving time without creating duplicate rows. To backfill a date,
 add `--snapshot-date=YYYY-MM-DD` together with the force flag.
 
+Midnight captures represent the **previous Athens calendar day's close**. The worker
+uses that valuation day for transaction cutoffs and daily external flows and saves
+it as `quote_metadata.valuationDate`. The database retains its capture-day storage
+key so new runs cannot overwrite an existing historical capture. API responses
+expose the valuation day as `snapshot_date` and the actual capture time as
+`snapshot_at`; legacy midnight captures are corrected on read, including their
+daily external flows. Explicit backfill dates and daytime captures keep their
+specified dates.
+
+Available cash uses actual net sale proceeds, recorded cash-funded spending, and
+withdrawals at the ledger's two-decimal settlement precision. Fees remain excluded
+from holding cost basis and investment P&L; they are not added back as spendable
+cash. Snapshot accounting version 4 uses this same cash ledger. Older snapshots
+are reconciled on read without changing their historical market prices or FX.
+
 The worker uses the trusted backend PostgreSQL connection to read all users and
 upsert `portfolio_value_snapshots`. Never expose this command through a public HTTP
 endpoint or place the database connection string in the frontend.

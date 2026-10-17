@@ -28,7 +28,8 @@ public sealed class PortfolioCashCommands(AppDataSource dataSource) : IPortfolio
                     var available = await PortfolioAccountingGuard.GetAvailableCashAsync(
                         connection, transaction, userId, mutation.PortfolioId,
                         mutation.Currency, mutation.WithdrawalDate, null, token).ConfigureAwait(false);
-                    if (!PortfolioCashCalculator.Withdraw(available, mutation.Amount).Allowed)
+                    var amount = PortfolioCashCalculator.CashAmount(mutation.Amount);
+                    if (!PortfolioCashCalculator.Withdraw(available, amount).Allowed)
                     {
                         return PortfolioMutationResult.Conflicted(
                             $"Only {available:0.########} {mutation.Currency.Trim().ToUpperInvariant()} is available.");
@@ -45,7 +46,7 @@ public sealed class PortfolioCashCommands(AppDataSource dataSource) : IPortfolio
                     Add(command, NpgsqlDbType.Uuid, userId);
                     Add(command, NpgsqlDbType.Uuid, mutation.PortfolioId);
                     Add(command, NpgsqlDbType.Text, mutation.Currency.Trim().ToUpperInvariant());
-                    Add(command, NpgsqlDbType.Numeric, mutation.Amount);
+                    Add(command, NpgsqlDbType.Numeric, amount);
                     Add(command, NpgsqlDbType.Date, mutation.WithdrawalDate);
                     Add(command, NpgsqlDbType.Text,
                         string.IsNullOrWhiteSpace(mutation.Notes) ? null : mutation.Notes.Trim());

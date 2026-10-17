@@ -19,8 +19,8 @@ public sealed class PortfolioSnapshotFeeAdjustmentTests
         Assert.Equal(750m, result.CostBasisUsd);
         Assert.Equal(300m, result.UnrealizedEur);
         Assert.Equal(200m, result.RealizedEur);
-        Assert.Equal(600m, result.CashBalanceEur);
-        Assert.Equal(1500m, result.TotalValueEur);
+        Assert.Equal(595m, result.CashBalanceEur);
+        Assert.Equal(1495m, result.TotalValueEur);
         Assert.Equal(500m, result.TotalPnlEur);
         Assert.Equal(625m, result.TotalPnlUsd);
         Assert.Equal(old.MarketValueEur, result.MarketValueEur);
@@ -30,12 +30,12 @@ public sealed class PortfolioSnapshotFeeAdjustmentTests
     }
 
     [Fact]
-    public void CashPreviouslyUsedForFeesIsExcludedFromCashUsageAndFlows()
+    public void FeesAreExcludedFromInvestmentFlowsWithoutInventingSpendableCash()
     {
         var purchase = Trade("buy", 1, 100, 5) with { CashUsed = 105, TransactionDate = Date };
         var old = Snapshot() with { ExternalFlowEur = 0m, ExternalFlowUsd = 0m };
         var result = PortfolioSnapshotFeeAdjustment.Apply(old, [purchase]);
-        Assert.Equal(old.CashBalanceEur + 5, result.CashBalanceEur);
+        Assert.Equal(old.CashBalanceEur, result.CashBalanceEur);
         Assert.Equal(0m, result.ExternalFlowEur);
     }
 
@@ -52,7 +52,7 @@ public sealed class PortfolioSnapshotFeeAdjustmentTests
         var result = PortfolioSnapshotFeeAdjustment.Apply(old, history);
         Assert.Equal(old.CostBasisEur, result.CostBasisEur);
         Assert.Equal(old.RealizedEur + 15m, result.RealizedEur);
-        Assert.Equal(old.CashBalanceEur + 5m, result.CashBalanceEur);
+        Assert.Equal(old.CashBalanceEur, result.CashBalanceEur);
     }
 
     private static SnapshotTransaction Trade(string action, decimal shares, decimal price, decimal fee) =>

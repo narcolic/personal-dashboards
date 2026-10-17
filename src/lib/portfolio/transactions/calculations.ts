@@ -1,8 +1,10 @@
+import { isPreviousQuoteSession } from "../holdings/dailyChange.ts";
 import type { Quote } from "@/lib/portfolio/types";
 
 export function enrich(
   positions: import("@/lib/portfolio/types").HoldingRow[],
   quotes: Quote[],
+  now = new Date(),
 ): import("@/lib/portfolio/types").Enriched[] {
   const map = new Map<string, Quote>();
   for (const q of quotes) {
@@ -19,7 +21,8 @@ export function enrich(
     const marketValue = price * Number(p.shares);
     const costBasis = Number(p.avg_cost) * Number(p.shares);
     const unrealized = marketValue - costBasis;
-    const dayChange = (price - prev) * Number(p.shares);
+    const previousSession = isPreviousQuoteSession(q, now);
+    const dayChange = previousSession ? 0 : (price - prev) * Number(p.shares);
     return {
       ...p,
       shares: Number(p.shares),
@@ -27,7 +30,7 @@ export function enrich(
       price,
       prevClose: prev,
       dayChange,
-      dayChangePct: prev ? ((price - prev) / prev) * 100 : 0,
+      dayChangePct: !previousSession && prev ? ((price - prev) / prev) * 100 : 0,
       marketValue,
       costBasis,
       unrealized,

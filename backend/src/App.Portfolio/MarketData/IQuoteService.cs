@@ -21,6 +21,7 @@ public sealed record MarketQuote(
     string? FullExchangeName,
     string? Exchange,
     string? MarketState,
-    string? QuoteType);
+    string? QuoteType,
+    long? RegularMarketTime = null);
 
 public sealed record QuoteFailure(string Symbol, string Error);

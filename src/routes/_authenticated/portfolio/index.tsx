@@ -1,3 +1,4 @@
+import { calculateDailyChange, isTodayClosingSnapshot } from "@/lib/portfolio/holdings/dailyChange";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -458,11 +459,14 @@ function computeTotals(
     quoteDayChange += convert(row.dayChange, row._nativeCurrency);
   }
   const totalValue = marketValue + cashValue;
-  const dayChange =
-    closingSnapshotValue === null
-      ? quoteDayChange
-      : totalValue - closingSnapshotValue - externalFlow;
-  const dayBaseline = closingSnapshotValue ?? totalValue - quoteDayChange;
+  const { change: dayChange, baseline: dayBaseline } = calculateDailyChange({
+    totalValue,
+    quoteDayChange,
+    closingSnapshotValue,
+    externalFlow,
+    quotes: rows.map((row) => row.quote),
+    now: new Date(),
+  });
   const unrealized = marketValue - costBasis;
   return {
     marketValue: totalValue,
@@ -486,8 +490,14 @@ function findClosingSnapshotValue(
       : selectedPortfolioId === "__unassigned__"
         ? "portfolio:unassigned"
         : `portfolio:${selectedPortfolioId}`;
+  const now = new Date();
   const snapshot = snapshots
-    .filter((row) => row.scope_key === scopeKey && isCompletePortfolioSnapshot(row))
+    .filter(
+      (row) =>
+        row.scope_key === scopeKey &&
+        isTodayClosingSnapshot(row, now) &&
+        isCompletePortfolioSnapshot(row),
+    )
     .sort((left, right) => {
       const dateOrder = right.snapshot_date.localeCompare(left.snapshot_date);
       return dateOrder || right.snapshot_at.localeCompare(left.snapshot_at);

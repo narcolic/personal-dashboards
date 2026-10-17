@@ -35,8 +35,8 @@ internal static class PortfolioAccountingGuard
             from (
               select case
                        when t.action = 'sell' and t.settles_to_cash
-                         then (t.shares * t.price)
-                       when t.action = 'buy' then -least(t.cash_used, t.shares * t.price)
+                         then round(t.shares::numeric * t.price::numeric - t.fee_amount::numeric, 2)
+                       when t.action = 'buy' then -round(t.cash_used::numeric, 2)
                        else 0
                      end::numeric as amount
               from public.transactions t
@@ -46,7 +46,7 @@ internal static class PortfolioAccountingGuard
                 and t.transaction_date <= $4
                 and ($5::uuid is null or t.id <> $5)
               union all
-              select -w.amount::numeric
+              select -round(w.amount::numeric, 2)
               from public.portfolio_cash_withdrawals w
               where w.user_id = $1
                 and w.portfolio_id is not distinct from $2
@@ -128,14 +128,14 @@ internal static class PortfolioAccountingGuard
                        t.transaction_date as event_date,
                        case
                          when t.action = 'sell' and t.settles_to_cash
-                           then (t.shares * t.price)
-                         when t.action = 'buy' then -least(t.cash_used, t.shares * t.price)
+                           then round(t.shares::numeric * t.price::numeric - t.fee_amount::numeric, 2)
+                         when t.action = 'buy' then -round(t.cash_used::numeric, 2)
                          else 0
                        end::numeric as amount
                 from public.transactions t
                 where t.user_id = $1
                 union all
-                select w.portfolio_id, w.currency, w.withdrawal_date, -w.amount::numeric
+                select w.portfolio_id, w.currency, w.withdrawal_date, -round(w.amount::numeric, 2)
                 from public.portfolio_cash_withdrawals w
                 where w.user_id = $1
               ) events

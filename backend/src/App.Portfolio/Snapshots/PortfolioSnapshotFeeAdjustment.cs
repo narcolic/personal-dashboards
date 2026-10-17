@@ -24,7 +24,6 @@ public static class PortfolioSnapshotFeeAdjustment
                     quantity += row.Shares;
                     remainingFees += row.FeeAmount;
                     var excessCash = Math.Max(0m, row.CashUsed - row.Shares * row.Price);
-                    effect.Cash += excessCash;
                     if (row.TransactionDate == snapshot.SnapshotDate)
                         effect.Flow += excessCash - row.FeeAmount;
                 }
@@ -35,7 +34,6 @@ public static class PortfolioSnapshotFeeAdjustment
                     remainingFees -= disposedFees;
                     if (quantity == 0m) remainingFees = 0m;
                     effect.Realized += disposedFees + row.FeeAmount;
-                    if (row.SettlesToCash) effect.Cash += row.FeeAmount;
                 }
             }
             effect.Basis += remainingFees;
@@ -52,8 +50,6 @@ public static class PortfolioSnapshotFeeAdjustment
         }
         var basisEur = Sum("EUR", e => e.Basis);
         var basisUsd = Sum("USD", e => e.Basis);
-        var cashEur = Sum("EUR", e => e.Cash);
-        var cashUsd = Sum("USD", e => e.Cash);
         var realizedEur = Sum("EUR", e => e.Realized);
         var realizedUsd = Sum("USD", e => e.Realized);
         return snapshot with
@@ -62,10 +58,6 @@ public static class PortfolioSnapshotFeeAdjustment
             CostBasisUsd = snapshot.CostBasisUsd - basisUsd,
             UnrealizedEur = snapshot.UnrealizedEur + basisEur,
             UnrealizedUsd = snapshot.UnrealizedUsd + basisUsd,
-            CashBalanceEur = snapshot.CashBalanceEur + cashEur,
-            CashBalanceUsd = snapshot.CashBalanceUsd + cashUsd,
-            TotalValueEur = snapshot.TotalValueEur + cashEur,
-            TotalValueUsd = snapshot.TotalValueUsd + cashUsd,
             RealizedEur = snapshot.RealizedEur + realizedEur,
             RealizedUsd = snapshot.RealizedUsd + realizedUsd,
             TotalPnlEur = snapshot.TotalPnlEur + basisEur + realizedEur,
@@ -79,7 +71,6 @@ public static class PortfolioSnapshotFeeAdjustment
     private sealed class Effect
     {
         public decimal Basis;
-        public decimal Cash;
         public decimal Realized;
         public decimal Flow;
     }

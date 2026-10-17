@@ -5,6 +5,22 @@ namespace PortfolioTerminal.Tests;
 public sealed class PortfolioCashCalculatorTests
 {
     [Fact]
+    public void SaleFeeIsNotSpendableCashAndLegacyFullWithdrawalLeavesZero()
+    {
+        var proceeds = PortfolioCashCalculator.SaleProceeds(100m, 106.3484m, 0.05m);
+        var withdrawn = PortfolioCashCalculator.CashAmount(10634.79033203125m);
+        Assert.Equal(10634.79m, proceeds);
+        Assert.Equal(0m, proceeds - withdrawn);
+        Assert.False(PortfolioCashCalculator.Withdraw(proceeds - withdrawn, 0.01m).Allowed);
+    }
+
+    [Fact]
+    public void GenuineSmallCashBalancesArePreserved()
+    {
+        Assert.Equal(0.04m, PortfolioCashCalculator.SaleProceeds(1m, 1.04m, 0m) - 1m);
+    }
+
+    [Fact]
     public void FullyCoveredPurchaseLeavesRemainingCash()
     {
         var result = PortfolioCashCalculator.FundPurchase(3000m, 1000m, true);

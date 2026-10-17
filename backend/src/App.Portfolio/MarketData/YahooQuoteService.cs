@@ -61,7 +61,10 @@ public sealed class YahooQuoteService(HttpClient httpClient) : IQuoteService
                 String(meta, "fullExchangeName"),
                 String(meta, "exchangeName"),
                 String(meta, "marketState"),
-                String(meta, "instrumentType")));
+                String(meta, "instrumentType"),
+                meta.TryGetProperty("regularMarketTime", out var marketTime) &&
+                marketTime.ValueKind == JsonValueKind.Number && marketTime.TryGetInt64(out var timestamp)
+                    ? timestamp : null));
         }
         catch (Exception exception) when (
             exception is HttpRequestException or JsonException or InvalidOperationException)

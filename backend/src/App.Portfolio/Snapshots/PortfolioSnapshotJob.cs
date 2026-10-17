@@ -1,5 +1,6 @@
 using System.Text.Json;
 using PortfolioTerminal.Portfolio.MarketData;
+using PortfolioTerminal.Portfolio.Cash;
 
 namespace PortfolioTerminal.Portfolio.Snapshots;
 
@@ -19,6 +20,7 @@ public sealed class PortfolioSnapshotJob(
         var now = timeProvider.GetUtcNow();
         var athensNow = TimeZoneInfo.ConvertTime(now, AthensTimeZone);
         var snapshotDate = request.Date ?? DateOnly.FromDateTime(athensNow.DateTime);
+        var valuationDate = request.Date ?? PortfolioSnapshotDates.ValuationDate(snapshotDate, now, default);
         if (!request.Force && athensNow.Hour != 0)
         {
             return Skipped("outside_athens_midnight_window", snapshotDate);
@@ -28,13 +30,13 @@ public sealed class PortfolioSnapshotJob(
         var withdrawalTask = store.ReadWithdrawalsAsync(cancellationToken);
         await Task.WhenAll(transactionTask, withdrawalTask).ConfigureAwait(false);
         var transactions = (await transactionTask.ConfigureAwait(false))
-            .Where(row => row.TransactionDate <= snapshotDate)
+            .Where(row => row.TransactionDate <= valuationDate)
             .ToArray();
         var withdrawals = (await withdrawalTask.ConfigureAwait(false))
-            .Where(row => row.WithdrawalDate <= snapshotDate)
+            .Where(row => row.WithdrawalDate <= valuationDate)
             .ToArray();
         var holdings = Aggregate(transactions);
-        var accounting = BuildAccounting(transactions, withdrawals, snapshotDate);
+        var accounting = BuildAccounting(transactions, withdrawals, valuationDate);
         if (holdings.Length == 0 && accounting.Length == 0)
         {
             return Completed(snapshotDate, rows: 0, users: 0, symbols: 0);
@@ -73,6 +75,9 @@ public sealed class PortfolioSnapshotJob(
         var quoteMetadata = JsonSerializer.SerializeToElement(new
         {
             provider = "yahoo-chart",
+            // Keep the existing capture-day storage key to avoid overwriting an older
+            // midnight snapshot. API readers expose this separate valuation date.
+            valuationDate = valuationDate.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
             requestedSymbols = symbols,
             quotedSymbols = quoteResult.Quotes
                 .Select(quote => quote.Symbol)
@@ -187,10 +192,10 @@ public sealed class PortfolioSnapshotJob(
             var value = rows.GetValueOrDefault(key) ?? new AccountingAmounts();
             if (transaction.Action.Equals("sell", StringComparison.OrdinalIgnoreCase) &&
                 transaction.SettlesToCash)
-                value.Cash += transaction.Shares * transaction.Price;
+                value.Cash += PortfolioCashCalculator.SaleProceeds(transaction.Shares, transaction.Price, transaction.FeeAmount);
             if (transaction.Action.Equals("buy", StringComparison.OrdinalIgnoreCase))
             {
-                value.Cash -= Math.Min(transaction.CashUsed, transaction.Shares * transaction.Price);
+                value.Cash -= PortfolioCashCalculator.CashAmount(transaction.CashUsed);
                 if (transaction.TransactionDate == snapshotDate)
                     value.ExternalFlow += Math.Max(0m, transaction.Shares * transaction.Price - transaction.CashUsed);
             }
@@ -202,8 +207,9 @@ public sealed class PortfolioSnapshotJob(
                 withdrawal.UserId, withdrawal.PortfolioId,
                 withdrawal.PortfolioName, NormalizeCurrency(withdrawal.Currency));
             var value = rows.GetValueOrDefault(key) ?? new AccountingAmounts();
-            value.Cash -= withdrawal.Amount;
-            if (withdrawal.WithdrawalDate == snapshotDate) value.ExternalFlow -= withdrawal.Amount;
+            value.Cash -= PortfolioCashCalculator.CashAmount(withdrawal.Amount);
+            if (withdrawal.WithdrawalDate == snapshotDate)
+                value.ExternalFlow -= PortfolioCashCalculator.CashAmount(withdrawal.Amount);
             rows[key] = value;
         }
         foreach (var item in realized)

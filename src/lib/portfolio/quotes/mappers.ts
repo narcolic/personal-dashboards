@@ -10,6 +10,7 @@ export type RawQuote = {
   fullExchangeName?: unknown;
   exchange?: unknown;
   marketState?: unknown;
+  regularMarketTime?: unknown;
   quoteType?: unknown;
 };
 
@@ -41,5 +42,9 @@ export function normalizeQuote(input: string, raw: RawQuote | undefined): Quote 
     currency: isPence ? "GBP" : rawCur,
     exchange: optionalString(raw.fullExchangeName) ?? optionalString(raw.exchange),
     marketState: optionalString(raw.marketState),
+    regularMarketTime:
+      typeof raw.regularMarketTime === "number" && Number.isFinite(raw.regularMarketTime)
+        ? raw.regularMarketTime
+        : undefined,
   };
 }

@@ -100,5 +100,6 @@ export interface Quote {
   currency: string;
   exchange?: string;
   marketState?: string;
+  regularMarketTime?: number;
   quoteType?: string;
 }
