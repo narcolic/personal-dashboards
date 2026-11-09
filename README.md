@@ -13,7 +13,7 @@ Terminal Hub is an expandable personal command center with a clean terminal-styl
 - Vehicle service history, maintenance reminders, and ownership-cost analytics
 - Subscription Tracker with recurring costs, reusable shared members, dated contributions, and money owed
 - Travel Globe with an interactive 3D Earth, place search, and private visit history
-- An extensible dashboard hub, with utility-bill tracking planned next
+- Energy & Bills with local ZeniΘ PDF extraction, editable review, and cost/consumption analytics
 - Supabase authentication with portfolio and car-service data accessed through the .NET API
 
 ## Project Structure (high level)
@@ -25,6 +25,39 @@ Terminal Hub is an expandable personal command center with a clean terminal-styl
 - `supabase/` - Supabase related assets/config
 - `backend/` - .NET 10 API, business logic, market-data integrations, and scheduled
   portfolio snapshot worker; see [`backend/README.md`](backend/README.md)
+
+## Energy & Bills
+
+Open **Energy & Power Bills** from the hub or navigation (`/energy`). Upload a
+monthly ZeniΘ electricity PDF, compare the original PDF with the compact summary,
+correct values if needed, and accept to save. Manual entry supports other layouts.
+No model or OCR service is called. Scanned PDFs need manual entry in this version.
+
+- Schema: `supabase/migrations/20261109224007_energy_bills.sql`. This migration has
+  been applied to the linked Supabase project and tested on disposable PostgreSQL.
+  Apply it before running the updated API against another database; a frontend build
+  does not apply database migrations.
+- `App.Energy` exposes authenticated CRUD at `/api/energy/bills`. Owner filters,
+  PostgreSQL RLS, and per-user invoice/PDF uniqueness protect saved summaries.
+- Only accepted summaries and source metadata are stored. PDF bytes and extracted
+  raw text stay in the browser; the original PDF is not retained after leaving the
+  review. Uploading the same source again can reopen its saved summary with the PDF.
+- Costs use current-period charges by issue month, excluding carried balances.
+  Consumption is allocated evenly across the inclusive consumption dates and
+  labelled as an estimate. Provider-reported billing days are preserved separately.
+  Actual readings supersede overlapping estimates for the same supply. For historical
+  settlement entry, explicitly include any prior-billed deduction in adjustments.
+- Missing months stay missing. Averages use months with recorded invoices; coverage
+  and year comparisons disclose incomplete periods. Billed amounts are not payments.
+- PDF.js loads only for PDF import/review. Limits are 15 MB and 12 pages. The first
+  automatic adapter supports the supplied newer three-page and earlier two-page
+  ZeniΘ monthly layouts; unsupported or changed
+  layouts require review/manual correction, never an automatic save.
+
+Checks: `npm run build`, `npm run typecheck`, `npm run test:unit`, and
+`dotnet test backend/PortfolioTerminal.sln`. Set `ENERGY_TEST_DATABASE` to a
+**disposable PostgreSQL server** with database-creation permissions to run the real
+migration/CRUD/constraint/RLS test. It creates and drops its own database.
 
 ## Travel Globe
 

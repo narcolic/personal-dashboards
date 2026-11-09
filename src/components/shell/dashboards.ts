@@ -16,7 +16,7 @@ export const dashboards = [
   },
   {
     titleKey: "dashboards.energyTitle",
-    path: null,
+    path: "/energy",
     descriptionKey: "dashboards.energyDescription",
   },
   {

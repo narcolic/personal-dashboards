@@ -17,6 +17,7 @@ import { Route as AuthenticatedTravelRouteImport } from "./routes/_authenticated
 import { Route as AuthenticatedSubscriptionsRouteImport } from "./routes/_authenticated/subscriptions"
 import { Route as AuthenticatedSettingsRouteImport } from "./routes/_authenticated/settings"
 import { Route as AuthenticatedPortfolioRouteImport } from "./routes/_authenticated/portfolio"
+import { Route as AuthenticatedEnergyRouteImport } from "./routes/_authenticated/energy"
 import { Route as AuthenticatedCarServiceRouteImport } from "./routes/_authenticated/car-service"
 import { Route as AuthenticatedSubscriptionsIndexRouteImport } from "./routes/_authenticated/subscriptions/index"
 import { Route as AuthenticatedSettingsIndexRouteImport } from "./routes/_authenticated/settings/index"
@@ -80,6 +81,11 @@ const AuthenticatedSettingsRoute = AuthenticatedSettingsRouteImport.update({
 const AuthenticatedPortfolioRoute = AuthenticatedPortfolioRouteImport.update({
   id: "/portfolio",
   path: "/portfolio",
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedEnergyRoute = AuthenticatedEnergyRouteImport.update({
+  id: "/energy",
+  path: "/energy",
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedCarServiceRoute = AuthenticatedCarServiceRouteImport.update({
@@ -230,6 +236,7 @@ export interface FileRoutesByFullPath {
   "/": typeof IndexRoute
   "/login": typeof LoginRoute
   "/car-service": typeof AuthenticatedCarServiceRouteWithChildren
+  "/energy": typeof AuthenticatedEnergyRoute
   "/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
   "/settings": typeof AuthenticatedSettingsRouteWithChildren
   "/subscriptions": typeof AuthenticatedSubscriptionsRouteWithChildren
@@ -262,6 +269,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   "/": typeof IndexRoute
   "/login": typeof LoginRoute
+  "/energy": typeof AuthenticatedEnergyRoute
   "/travel": typeof AuthenticatedTravelRoute
   "/oauth/consent": typeof OauthConsentRoute
   "/car-service/$visitId": typeof AuthenticatedCarServiceVisitIdRoute
@@ -294,6 +302,7 @@ export interface FileRoutesById {
   "/_authenticated": typeof AuthenticatedRouteWithChildren
   "/login": typeof LoginRoute
   "/_authenticated/car-service": typeof AuthenticatedCarServiceRouteWithChildren
+  "/_authenticated/energy": typeof AuthenticatedEnergyRoute
   "/_authenticated/portfolio": typeof AuthenticatedPortfolioRouteWithChildren
   "/_authenticated/settings": typeof AuthenticatedSettingsRouteWithChildren
   "/_authenticated/subscriptions": typeof AuthenticatedSubscriptionsRouteWithChildren
@@ -329,6 +338,7 @@ export interface FileRouteTypes {
     | "/"
     | "/login"
     | "/car-service"
+    | "/energy"
     | "/portfolio"
     | "/settings"
     | "/subscriptions"
@@ -361,6 +371,7 @@ export interface FileRouteTypes {
   to:
     | "/"
     | "/login"
+    | "/energy"
     | "/travel"
     | "/oauth/consent"
     | "/car-service/$visitId"
@@ -392,6 +403,7 @@ export interface FileRouteTypes {
     | "/_authenticated"
     | "/login"
     | "/_authenticated/car-service"
+    | "/_authenticated/energy"
     | "/_authenticated/portfolio"
     | "/_authenticated/settings"
     | "/_authenticated/subscriptions"
@@ -485,6 +497,13 @@ declare module "@tanstack/react-router" {
       path: "/portfolio"
       fullPath: "/portfolio"
       preLoaderRoute: typeof AuthenticatedPortfolioRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    "/_authenticated/energy": {
+      id: "/_authenticated/energy"
+      path: "/energy"
+      fullPath: "/energy"
+      preLoaderRoute: typeof AuthenticatedEnergyRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     "/_authenticated/car-service": {
@@ -760,6 +779,7 @@ const AuthenticatedSubscriptionsRouteWithChildren =
 
 interface AuthenticatedRouteChildren {
   AuthenticatedCarServiceRoute: typeof AuthenticatedCarServiceRouteWithChildren
+  AuthenticatedEnergyRoute: typeof AuthenticatedEnergyRoute
   AuthenticatedPortfolioRoute: typeof AuthenticatedPortfolioRouteWithChildren
   AuthenticatedSettingsRoute: typeof AuthenticatedSettingsRouteWithChildren
   AuthenticatedSubscriptionsRoute: typeof AuthenticatedSubscriptionsRouteWithChildren
@@ -768,6 +788,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCarServiceRoute: AuthenticatedCarServiceRouteWithChildren,
+  AuthenticatedEnergyRoute: AuthenticatedEnergyRoute,
   AuthenticatedPortfolioRoute: AuthenticatedPortfolioRouteWithChildren,
   AuthenticatedSettingsRoute: AuthenticatedSettingsRouteWithChildren,
   AuthenticatedSubscriptionsRoute: AuthenticatedSubscriptionsRouteWithChildren,

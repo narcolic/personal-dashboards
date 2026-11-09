@@ -103,7 +103,11 @@ function AuthLayout() {
   return (
     <div
       className={`min-h-screen overflow-x-clip bg-background text-foreground ${
-        isPortfolio || isCarService || isSubscriptions || pathname === "/travel"
+        isPortfolio ||
+        isCarService ||
+        isSubscriptions ||
+        pathname === "/travel" ||
+        pathname === "/energy"
           ? "workspace-ambient-bg"
           : ""
       }`}

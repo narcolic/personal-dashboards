@@ -1,0 +1,302 @@
+.energy-workspace {
+  display: grid;
+  gap: 1.4rem;
+  font-family: var(--font-analytics);
+  color: var(--foreground);
+}
+.energy-workspace h1 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2rem);
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+.energy-workspace h2 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+.energy-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+.energy-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.energy-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.13em;
+  color: var(--primary);
+  text-transform: uppercase;
+  margin-bottom: 0.45rem;
+}
+.energy-muted {
+  color: var(--muted-foreground);
+}
+.energy-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem 0.85rem;
+  min-height: 2.35rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--card);
+  color: var(--foreground);
+  font: 500 0.8rem/1.3 var(--font-analytics);
+  cursor: pointer;
+}
+.energy-button:hover:not(:disabled) {
+  background: var(--secondary);
+}
+.energy-button:focus-visible,
+.energy-input:focus-visible,
+.energy-workspace summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 3px;
+}
+.energy-button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.energy-primary {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.energy-primary:hover:not(:disabled) {
+  background: var(--primary);
+  filter: brightness(1.08);
+}
+.energy-toggle[aria-pressed="true"] {
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border-color: var(--primary);
+}
+.energy-panel {
+  min-width: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  overflow: hidden;
+}
+.energy-panel-head {
+  padding: 0.85rem 1.15rem;
+  border-bottom: 1px solid var(--border);
+}
+.energy-panel-body {
+  padding: 1.15rem;
+}
+.energy-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.energy-metrics article {
+  padding: 1.3rem;
+  border-right: 1px solid var(--border);
+}
+.energy-metrics article:last-child {
+  border: 0;
+}
+.energy-metrics strong {
+  display: block;
+  margin: 0.6rem 0 0.4rem;
+  font-size: clamp(1.6rem, 3vw, 2.25rem);
+  line-height: 1.15;
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  font-variant-numeric: tabular-nums;
+}
+.energy-metrics strong span {
+  font-size: 1rem;
+  color: var(--muted-foreground);
+}
+.energy-overview-grid,
+.energy-review-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+.energy-review-single {
+  max-width: 780px;
+  width: 100%;
+  margin: 0 auto;
+}
+.energy-badge {
+  display: inline-flex;
+  font-size: 0.72rem;
+  color: var(--primary);
+  background: color-mix(in oklch, var(--primary) 10%, var(--card));
+  border-radius: 5px;
+  padding: 0.3rem 0.5rem;
+}
+.energy-input {
+  background: var(--background);
+  color: var(--foreground);
+  border: 1px solid var(--input);
+  border-radius: 5px;
+  padding: 0.5rem 0.6rem;
+  min-height: 2.25rem;
+  max-width: 100%;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+.energy-label {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+}
+.energy-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+}
+.energy-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+}
+.energy-field dt {
+  color: var(--muted-foreground);
+}
+.energy-field dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.energy-numeric {
+  width: 125px;
+  text-align: right;
+}
+.energy-total {
+  padding-top: 1.1rem;
+  border-bottom: 0;
+}
+.energy-total dt {
+  color: var(--foreground);
+}
+.energy-total dd {
+  font-size: 1.7rem;
+  font-weight: 650;
+}
+.energy-workspace summary {
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+.energy-notice {
+  padding: 0.85rem 1rem;
+  background: color-mix(in oklch, var(--primary) 8%, var(--card));
+  border-radius: 8px;
+  font-size: 0.85rem;
+}
+.energy-errors {
+  color: var(--destructive);
+  font-size: 0.85rem;
+}
+.energy-empty {
+  padding: 3rem 1.5rem;
+  text-align: center;
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+}
+.energy-empty p {
+  max-width: 560px;
+}
+.energy-table-wrap {
+  position: relative;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.energy-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.energy-table th,
+.energy-table td {
+  padding: 0.85rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.energy-table th {
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+.energy-table tr:last-child td {
+  border-bottom: 0;
+}
+.energy-pdf {
+  overflow: auto;
+  max-height: 85vh;
+  padding: 12px;
+  background: var(--secondary);
+}
+.energy-pdf canvas {
+  display: block;
+  margin: auto;
+}
+.energy-charge-track {
+  height: 7px;
+  background: var(--secondary);
+  margin-top: 0.5rem;
+  border-radius: 3px;
+  overflow: hidden;
+}
+.energy-charge-track > div {
+  height: 100%;
+}
+@media (max-width: 1000px) {
+  .energy-review-grid {
+    grid-template-columns: 1fr;
+  }
+  .energy-pdf {
+    max-height: 60vh;
+  }
+}
+@media (max-width: 750px) {
+  .energy-overview-grid {
+    grid-template-columns: 1fr;
+  }
+  .energy-metrics {
+    grid-template-columns: 1fr;
+  }
+  .energy-metrics article {
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 1rem;
+  }
+  .energy-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .energy-panel-body {
+    padding: 1rem;
+  }
+  .energy-field {
+    font-size: 0.8rem;
+  }
+}
+@media (pointer: coarse) {
+  .energy-button {
+    min-height: 44px;
+  }
+  .energy-input {
+    min-height: 44px;
+    font-size: 16px;
+  }
+}

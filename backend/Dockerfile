@@ -8,6 +8,7 @@ COPY Directory.Build.props global.json PortfolioTerminal.sln ./
 COPY src/App.Api/App.Api.csproj src/App.Api/
 COPY src/App.CarService/App.CarService.csproj src/App.CarService/
 COPY src/App.Data/App.Data.csproj src/App.Data/
+COPY src/App.Energy/App.Energy.csproj src/App.Energy/
 COPY src/App.Portfolio/App.Portfolio.csproj src/App.Portfolio/
 COPY src/App.Subscriptions/App.Subscriptions.csproj src/App.Subscriptions/
 COPY src/App.Travel/App.Travel.csproj src/App.Travel/
