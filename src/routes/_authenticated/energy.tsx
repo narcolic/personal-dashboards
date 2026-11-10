@@ -127,7 +127,6 @@ function EnergyWorkspace({ userId }: { userId: string }) {
         <div>
           <p className="energy-eyebrow">{t("energy.eyebrow")}</p>
           <h1>{t("dashboards.energyTitle")}</h1>
-          <p className="energy-muted">{t("energy.subtitle")}</p>
         </div>
         <div className="energy-actions">
           <button

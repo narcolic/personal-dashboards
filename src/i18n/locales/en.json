@@ -35,6 +35,8 @@
     "notFound": "Not Found"
   },
   "shell": {
+    "switchApp": "Switch app",
+    "appSections": "App sections",
     "hub": "Terminal Hub",
     "dashboards": "Dashboards",
     "open": "> open",

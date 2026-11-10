@@ -100,19 +100,15 @@ export function EnergyOverview({ bills, onOpen, onDelete }: Props) {
           <strong>
             {data.coveredDays ? number(data.totalKwh) : "—"} <span>kWh</span>
           </strong>
-          <p className="energy-muted text-xs">
-            {t("energy.coveredPeriods")}
-            {data.estimatedKwh > 0
-              ? ` · ${t("energy.estimated")}: ${number(data.estimatedKwh)} kWh`
-              : ""}
-          </p>
+          {data.estimatedKwh > 0 && (
+            <p className="energy-muted text-xs">
+              {t("energy.estimated")}: {number(data.estimatedKwh)} kWh
+            </p>
+          )}
         </article>
         <article>
           <p className="energy-muted text-xs">{t("energy.averageMonthly")}</p>
           <strong>{money(data.averageMonthly)}</strong>
-          <p className="energy-muted text-xs">
-            {t("energy.recordedMonths", { count: data.recordedMonths })}
-          </p>
         </article>
       </section>
       <div className="energy-overview-grid">
@@ -134,9 +130,6 @@ export function EnergyOverview({ bills, onOpen, onDelete }: Props) {
             </div>
           </div>
           <div className="energy-panel-body">
-            <p className="energy-muted text-xs mb-4">
-              {t(measure === "cost" ? "energy.issueMonthBasis" : "energy.allocationBasis")}
-            </p>
             <div
               role="img"
               aria-label={t(
@@ -183,7 +176,6 @@ export function EnergyOverview({ bills, onOpen, onDelete }: Props) {
                 </BarChart>
               </ResponsiveContainer>
             </div>
-            <p className="energy-muted text-xs mt-3">{t("energy.missingMonths")}</p>
             <details className="mt-3">
               <summary className="text-xs">{t("energy.showMonthlyValues")}</summary>
               <div className="energy-table-wrap">
@@ -230,7 +222,6 @@ export function EnergyOverview({ bills, onOpen, onDelete }: Props) {
                 </div>
               </div>
             ))}
-            <p className="energy-muted text-xs">{t("energy.breakdownNote")}</p>
           </div>
         </section>
       </div>
@@ -323,7 +314,6 @@ export function EnergyOverview({ bills, onOpen, onDelete }: Props) {
           <p className="energy-panel-body energy-muted text-sm">{t("energy.needMoreYears")}</p>
         ) : (
           <div className="energy-panel-body">
-            <p className="energy-muted text-xs mb-3">{t("energy.comparisonNote")}</p>
             <div className="energy-table-wrap">
               <table className="energy-table">
                 <thead>

@@ -35,6 +35,8 @@
     "notFound": "Η Σελίδα Δεν Βρέθηκε"
   },
   "shell": {
+    "switchApp": "Αλλαγή εφαρμογής",
+    "appSections": "Ενότητες εφαρμογής",
     "hub": "Terminal Hub",
     "dashboards": "Πίνακες Ελέγχου",
     "open": "> άνοιγμα",

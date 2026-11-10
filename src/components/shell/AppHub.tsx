@@ -1,3 +1,4 @@
+import { DashboardIcon } from "@/components/shell/DashboardIcon";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { TerminalCard } from "@/components/terminal/TerminalCard";
@@ -26,26 +27,30 @@ export function AppHub() {
       <div className="mx-auto max-w-5xl">
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
-            <BrandLockup tagline={t("brand.tagline")} />
+            <BrandLockup />
             <h1 className="mt-6 text-2xl font-bold uppercase tracking-[0.2em]">
               {t("shell.dashboards")}
             </h1>
           </div>
         </div>
 
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid auto-rows-[minmax(12rem,1fr)] gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {dashboards.map((dashboard) =>
             dashboard.path ? (
-              <Link key={dashboard.titleKey} to={dashboard.path} className="block">
+              <Link
+                key={dashboard.titleKey}
+                to={dashboard.path}
+                className="group block rounded-[10px] focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+              >
                 <TerminalCard
                   bodyClassName="p-4 flex h-full flex-col"
-                  className="h-full hover:border-primary"
+                  className="h-full transition-colors duration-200 group-hover:border-primary"
                 >
-                  <div className="mt-1 text-lg font-bold text-primary">{t(dashboard.titleKey)}</div>
+                  <div className="flex items-center gap-3 text-primary">
+                    <DashboardIcon titleKey={dashboard.titleKey} />
+                    <h2 className="text-lg font-bold leading-snug">{t(dashboard.titleKey)}</h2>
+                  </div>
                   <div className="flex-1">
-                    <p className="mt-1 text-[12px] text-muted-foreground/80">
-                      {t(dashboard.descriptionKey)}
-                    </p>
                     {dashboard.titleKey === "dashboards.portfolioTitle" ? (
                       <PortfolioHubSummary />
                     ) : null}
@@ -67,13 +72,9 @@ export function AppHub() {
                 bodyClassName="p-4 flex h-full flex-col"
                 className="h-full border-border/40 bg-card/50 opacity-75"
               >
-                <div className="mt-1 text-lg font-bold text-primary/65">
-                  {t(dashboard.titleKey)}
-                </div>
-                <div className="flex-1">
-                  <p className="mt-1 text-[12px] text-muted-foreground/70">
-                    {t(dashboard.descriptionKey)}
-                  </p>
+                <div className="flex flex-1 items-center gap-3 text-primary/65">
+                  <DashboardIcon titleKey={dashboard.titleKey} />
+                  <h2 className="text-lg font-bold leading-snug">{t(dashboard.titleKey)}</h2>
                 </div>
                 <div className="mt-3 border-t border-border/50 pt-2">
                   <div className="inline-flex cursor-not-allowed items-center border border-border/50 bg-background/40 px-2 py-1 text-[9px] uppercase tracking-[0.22em] text-muted-foreground/80">
